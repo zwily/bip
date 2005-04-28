@@ -1,9 +1,0 @@
-- SSL certificate verification
-- allowed IP filtering
-- multi user (user/pass to identify user + realname to id. network)
-- keep invites when detached
-- DCC proxying ?
-- /bip command, for admin (rehash, jump, ...)
-- crypt logs
-
-tidy up irc_server/server structures

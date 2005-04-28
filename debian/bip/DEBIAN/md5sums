@@ -1,9 +1,0 @@
-2fcb2e23f48dd8e205b6e434bb0a1e49  usr/bin/bip
-df1d3b30f4ccb839963d39b67fcc83e3  usr/bin/genpwent
-816e04d8e35370693904cc3a06107e56  usr/share/bip/bip.conf
-48f6c5372dbef10c96f251f313a4c83b  usr/share/bip/bip.vim
-b35795a23db4c45c95fc897375954a49  usr/share/doc/bip/README
-08e6785d9f0333a1f0009c71655a8e6a  usr/share/doc/bip/TODO
-c9367cfeedf1700a01107616effd5c8e  usr/share/doc/bip/AUTHORS
-75e57f35e3a9155f3cd215d43dd31380  usr/share/doc/bip/changelog.gz
-9416df600764b0209c175026fd2f7702  usr/share/doc/bip/changelog.Debian.gz
