@@ -1,0 +1,4 @@
+2005-04-21  Arnaud Cornet <nohar@t1r.net>
+
+        * src: Now use autoconf/automake
+	bip is now public :)

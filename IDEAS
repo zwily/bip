@@ -1,0 +1,14 @@
+- parser limité aux join part mode kick kill privmsg notices quit nick names
+- parser client : join, part, quit, nick, privmsg/notice
+- gestion des chans avec liste des nicks et statut
+- backlog avec timestamp à la reconnexion
+- logs au format irssi + timestamp complet
+- parser de conf (lex) du style var = value
+- backlog dans un dir, plusieurs fichiers (un par chan + le reste dans un autre)
+- [secondaire] rotate logs
+
+- connection.c: conn, read/write polls, waitevent, ssl transparent et anti flood
+- irc.c: gestion des chans, des spécificités d'un client IRC (ping)
+- log.c: log et backlog
+- client.c: gestion des clients (auth, etc...)
+- config.c: lecture et enregistrement de la conf

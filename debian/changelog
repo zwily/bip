@@ -1,0 +1,5 @@
+bip (0.0-1) unstable; urgency=low
+
+  * debian/rules: Initial package
+
+ -- Arnaud Cornet <nohar@t1r.net>  Thu, 20 Apr 2005 22:00:45 -0200

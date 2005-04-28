@@ -1,0 +1,19 @@
+AC_INIT(src/bip.c)
+AM_CONFIG_HEADER(src/config.h)
+AM_INIT_AUTOMAKE(bip,0.0)
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_YACC
+AM_PROG_LEX
+
+requires_libssl=yes
+AC_ARG_ENABLE(ssl,
+	      [  --disable-ssl           Drop OpenSSL support],
+	      [requires_libssl=no])
+if test "x$requires_libssl" = "xyes" ; then
+    AC_CHECK_LIB(ssl, SSL_read, [], [
+        echo "Error! You need to have libssl around."
+        exit -1
+        ])
+fi
+AC_OUTPUT(Makefile src/Makefile samples/Makefile)
