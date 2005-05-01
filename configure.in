@@ -6,6 +6,12 @@ AC_PROG_INSTALL
 AC_PROG_YACC
 AM_PROG_LEX
 
+debug=false
+AC_ARG_ENABLE(debug,
+	[  --enable-debug                Turn on debugging],
+	[debug=true])
+AM_CONDITIONAL(DEBUG, test x$debug = xtrue)
+
 requires_libssl=yes
 AC_ARG_ENABLE(ssl,
 	      [  --disable-ssl           Drop OpenSSL support],

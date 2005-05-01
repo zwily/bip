@@ -588,13 +588,14 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 		int err, err2;
 		socklen_t errSize = sizeof(err);
 
-		err2 = getsockopt(cn->handle,SOL_SOCKET,SO_ERROR,(void *)&err,
+		err2 = getsockopt(cn->handle, SOL_SOCKET, SO_ERROR,(void *)&err,
 				&errSize);
 		
 		if (err2 < 0) {
 			mylog(LOG_WARN, "fd:%d getsockopt error: %s",
 					cn->handle, strerror(errno));
-			connect_trynext(cn);
+			if (cn->connecting_data)
+				connect_trynext(cn);
 			return (cn_is_new(cn) || cn->connected ==
 					CONN_NEED_SSLIZE) ? 0 : 1;
 			
@@ -616,7 +617,8 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 		} else {
 			mylog(LOG_WARN, "fd:%d Socket error: %s", cn->handle,
 					strerror(err));
-			connect_trynext(cn);
+			if (cn->connecting_data)
+				connect_trynext(cn);
 			return (cn_is_new(cn) || cn->connected ==
 					CONN_NEED_SSLIZE) ? 0 : 1;
 		}

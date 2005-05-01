@@ -617,7 +617,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	}
 	son = p;
 	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
-	p = strchr(p, '!');
+	while (*p && *p != '!' && *p != ' ')
+		p++;
 	if (!p || !p[0] || !p[1])
 		return buf;
 	lon = p - son;
@@ -625,6 +626,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	if (!p || !p[0] || !p[1])
 		return buf;
 	p++;
+
 	som = p;
 	lom = strlen(p);
 
@@ -649,7 +651,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 		p += strlen("ACTION");
 	}
 	memcpy(p, sots, lots);
-	p+=lots;
+	p += lots;
 	*p++ = ' ';
 	memcpy(p, som, lom);
 	p += lom;

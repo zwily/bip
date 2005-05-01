@@ -73,7 +73,6 @@ bin_PROGRAMS = bip genpwent
 bip_SOURCES = conf.y lex.l bip.c connection.c irc.c line.c log.c md5.c util.c
 genpwent_SOURCES = genpwent.c md5.c util.c
 AM_YFLAGS = -d
-CFLAGS = -Wall
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES = 
@@ -95,6 +94,7 @@ genpwent_DEPENDENCIES =
 genpwent_LDFLAGS = 
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LEXLIB = @LEXLIB@
+CFLAGS = @CFLAGS@
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
@@ -369,6 +369,9 @@ install uninstall-am uninstall all-redirect all-am all installdirs \
 mostlyclean-generic distclean-generic clean-generic \
 maintainer-clean-generic clean mostlyclean distclean maintainer-clean
 
+@DEBUG_TRUE@	AM_CFLAGS=-Wall -g
+@DEBUG_TRUE@	AM_LDFLAGS=-g
+@DEBUG_FALSE@	AM_CFLAGS=-Wall
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
