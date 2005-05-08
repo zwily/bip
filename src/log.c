@@ -633,7 +633,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*raw = 1;
 	p = ret = (char *)malloc(
 		1 + lon + strlen(LAMESTRING) + strlen(dest) + 2 + lots +
-		1 + lom + 3 + action * (2 + strlen("ACTION")));
+		1 + lom + 3 + action * (2 + strlen("ACTION ")));
 	if (!p)
 		fatal("out of memory");
 	*p++ = ':';
@@ -647,8 +647,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	p += 2;
 	if (action) {
 		*p++ = 1;
-		memcpy(p, "ACTION", strlen("ACTION"));
-		p += strlen("ACTION");
+		memcpy(p, "ACTION ", strlen("ACTION "));
+		p += strlen("ACTION ");
 	}
 	memcpy(p, sots, lots);
 	p += lots;
