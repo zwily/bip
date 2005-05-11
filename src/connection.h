@@ -94,4 +94,9 @@ list_t *wait_event(list_t *cn_list, int *msec);
 
 int cn_is_connected(connection_t *cn);
 int cn_is_listening(connection_t *cn);
+
+int connection_localport(connection_t *cn);
+int connection_remoteport(connection_t *cn);
+char *connection_localip(connection_t *cn);
+char *connection_remoteip(connection_t *cn);
 #endif

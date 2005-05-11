@@ -1279,3 +1279,101 @@ int main(int argc,char* argv[])
 }
 #endif	
 
+int connection_localport(connection_t *cn)
+{
+	struct sockaddr_in addr;
+	int err, addrlen;
+	
+	if (cn->handle <= 0)
+		return -1;
+	
+	addrlen = sizeof(addr);
+	err = getsockname(cn->handle, (struct sockaddr *)&addr, &addrlen);
+	if (err != 0) {
+		mylog(LOG_ERROR, "in getsockname(%d): %s", cn->handle,
+				strerror(errno));
+		return -1;
+	}
+
+	return ntohs(addr.sin_port);
+}
+
+int connection_remoteport(connection_t *cn)
+{
+	struct sockaddr_in addr;
+	int err, addrlen;
+	
+	if (cn->handle <= 0)
+		return -1;
+	
+	addrlen = sizeof(addr);
+	err = getpeername(cn->handle, (struct sockaddr *)&addr, &addrlen);
+	if (err != 0) {
+		mylog(LOG_ERROR, "in getpeername(%d): %s", cn->handle,
+				strerror(errno));
+		return -1;
+	}
+
+	return ntohs(addr.sin_port);
+}
+
+char *connection_localip(connection_t *cn)
+{
+	struct sockaddr_in addr;
+	int err, addrlen;
+	char *ip;
+	const char *ret;
+	
+	if (cn->handle <= 0)
+		return NULL;
+	
+	addrlen = sizeof(addr);
+	err = getsockname(cn->handle, (struct sockaddr *)&addr, &addrlen);
+	if (err != 0) {
+		mylog(LOG_ERROR, "in getsockname(%d): %s", cn->handle,
+				strerror(errno));
+		return NULL;
+	}
+
+	ip = malloc(65);
+	if (ip == NULL)
+		fatal("malloc");
+
+	ret = inet_ntop(AF_INET, &(addr.sin_addr.s_addr), ip, 64);
+	if (ret == NULL) {
+		mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
+		return NULL;
+	}
+	return ip;
+}
+
+char *connection_remoteip(connection_t *cn)
+{
+	struct sockaddr_in addr;
+	int err, addrlen;
+	char *ip;
+	const char *ret;
+	
+	if (cn->handle <= 0)
+		return NULL;
+	
+	addrlen = sizeof(addr);
+	err = getpeername(cn->handle, (struct sockaddr *)&addr, &addrlen);
+	if (err != 0) {
+		mylog(LOG_ERROR, "in getpeername(%d): %s", cn->handle,
+				strerror(errno));
+		return NULL;
+	}
+
+
+	ip = malloc(65);
+	if (ip == NULL)
+		fatal("malloc");
+
+	ret = inet_ntop(AF_INET, &(addr.sin_addr.s_addr), ip, 64);
+	if (ret == NULL) {
+		mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
+		return NULL;
+	}
+	return ip;
+}
