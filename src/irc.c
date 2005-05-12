@@ -1821,6 +1821,54 @@ void irc_server_shutdown(struct link_server *s)
 }
 
 
+#ifdef HAVE_OIDENTD
+/* ugly */
+void oidentd_dump(list_t *connl)
+{
+	list_iterator_t it;
+	FILE *f;
+	char *home;
+	char tmpbuf[256];
+
+	home = getenv("HOME");
+	if (!home)
+		return;
+	strcpy(tmpbuf, home);
+	strcat(tmpbuf, "/.oidentd.conf");
+	f = fopen(tmpbuf, "w");
+	if (!f)
+		return;
+
+	for (list_it_init(connl, &it); list_it_item(&it); list_it_next(&it)) {
+		connection_t *c = list_it_item(&it);
+		struct link_any *la = c->user_data;
+		if (c->connected == CONN_OK && la &&
+				TYPE(la) == IRC_TYPE_SERVER) {
+			struct link_server *ls = (struct link_server*)la;
+			struct link *l = LINK(ls);
+
+			char *localip, *remoteip;
+			int localport, remoteport;
+
+			localip = connection_localip(CONN(ls));
+			localport = connection_localport(CONN(ls));
+			remoteip = connection_remoteip(CONN(ls));
+			remoteport = connection_remoteport(CONN(ls));
+
+			fprintf(f, "to %s lport %d from %s fport %d {\n",
+					remoteip, remoteport, localip,
+					localport);
+			fprintf(f, "\treply %s\n", l->user);
+			fprintf(f, "}\n");
+			free(localip);
+			free(remoteip);
+		}
+	}
+	fclose(f);
+}
+#endif
+
+
 struct link_client *reloading_client;
 /*
  * The main loop
@@ -1934,8 +1982,13 @@ void irc_main(connection_t *inc, list_t *ll)
 			}
 		}
 
+		int nc;
 		/* Da main loop */
-		list_t *ready = wait_event(&connl, &timeleft);
+		list_t *ready = wait_event(&connl, &timeleft, &nc);
+#ifdef HAVE_OIDENTD
+		if (nc)
+			oidentd_dump(&connl);
+#endif
 		while ((conn = list_remove_first(ready))) {
 			struct link_any *lc =
 				(struct link_any *)conn->user_data;

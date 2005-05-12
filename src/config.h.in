@@ -3,6 +3,9 @@
 /* Define to 1 if you have the `ssl' library (-lssl). */
 #undef HAVE_LIBSSL
 
+/* Enable oidentd.conf management support */
+#undef HAVE_OIDENTD
+
 /* Name of package */
 #undef PACKAGE
 

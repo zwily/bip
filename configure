@@ -272,7 +272,7 @@ PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
 ac_unique_file="src/bip.c"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT YACC LEX LEXLIB LEX_OUTPUT_ROOT DEBUG_TRUE DEBUG_FALSE LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT YACC LEX LEXLIB LEX_OUTPUT_ROOT DEBUG_TRUE DEBUG_FALSE OIDENTD_TRUE OIDENTD_FALSE LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -805,6 +805,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug                Turn on debugging
+  --enable-oidentd                Enable oidentd support (bip overwrites ~/.oidentd.conf with this on!)
   --disable-ssl           Drop OpenSSL support
 
 Some influential environment variables:
@@ -2925,6 +2926,29 @@ else
   DEBUG_FALSE=
 fi
 
+oidentd=false
+# Check whether --enable-oidentd or --disable-oidentd was given.
+if test "${enable_oidentd+set}" = set; then
+  enableval="$enable_oidentd"
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_OIDENTD
+_ACEOF
+
+
+
+fi;
+	#[oidentd=true]
+
+
+if test x$debug = xtrue; then
+  OIDENTD_TRUE=
+  OIDENTD_FALSE='#'
+else
+  OIDENTD_TRUE='#'
+  OIDENTD_FALSE=
+fi
+
 requires_libssl=yes
 # Check whether --enable-ssl or --disable-ssl was given.
 if test "${enable_ssl+set}" = set; then
@@ -3661,6 +3685,8 @@ s,@LEXLIB@,$LEXLIB,;t t
 s,@LEX_OUTPUT_ROOT@,$LEX_OUTPUT_ROOT,;t t
 s,@DEBUG_TRUE@,$DEBUG_TRUE,;t t
 s,@DEBUG_FALSE@,$DEBUG_FALSE,;t t
+s,@OIDENTD_TRUE@,$OIDENTD_TRUE,;t t
+s,@OIDENTD_FALSE@,$OIDENTD_FALSE,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF

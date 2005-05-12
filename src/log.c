@@ -617,7 +617,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	}
 	son = p;
 	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
-	while (*p && *p != '!' && *p != ' ')
+	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
 	if (!p || !p[0] || !p[1])
 		return buf;

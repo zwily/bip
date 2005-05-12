@@ -21,7 +21,7 @@ extern int errno;
 static SSL_CTX *sslctx = NULL;
 static BIO *errbio = NULL;
 extern char *conf_ssl_certfile;
-static int SSLize(connection_t *cn);
+static int SSLize(connection_t *cn, int *nc);
 static int SSL_init_context(void);
 #endif
 
@@ -563,7 +563,7 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	return 1;
 }
 
-static int check_event_write(fd_set *fds, connection_t *cn)
+static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 {
 	if (cn_is_in_error(cn)) {
 		mylog(LOG_DEBUGVERB, "Error on fd %d (state %d)",
@@ -588,8 +588,8 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 		int err, err2;
 		socklen_t errSize = sizeof(err);
 
-		err2 = getsockopt(cn->handle, SOL_SOCKET, SO_ERROR,(void *)&err,
-				&errSize);
+		err2 = getsockopt(cn->handle, SOL_SOCKET, SO_ERROR,
+				(void *)&err, &errSize);
 		
 		if (err2 < 0) {
 			mylog(LOG_WARN, "fd:%d getsockopt error: %s",
@@ -600,7 +600,7 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 					CONN_NEED_SSLIZE) ? 0 : 1;
 			
 		} else if (err == EINPROGRESS || err == EALREADY) {
-			mylog(LOG_INFO, "fd:%d Connection in progress...",
+			mylog(LOG_DEBUG, "fd:%d Connection in progress...",
 					cn->handle);
 			return connection_timedout(cn);
 		} else if (err == EISCONN || err == 0) {
@@ -611,7 +611,8 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 			}
 #endif
 			cn->connected = CONN_OK;
-			mylog(LOG_INFO, "fd:%d Connection established !",
+			*nc = 1;
+			mylog(LOG_DEBUG, "fd:%d Connection established !",
 					cn->handle);
 			return 1;
 		} else {
@@ -626,7 +627,7 @@ static int check_event_write(fd_set *fds, connection_t *cn)
 
 #ifdef HAVE_LIBSSL
 	if (cn->connected == CONN_NEED_SSLIZE) {
-		if (SSLize(cn))
+		if (SSLize(cn, nc))
 			return connection_timedout(cn);
 		return 0;
 	}
@@ -691,7 +692,7 @@ int cn_want_write(connection_t *cn)
 	return !list_is_empty(cn->outgoing);
 }
 
-list_t *wait_event(list_t *cn_list, int *msec)
+list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 {
 	fd_set fds_read, fds_write, fds_except;
 	int maxfd = -1, err;
@@ -699,6 +700,7 @@ list_t *wait_event(list_t *cn_list, int *msec)
 	list_iterator_t it;
 	struct timeval tv;
 	struct timeval btv, etv;
+	*nc = 0;
 
 	cn_newdata = list_new(NULL);
 	FD_ZERO(&fds_read);
@@ -795,7 +797,7 @@ list_t *wait_event(list_t *cn_list, int *msec)
 			list_add_first(cn_newdata, cn);
 			continue;
  		}
-		if (check_event_write(&fds_write, cn))
+		if (check_event_write(&fds_write, cn, nc))
 			connection_ready_output(cn);
 
 		if (check_event_read(&fds_read, cn)) {
@@ -1097,7 +1099,7 @@ prng_end:
 	return 0;
 }
 
-static int SSLize(connection_t *cn)
+static int SSLize(connection_t *cn, int *nc)
 {
 	int err, err2;
 	
@@ -1139,6 +1141,7 @@ static int SSLize(connection_t *cn)
 			return 1;
 		}*/
 		cn->connected = CONN_OK;
+		*nc = 1;
 		return 0;
 	}
 	if (err2 == SSL_ERROR_ZERO_RETURN || err2 == SSL_ERROR_SSL) {
@@ -1263,7 +1266,7 @@ int main(int argc,char* argv[])
 	while (cont) {
 		conn2 = accept_new(conn);
 		if (conn2) {
-			mylog(LOG_INFO, "New client");
+			mylog(LOG_DEBUG, "New client");
 			cont = 0;
 		}
 		sleep(1);
