@@ -96,8 +96,6 @@ int is_valid_nick(char *str);
 int is_valid_username(char *str);
 char *strmaydup(char *s);
 
-int ident_spoof(char *user);
-int ident_nospoof();
 void strucase(char *s);
 int ischannel(char p);
 #endif

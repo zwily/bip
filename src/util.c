@@ -558,64 +558,6 @@ char *strmaydup(char *s)
 	
 }
 
-/* returns 1 on error */
-int ident_spoof(char *user)
-{
-	char *h;
-	char buf[1024];
-	mode_t ou;
-	FILE *of;
-	int cnt = 0;
-	
-	/* get home dir or return an error */
-	h = getenv("HOME");
-	if (h == NULL)
-		return 1;
-	
-	/* first we set umask correctly */
-	ou = umask(0022);
-	
-	snprintf(buf, 1024, "%s/.ispoof", h);
-	of = fopen(buf, "w");
-	if (of) {
-		fprintf(of, "%s\n", user);
-		fclose(of);
-		cnt++;
-	}
-	snprintf(buf, 1024, "%s/.oidentd.conf", h);
-	of = fopen(buf, "w");
-	if (of) {
-		fprintf(of, "global { reply \"%s\" }\n", user);
-		fclose(of);
-		cnt++;
-	}
-
-	/* restore old umask */
-	umask(ou);
-
-	return (cnt == 2);
-}
-
-/* returns 1 on error */
-int ident_nospoof()
-{
-	char *h;
-	char buf[1024];
-	int e, cnt;
-
-	/* get home dir or return an error */
-	h = getenv("HOME");
-	if (h == NULL)
-		return 1;
-	
-	snprintf(buf, 1024, "%s/.ispoof", h);
-	e = unlink(buf);
-	cnt = (e == -1 && errno != ENOENT ? 1 : 0);
-	snprintf(buf, 1024, "%s/.oidentd.conf", h);
-	e = unlink(buf);
-	return cnt+(e == -1 && errno != ENOENT ? 1 : 0);
-}
-
 void strucase(char *s)
 {
 	while (*s) {

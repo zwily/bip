@@ -1829,6 +1829,7 @@ void oidentd_dump(list_t *connl)
 	FILE *f;
 	char *home;
 	char tmpbuf[256];
+	int err;
 
 	home = getenv("HOME");
 	if (!home)
@@ -1855,16 +1856,21 @@ void oidentd_dump(list_t *connl)
 			remoteip = connection_remoteip(CONN(ls));
 			remoteport = connection_remoteport(CONN(ls));
 
-			fprintf(f, "to %s lport %d from %s fport %d {\n",
+			fprintf(f, "to %s fport %d from %s lport %d {\n",
 					remoteip, remoteport, localip,
 					localport);
-			fprintf(f, "\treply %s\n", l->user);
+			fprintf(f, "\treply \"%s\"\n", l->user);
 			fprintf(f, "}\n");
 			free(localip);
 			free(remoteip);
 		}
 	}
 	fclose(f);
+	err = chmod(tmpbuf, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (err) {
+		mylog(LOG_WARN, "Unable to set modes for '%s': %s", tmpbuf,
+				strerror(errno));
+	}
 }
 #endif
 
