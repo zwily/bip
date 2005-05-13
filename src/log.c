@@ -176,7 +176,7 @@ void log_updatelast(logfile_t *lf)
 
 void log_reinit(logfilegroup_t *lfg)
 {
-	mylog(LOG_ERROR, "%s is inconsistant, droping backlog info\n",
+	mylog(LOG_ERROR, "%s is inconsistant, droping backlog info",
 			lfg->name);
 	logfile_t *olf;
 	while ((olf = list_get_first(&lfg->file_group)) !=
@@ -371,6 +371,7 @@ void log_privmsg(log_t *logdata, char *ircmask, char *destination,
 {
 	if (!ircmask)
 		ircmask = "Server message";
+
 	if (*message == '\001' && *(message + strlen(message) - 1) == '\001') {
 		char *msg = strdup(message);
 		if (!msg)
@@ -380,12 +381,25 @@ void log_privmsg(log_t *logdata, char *ircmask, char *destination,
 			return;
 		}
 		*(msg + strlen(msg) - 1) = '\0';
-		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s * %s %s\n",
-				timestamp(), ircmask, msg + 8);
+		if (ischannel(*destination) || strchr(destination, '@')) {
+			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+					"%s * %s %s\n", timestamp(), ircmask,
+					msg + 8);
+		} else {
+			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+					"%s (%s) * %s %s\n", timestamp(),
+					destination, ircmask, msg + 8);
+		}
 		free(msg);
 	} else {
-		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s\n",
+		if (ischannel(*destination) || strchr(destination, '@')) {
+			snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s\n",
 				timestamp(), ircmask, message);
+		} else {
+			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+					"%s %s (%s): %s\n", timestamp(),
+					ircmask, destination, message);
+		}
 	}
 	log_write(logdata, destination, logdata->buffer);
 }
@@ -448,7 +462,7 @@ void log_mode(log_t *logdata, char *ircmask, char *channel, char *modes,
 	log_write(logdata, channel, logdata->buffer);
 	for (i = 0; i < modargc; i++) {
 		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s%c", modargv[i],
-				i == modargc-1 ? ']' : ' ');
+				i == modargc - 1 ? ']' : ' ');
 		log_write(logdata, channel, logdata->buffer);
 	}
 	snprintf(logdata->buffer, LOGLINE_MAXLEN, " by %s\n", ircmask);
@@ -581,6 +595,7 @@ int log_has_backlog(log_t *logdata, char *destination)
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 
+/* must *not* return NULL */
 static char *log_beautify(char *buf, char *dest, int *raw)
 {
 	int action = 0;
@@ -593,9 +608,10 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	size_t lots, lon, lom;
 	char *ret;
 
+
 	*raw = 0;
 	if (!buf)
-		return NULL;
+		mylog(LOG_INFO, "BUG!");
 
 	p = strchr(buf, ' ');
 	if (!p || !p[0] || !p[1])
@@ -661,6 +677,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*p++ = '\n';
 	*p = 0;
 	free(buf);
+	mylog(LOG_INFO, "beautify in: \"%s\"", raw);
+	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
 	return ret;
 }
 
@@ -675,33 +693,40 @@ char *log_backread(log_t *logdata, char *destination, int *raw)
 	if (!conf_always_backlog && logdata->connected)
 		return NULL;
 
-	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
 	lfg = hash_get(&logdata->logfgs, destination);
-
 	if (!lfg)
 		return NULL;
+
+	/* freed by log_beautify sometimes */
+	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
 
 	if (!logdata->backlogging) {
 		list_it_init(&lfg->file_group, &logdata->file_it);
 		logdata->backlogging = 1;
+		mylog(LOG_INFO, "backlogging!");
 	}
 next_file:
 	/* check the files containing data to backlog */
 	lf = list_it_item(&logdata->file_it);
 	if (lf != list_get_last(&lfg->file_group)) {
+		mylog(LOG_INFO, "%s not last file!", lf->filename);
 		/* if the file is not the current open for logging
 		 * (it is an old file that has been rotated)
 		 * open if necessary, backlog line per line, and close */
 		if (!lf->file) {
+			mylog(LOG_INFO, "opening: %s!", lf->filename);
 			lf->file = fopen(lf->filename, "r");
 			if (!lf->file) {
 				mylog(LOG_ERROR, "Can't open %s for reading",
 						lf->filename);
 				log_reinit(lfg);
+				free(buf);
 				return strdup("Error reading logfile");
 			}
+			mylog(LOG_INFO, "seeking: %d!", lf->backlog_offset);
 			if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 				log_reinit(lfg);
+				free(buf);
 				return strdup("Error reading in logfile");
 			}
 		}
@@ -709,9 +734,17 @@ next_file:
 			c = fgetc(lf->file);
 			if (!conf_always_backlog)
 				lf->backlog_offset++;
-			if (c == EOF || c == '\n'
-					|| pos + 1 >= LOGLINE_MAXLEN) {
-				if (c == EOF) {
+			if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
+				/* change file if we reach EOF, if pos == maxlen
+				 * then the log file is corrupted so we also
+				 * drop this file */
+				if (pos == LOGLINE_MAXLEN)
+					mylog(LOG_INFO, "logline too long");
+				if (c == EOF || pos == LOGLINE_MAXLEN) {
+					mylog(LOG_INFO, "EOF: %s (%d)!",
+							lf->filename,
+							conf_always_backlog);
+
 					list_it_next(&logdata->file_it);
 					if (!conf_always_backlog) {
 						list_remove_first(
@@ -732,6 +765,7 @@ next_file:
 		}
 	}
 
+	mylog(LOG_INFO, "already open: %s", lf->filename); 
 	/* the logfile to read is the one open for writing */
 	if (!logdata->lastfile_seeked) {
 		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
@@ -739,10 +773,12 @@ next_file:
 			return strdup("Error reading in logfile");
 		}
 		logdata->lastfile_seeked = 1;
+		mylog(LOG_INFO, "last file seedked!");
 	}
 
 	c = fgetc(lf->file);
 	if (c == EOF) {
+		mylog(LOG_INFO, "end of backlog");
 		logdata->lastfile_seeked = 0;
 		logdata->backlogging = 0;
 		free(buf);
@@ -757,7 +793,17 @@ next_file:
 		c = fgetc(lf->file);
 		if (!conf_always_backlog)
 			lf->backlog_offset++;
-		if (c == EOF || c == '\n' || pos + 1 >= LOGLINE_MAXLEN) {
+		if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
+			if (pos == LOGLINE_MAXLEN) {
+				mylog(LOG_INFO, "logline too long");
+				fseek(lf->file, 0, SEEK_END);
+				/* in the corruption case we alwayse reset
+				 * backlog offset */
+				lf->backlog_offset = ftell(lf->file);
+				free(buf);
+				return NULL;
+			}
+
 			if (conf_always_backlog && c == EOF)
 				lf->backlog_offset--;
 			buf[pos] = 0;
@@ -775,6 +821,10 @@ static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *str)
 	size_t nbwrite;
 	size_t len;
 	logfile_t *lf = list_get_last(&lfg->file_group);
+
+	/* str alloced size is LOGLINE_MAXLEN + 1 */
+	str[LOGLINE_MAXLEN - 1] = '\n';
+	str[LOGLINE_MAXLEN] = 0;
 
 	len = strlen(str);
 	nbwrite = fwrite(str, sizeof(char), len, lf->file);
@@ -834,7 +884,7 @@ log_t *log_new(char *user, char *network)
 	logdata->user = strdup(user);
 	logdata->network = strdup(network);
 	hash_init(&logdata->logfgs, HASH_NOCASE);
-	logdata->buffer = (char *)malloc(LOGLINE_MAXLEN * sizeof(char));
+	logdata->buffer = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
 	if (!logdata->user || !logdata->network || !logdata->buffer)
 		fatal("out of memory");
 	logdata->connected = 0;

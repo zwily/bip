@@ -1285,7 +1285,8 @@ int main(int argc,char* argv[])
 int connection_localport(connection_t *cn)
 {
 	struct sockaddr_in addr;
-	int err, addrlen;
+	int err;
+	socklen_t addrlen;
 	
 	if (cn->handle <= 0)
 		return -1;
@@ -1304,7 +1305,8 @@ int connection_localport(connection_t *cn)
 int connection_remoteport(connection_t *cn)
 {
 	struct sockaddr_in addr;
-	int err, addrlen;
+	int err;
+	socklen_t addrlen;
 	
 	if (cn->handle <= 0)
 		return -1;
@@ -1323,9 +1325,10 @@ int connection_remoteport(connection_t *cn)
 char *connection_localip(connection_t *cn)
 {
 	struct sockaddr_in addr;
-	int err, addrlen;
+	int err;
 	char *ip;
 	const char *ret;
+	socklen_t addrlen;
 	
 	if (cn->handle <= 0)
 		return NULL;
@@ -1353,9 +1356,10 @@ char *connection_localip(connection_t *cn)
 char *connection_remoteip(connection_t *cn)
 {
 	struct sockaddr_in addr;
-	int err, addrlen;
+	int err;
 	char *ip;
 	const char *ret;
+	socklen_t addrlen;
 	
 	if (cn->handle <= 0)
 		return NULL;
