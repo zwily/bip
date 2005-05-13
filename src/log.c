@@ -595,6 +595,11 @@ int log_has_backlog(log_t *logdata, char *destination)
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 
+/*
+ * 13-05-2005 12:14:29 nohar (nohar): coucou
+ * 13-05-2005 12:14:30 nohar!~nohar@je.suis.t1r.net (nohar): coucou
+ */
+
 /* must *not* return NULL */
 static char *log_beautify(char *buf, char *dest, int *raw)
 {
@@ -604,8 +609,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	 * so = start, lo = length
 	 * ts = timestamp, n = sender nick, m = message or action
 	 */
-	char *sots, *son, *som;
-	size_t lots, lon, lom;
+	char *sots, *son, *som, *sod = NULL;
+	size_t lots, lon, lom, lod;
 	char *ret;
 
 
@@ -635,7 +640,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
-	if (!p || !p[0] || !p[1])
+	if (!p[0] || !p[1])
 		return buf;
 	lon = p - son;
 	p = strchr(p, ' ');
@@ -643,24 +648,51 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 		return buf;
 	p++;
 
+	if (*p == '(') {
+		sod = p;
+		while (*p && *p != ')' && *p != ' ')
+			p++;
+		if (*p != ')')
+			return buf;
+		lod = p - sod;
+		p++;
+		if (*p != ':')
+			return buf;
+		p++;
+		if (*p != ' ')
+			return buf;
+		p++;
+		if (!p[0] || !p[1])
+			return buf;
+	} else {
+		sod = dest;
+		lod = strlen(dest);
+	}
+
+
 	som = p;
 	lom = strlen(p);
 
 	*raw = 1;
 	p = ret = (char *)malloc(
-		1 + lon + strlen(LAMESTRING) + strlen(dest) + 2 + lots +
+		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +
 		1 + lom + 3 + action * (2 + strlen("ACTION ")));
 	if (!p)
 		fatal("out of memory");
 	*p++ = ':';
+
 	memcpy(p, son, lon);
 	p += lon;
+
 	strcpy(p, LAMESTRING);
 	p += strlen(LAMESTRING);
-	strcpy(p, dest);
-	p += strlen(dest);
+
+	memcpy(p, sod, lod);
+	p += lod;
+
 	strcpy(p, " :");
 	p += 2;
+
 	if (action) {
 		*p++ = 1;
 		memcpy(p, "ACTION ", strlen("ACTION "));
@@ -668,16 +700,19 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	}
 	memcpy(p, sots, lots);
 	p += lots;
+
 	*p++ = ' ';
+
 	memcpy(p, som, lom);
 	p += lom;
+
 	if (action)
 		*p++ = 1;
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
 	free(buf);
-	mylog(LOG_INFO, "beautify in: \"%s\"", raw);
+	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
 	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
 	return ret;
 }
