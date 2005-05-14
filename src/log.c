@@ -404,16 +404,21 @@ void log_privmsg(log_t *logdata, char *ircmask, char *destination,
 	log_write(logdata, destination, logdata->buffer);
 }
 
-void log_notice(log_t *logdata, char *ircmask, char *channel,
-		char *message)
+void log_notice(log_t *logdata, char *ircmask, char *destination, char *message)
 {
 	if (!ircmask)
 		ircmask = "Server message";
 	if (*message == '\001' && *(message + strlen(message) - 1) == '\001')
 		return;
-	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s %s\n", timestamp(),
-			ircmask, channel, message);
-	log_write(logdata, channel, logdata->buffer);
+	if (ischannel(*destination) || strchr(destination, '@')) {
+		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s\n",
+				timestamp(), ircmask, message);
+	} else {
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
+				"%s %s (%s): %s\n", timestamp(),
+				ircmask, destination, message);
+	}
+	log_write(logdata, destination, logdata->buffer);
 }
 
 void log_topic(log_t *logdata, char *ircmask, char *channel, char *message)
@@ -612,7 +617,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	char *sots, *son, *som, *sod = NULL;
 	size_t lots, lon, lom, lod;
 	char *ret;
-
+	int guess_was_me = 0;
 
 	*raw = 0;
 	if (!buf)
@@ -640,6 +645,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
+	if (*p != '!')
+		guess_was_me = 1;
 	if (!p[0] || !p[1])
 		return buf;
 	lon = p - son;
@@ -649,6 +656,9 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	p++;
 
 	if (*p == '(') {
+		p++;
+		if (!p[0] || !p[1] || p[0] == ')')
+			return buf;
 		sod = p;
 		while (*p && *p != ')' && *p != ' ')
 			p++;
@@ -668,7 +678,10 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 		sod = dest;
 		lod = strlen(dest);
 	}
-
+	if (guess_was_me) {
+		lon = lod;
+		son = sod;
+	}
 
 	som = p;
 	lom = strlen(p);
@@ -676,7 +689,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*raw = 1;
 	p = ret = (char *)malloc(
 		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +
-		1 + lom + 3 + action * (2 + strlen("ACTION ")));
+		1 + 3 + lom + 3 + action * (2 + strlen("ACTION ")));
 	if (!p)
 		fatal("out of memory");
 	*p++ = ':';
@@ -698,6 +711,10 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 		memcpy(p, "ACTION ", strlen("ACTION "));
 		p += strlen("ACTION ");
 	}
+	if (guess_was_me) {
+		memcpy(p, "<-", 2);
+		p += 2;
+	}
 	memcpy(p, sots, lots);
 	p += lots;
 
@@ -711,9 +728,9 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
-	free(buf);
 	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
 	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
+	free(buf);
 	return ret;
 }
 
