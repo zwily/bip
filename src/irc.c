@@ -567,6 +567,10 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		}
 	}
 
+	if (!LINK(ic))
+		mylog(LOG_ERROR, "Invalid credentials (user: %s realname:%s)",
+				ic->init_user, ic->init_real_name);
+
 	free(ic->init_pass);
 	ic->init_pass = NULL;
 	init_nick = ic->init_nick;
@@ -2054,10 +2058,8 @@ void irc_main(connection_t *inc, list_t *ll)
 							"closing...");
 					goto prot_err_lines;
 				}
-				if (r == ERR_AUTH) {
-					mylog(LOG_ERROR, "Invalid credentials");
+				if (r == ERR_AUTH)
 					goto prot_err_lines;
-				}
 				/* XXX: not real error */
 				if (r == OK_CLOSE)
 					goto prot_err_lines;

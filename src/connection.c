@@ -1135,11 +1135,13 @@ static int SSLize(connection_t *cn, int *nc)
 		if (len > 0)
 			buf[len-1] = '\0';
 		mylog(LOG_DEBUG, "Negociated cyphers: %s",buf);
-/*		if (SSL_get_verify_result(cn->ssl_h) != X509_V_OK) {
+/*
+		if (SSL_get_verify_result(cn->ssl_h) != X509_V_OK) {
 			mylog(LOG_ERROR, "Invalid certificate !");
 			cn->connected = CONN_ERROR;
 			return 1;
-		}*/
+		}
+*/
 		cn->connected = CONN_OK;
 		*nc = 1;
 		return 0;
