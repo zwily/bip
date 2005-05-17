@@ -1439,15 +1439,17 @@ static int irc_kick(struct link_server *server, struct line *line)
 
 static int irc_privmsg(struct link_server *server, struct line *line)
 {
-	log_privmsg(LINK(server)->log, line->origin, line->elemv[1],
-			line->elemv[2]);
+	if (LINK(server)->s_state == IRCS_CONNECTED)
+		log_privmsg(LINK(server)->log, line->origin, line->elemv[1],
+				line->elemv[2]);
 	return OK_COPY;
 }
 
 static int irc_notice(struct link_server *server, struct line *line)
 {
-	log_notice(LINK(server)->log, line->origin, line->elemv[1],
-			line->elemv[2]);
+	if (LINK(server)->s_state == IRCS_CONNECTED)
+		log_notice(LINK(server)->log, line->origin, line->elemv[1],
+				line->elemv[2]);
 	return OK_COPY;
 }
 
