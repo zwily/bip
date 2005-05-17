@@ -461,7 +461,7 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 		char *line;
 		int raw;
 		while ((line = log_backread(LINK(ic)->log, chan->name, &raw))) {
-			mylog(LOG_DEBUG, "%s", line);
+			mylog(LOG_DEBUG, "backread:%s\n", line);
 			if (raw)
 				write_line(CONN(ic), line);
 			else
@@ -635,6 +635,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	char *str;
 	int raw;
 	while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &raw))) {
+		mylog(LOG_DEBUG, "backread:%s\n", line);
 		if (raw)
 			write_line(CONN(ic), str);
 		else

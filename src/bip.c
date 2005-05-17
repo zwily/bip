@@ -166,7 +166,7 @@ static pid_t daemonize(void)
 	}
 	if (setsid() < 0)
 		fatal("setsid() failed");
-	snprintf(buf, 4095, "%s/bip.syslog", conf_log_root);
+	snprintf(buf, 4095, "%s/bip.log", conf_log_root);
 	FILE *f = fopen(buf, "a");
 	if (!f)
 		fatal("Can't open %s: %s", buf, strerror(errno));

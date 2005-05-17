@@ -619,6 +619,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	char *ret;
 	int guess_was_me = 0;
 
+	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
+
 	*raw = 0;
 	if (!buf)
 		mylog(LOG_INFO, "BUG!");
@@ -728,7 +730,6 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
-	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
 	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
 	free(buf);
 	return ret;
@@ -817,7 +818,6 @@ next_file:
 		}
 	}
 
-	mylog(LOG_INFO, "already open: %s", lf->filename); 
 	/* the logfile to read is the one open for writing */
 	if (!logdata->lastfile_seeked) {
 		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
