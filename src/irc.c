@@ -1872,6 +1872,7 @@ void oidentd_dump(list_t *connl)
 			free(remoteip);
 		}
 	}
+	fflush(f);
 	fclose(f);
 	err = chmod(tmpbuf, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (err) {

@@ -1146,12 +1146,16 @@ static int SSLize(connection_t *cn, int *nc)
 		*nc = 1;
 		return 0;
 	}
+	
+	/* From now on, we are on error, thus we return 1 to check timeout */
 	if (err2 == SSL_ERROR_ZERO_RETURN || err2 == SSL_ERROR_SSL) {
 		mylog(LOG_DEBUG, "Error in SSL handshake.");
 		cn->connected = CONN_ERROR;
 		return 1;
 	}
-	return 0;
+	/* Here are unhandled errors/resource waiting. Timeout must be
+	 * checked but connection may still be valid */
+	return 1;
 }
 
 static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,

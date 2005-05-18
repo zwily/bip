@@ -1,9 +1,11 @@
+Before release:
 - SSL certificate verification
-- allowed IP filtering
-- multi user (user/pass to identify user + realname to id. network)
-- keep invites when detached
-- DCC proxying ?
-- /bip command, for admin (rehash, jump, ...)
-- crypt logs
+- keep invites when detached ?
+- allow global (or per net ?) IP filtering
+- /bip command for admin (at least rehash, jump, ...)
+- check why log_mode doesn't add closing bracket...
+- bug: bip using 100% cpu when reconnecting (to SSL only ?)
 
-tidy up irc_server/server structures
+TODO:
+- DCC proxying...
+- crypt logs
