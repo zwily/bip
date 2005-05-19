@@ -20,14 +20,17 @@ extern int errno;
 extern int log_level;
 extern char *conf_log_root;
 extern char *conf_log_format;
+extern int conf_log;
+
+int conf_memlog = 1;
 
 /* conf_always_backlog => conf_backlog_lines != 0 */
-extern int conf_no_backlog;
+extern int conf_backlog;
 extern int conf_backlog_lines;
 extern int conf_always_backlog;
 
 int log_set_backlog_offset(log_t *logdata, char *dest);
-static int _log_write(log_t *logdata, logfilegroup_t *lf, char *str);
+static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
 void logfile_free(logfile_t *lf);
 
 /* TODO: change fatal("out of memory") to cleanup & return NULL */
@@ -194,33 +197,37 @@ void log_reinit(logfilegroup_t *lfg)
 static int log_add_file(log_t *logdata, char *destination, char *filename)
 {
 	FILE *f;
-	logfile_t *lf;
+	logfile_t *lf = NULL;
 	logfilegroup_t *lfg;
-	
-	f = fopen(filename, "a+");
-	if (!f) {
-		mylog(LOG_ERROR, "fopen(%s) %s", filename, strerror(errno));
-		return 0;
+
+	if (conf_log) {
+		f = fopen(filename, "a+");
+		if (!f) {
+			mylog(LOG_ERROR, "fopen(%s) %s", filename,
+					strerror(errno));
+			return 0;
+		}
+
+		lf = malloc(sizeof(logfile_t));
+		if (!lf)
+			fatal("out of memory");
+		lf->file = f;
+		lf->filename = strdup(filename);
+		if (!lf->filename)
+			fatal("out of memory");
+
+		fseek(lf->file, 0, SEEK_END);
+		if (ftell(f) < 0)
+			fatal("ftell");
+		lf->len = ftell(f);
+		lf->backlog_offset = lf->len;
+		log_updatelast(lf);
 	}
 
-	lf = malloc(sizeof(logfile_t));
-	if (!lf)
-		fatal("out of memory");
-	lf->file = f;
-	lf->filename = strdup(filename);
-	if (!lf->filename)
-		fatal("out of memory");
-
-	fseek(lf->file, 0, SEEK_END);
-	if (ftell(f) < 0)
-		fatal("ftell");
-	lf->len = ftell(f);
-	lf->backlog_offset = lf->len;
-	log_updatelast(lf);
-
 	lfg = hash_get(&logdata->logfgs, destination);
+
 	if (!lfg) {
-		lfg = malloc(sizeof(logfilegroup_t));
+		lfg = calloc(sizeof(logfilegroup_t), 1);
 		if (!lfg)
 			fatal("out of memory");
 		list_init(&lfg->file_group, NULL);
@@ -230,7 +237,14 @@ static int log_add_file(log_t *logdata, char *destination, char *filename)
 		lfg->skip_advance = 0;
 		hash_insert(&logdata->logfgs, destination, lfg);
 	}
-	list_add_last(&lfg->file_group, lf);
+
+	if (conf_memlog) {
+		if (!lfg->memlog)
+			lfg->memlog = list_new(NULL);
+	}
+
+	if (lf)
+		list_add_last(&lfg->file_group, lf);
 	return 1;
 }
 
@@ -252,7 +266,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 {
 	logfile_t *lf;
 	logfilegroup_t *lfg;
-	char *filename;
+	char *filename = NULL;
 	time_t t;
 	struct tm *ltime;
 
@@ -261,13 +275,17 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 
 	lfg = hash_get(&logdata->logfgs, destination);
 
-	if (!lfg) {
-		filename = log_build_filename(logdata, destination);
-		if (!filename)
-			return NULL;
+	if (lfg && !conf_log)
+		return lfg;
 
-		mylog(LOG_DEBUG, "Creating new logfile for %s: %s", destination,
-				filename);
+	if (!lfg) {
+		if (conf_log) {
+			filename = log_build_filename(logdata, destination);
+			if (!filename)
+				return NULL;
+			mylog(LOG_DEBUG, "Creating new logfile for %s: %s",
+					destination, filename);
+		}
 		if (!log_add_file(logdata, destination, filename)) {
 			free(filename);
 			return NULL;
@@ -275,9 +293,11 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 		lfg = hash_get(&logdata->logfgs, destination);
 		if (!lfg)
 			fatal("internal log_find_file");
-		free(filename);
+		if (filename)
+			free(filename);
 		return lfg;
 	}
+
 	/* This is reached if lfg already exists */
 	time(&t);
 	ltime = localtime(&t);
@@ -305,7 +325,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 		}
 		free(filename);
 
-		if (conf_no_backlog) {
+		if (!conf_backlog) {
 			/* remove oldlf from file_group */
 			if (list_remove_first(&lfg->file_group) != oldlf)
 				fatal("internal log_find_file 2");
@@ -366,11 +386,15 @@ void log_nick(log_t *logdata, char *ircmask, char *channel, char *newnick)
 	log_write(logdata, channel, logdata->buffer);
 }
 
-void log_privmsg(log_t *logdata, char *ircmask, char *destination,
-		char *message)
+static void _log_privmsg(log_t *logdata, char *ircmask, int src,
+		char *destination, char *message)
 {
+	char dir = '<';
 	if (!ircmask)
 		ircmask = "Server message";
+
+	if (src)
+		dir = '>';
 
 	if (*message == '\001' && *(message + strlen(message) - 1) == '\001') {
 		char *msg = strdup(message);
@@ -383,42 +407,72 @@ void log_privmsg(log_t *logdata, char *ircmask, char *destination,
 		*(msg + strlen(msg) - 1) = '\0';
 		if (ischannel(*destination) || strchr(destination, '@')) {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s * %s %s\n", timestamp(), ircmask,
-					msg + 8);
+					"%s * %c %s %s\n", timestamp(), dir,
+					ircmask, msg + 8);
 		} else {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s (%s) * %s %s\n", timestamp(),
-					destination, ircmask, msg + 8);
+					"%s (%s) * %c %s %s\n", timestamp(),
+					destination, dir, ircmask, msg + 8);
 		}
 		free(msg);
 	} else {
 		if (ischannel(*destination) || strchr(destination, '@')) {
-			snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s\n",
-				timestamp(), ircmask, message);
+			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+					"%s %c %s: %s\n", timestamp(), dir,
+					ircmask, message);
 		} else {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s %s (%s): %s\n", timestamp(),
-					ircmask, destination, message);
+					"%s %c %s (%s): %s\n", timestamp(),
+					dir, ircmask, destination, message);
 		}
 	}
 	log_write(logdata, destination, logdata->buffer);
 }
 
-void log_notice(log_t *logdata, char *ircmask, char *destination, char *message)
+void log_privmsg(log_t *logdata, char *ircmask, char *destination,
+		char *message)
 {
+	_log_privmsg(logdata, ircmask, 0, destination, message);
+}
+
+void log_cli_privmsg(log_t *logdata, char *ircmask, char *destination,
+		char *message)
+{
+	_log_privmsg(logdata, ircmask, 1, destination, message);
+}
+
+static void _log_notice(log_t *logdata, char *ircmask, int src,
+		char *destination, char *message)
+{
+	char dir = '<';
+
 	if (!ircmask)
 		ircmask = "Server message";
+	if (src)
+		dir = '>';
 	if (*message == '\001' && *(message + strlen(message) - 1) == '\001')
 		return;
 	if (ischannel(*destination) || strchr(destination, '@')) {
-		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %s: %s\n",
-				timestamp(), ircmask, message);
+		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %c %s: %s\n",
+				timestamp(), dir, ircmask, message);
 	} else {
 		snprintf(logdata->buffer, LOGLINE_MAXLEN,
-				"%s %s (%s): %s\n", timestamp(),
-				ircmask, destination, message);
+				"%s %c %s (%s): %s\n", timestamp(),
+				dir, ircmask, destination, message);
 	}
 	log_write(logdata, destination, logdata->buffer);
+}
+
+void log_notice(log_t *logdata, char *ircmask, char *destination,
+		char *message)
+{
+	_log_notice(logdata, ircmask, 0, destination, message);
+}
+
+void log_cli_notice(log_t *logdata, char *ircmask, char *destination,
+		char *message)
+{
+	_log_notice(logdata, ircmask, 1, destination, message);
 }
 
 void log_topic(log_t *logdata, char *ircmask, char *channel, char *message)
@@ -462,15 +516,20 @@ void log_mode(log_t *logdata, char *ircmask, char *channel, char *modes,
 		char **modargv, unsigned modargc)
 {
 	unsigned i;
-	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s -!- mode/%s [%s ",
-			timestamp(), channel, modes);
-	log_write(logdata, channel, logdata->buffer);
+	char *tmpbuf = malloc(LOGLINE_MAXLEN + 1);
+	char *tmpbuf2 = malloc(LOGLINE_MAXLEN + 1);
+	char *tmp;
+	snprintf(tmpbuf, LOGLINE_MAXLEN, "%s -!- mode/%s [%s ", timestamp(),
+			channel, modes);
 	for (i = 0; i < modargc; i++) {
-		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s%c", modargv[i],
-				i == modargc - 1 ? ']' : ' ');
-		log_write(logdata, channel, logdata->buffer);
+		snprintf(tmpbuf2, LOGLINE_MAXLEN, "%s%s%c", tmpbuf,
+				modargv[i], i == modargc - 1 ? ']' : ' ');
+		tmp = tmpbuf;
+		tmpbuf = tmpbuf2;
+		tmpbuf2 = tmp;
 	}
-	snprintf(logdata->buffer, LOGLINE_MAXLEN, " by %s\n", ircmask);
+	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s by %s\n", tmpbuf,
+			ircmask);
 	log_write(logdata, channel, logdata->buffer);
 }
 
@@ -483,7 +542,7 @@ void log_disconnected(log_t *logdata)
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		lfg = hash_it_item(&hi);
-		_log_write(logdata, lfg, logdata->buffer);
+		_log_write(logdata, lfg, hash_it_key(&hi), logdata->buffer);
 	}
 }
 
@@ -504,7 +563,7 @@ void log_connected(log_t *logdata)
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		lfg = hash_it_item(&hi);
-		_log_write(logdata, lfg, logdata->buffer);
+		_log_write(logdata, lfg, hash_it_key(&hi), logdata->buffer);
 	}
 }
 
@@ -544,7 +603,7 @@ void log_client_connected(log_t *logdata)
 void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 {
 	int c;
-	if (conf_no_backlog || conf_backlog_lines == 0)
+	if (!conf_backlog || conf_backlog_lines == 0)
 		return;
 
 	if (lfg->skip_advance < conf_backlog_lines) {
@@ -589,6 +648,9 @@ int log_has_backlog(log_t *logdata, char *destination)
 	if (!lfg)
 		return 0;
 
+	if (lfg->memlog)
+		return !list_is_empty(lfg->memlog);
+
 	logfile_t *lf;
 	lf = list_get_first(&lfg->file_group);
 	if (lf != list_get_last(&lfg->file_group))
@@ -601,8 +663,8 @@ int log_has_backlog(log_t *logdata, char *destination)
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 
 /*
- * 13-05-2005 12:14:29 nohar (nohar): coucou
- * 13-05-2005 12:14:30 nohar!~nohar@je.suis.t1r.net (nohar): coucou
+ * 13-05-2005 12:14:29 > nohar (nohar): coucou
+ * 13-05-2005 12:14:30 < nohar!~nohar@je.suis.t1r.net (nohar): coucou
  */
 
 /* must *not* return NULL */
@@ -617,7 +679,7 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	char *sots, *son, *som, *sod = NULL;
 	size_t lots, lon, lom, lod;
 	char *ret;
-	int guess_was_me = 0;
+	int out;
 
 	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
 
@@ -627,62 +689,72 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 
 	p = strchr(buf, ' ');
 	if (!p || !p[0] || !p[1])
-		return buf;
+		return strdup(buf);
 	p++;
 	sots = p;
 	p = strchr(p, ' ');
 	if (!p || !p[0] || !p[1])
-		return buf;
+		return strdup(buf);
 	lots = p - sots;
 	p++;
 	if (strncmp(p, "-!-", 3) == 0)
-		return buf;
+		return strdup(buf);
+
+	if (*p == '>')
+		out = 1;
+	else if (*p == '<')
+		out = 0;
+	else
+		return strdup(buf);
+	p++;
+	if (*p != ' ')
+		return strdup(buf);
+	p++;
 	if (*p == '*') {
 		action = 1;
 		if (!p[1] || !p[2])
-			return buf;
+			return strdup(buf);
 		p += 2;
 	}
 	son = p;
 	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
-	if (*p != '!')
-		guess_was_me = 1;
 	if (!p[0] || !p[1])
-		return buf;
+		return strdup(buf);
 	lon = p - son;
 	p = strchr(p, ' ');
 	if (!p || !p[0] || !p[1])
-		return buf;
+		return strdup(buf);
 	p++;
 
 	if (*p == '(') {
 		p++;
 		if (!p[0] || !p[1] || p[0] == ')')
-			return buf;
+			return strdup(buf);
 		sod = p;
 		while (*p && *p != ')' && *p != ' ')
 			p++;
 		if (*p != ')')
-			return buf;
+			return strdup(buf);
 		lod = p - sod;
 		p++;
 		if (*p != ':')
-			return buf;
+			return strdup(buf);
 		p++;
 		if (*p != ' ')
-			return buf;
+			return strdup(buf);
 		p++;
 		if (!p[0] || !p[1])
-			return buf;
+			return strdup(buf);
 	} else {
 		sod = dest;
 		lod = strlen(dest);
 	}
-	if (guess_was_me) {
-		lon = lod;
+
+	if (out && strcmp(dest, "privates") == 0) {
 		son = sod;
+		lon = lod;
 	}
 
 	som = p;
@@ -713,8 +785,8 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 		memcpy(p, "ACTION ", strlen("ACTION "));
 		p += strlen("ACTION ");
 	}
-	if (guess_was_me) {
-		memcpy(p, "<-", 2);
+	if (out) {
+		memcpy(p, "->", 2);
 		p += 2;
 	}
 	memcpy(p, sots, lots);
@@ -731,17 +803,17 @@ static char *log_beautify(char *buf, char *dest, int *raw)
 	*p++ = '\n';
 	*p = 0;
 	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
-	free(buf);
 	return ret;
 }
 
-char *log_backread(log_t *logdata, char *destination, int *raw)
+static char *_log_backread(log_t *logdata, char *destination, int *raw)
 {
 	char *buf;
 	size_t pos = 0;
 	logfile_t *lf;
 	logfilegroup_t *lfg;
 	int c;
+	char *ret;
 
 	if (!conf_always_backlog && logdata->connected)
 		return NULL;
@@ -750,14 +822,31 @@ char *log_backread(log_t *logdata, char *destination, int *raw)
 	if (!lfg)
 		return NULL;
 
-	/* freed by log_beautify sometimes */
-	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
-
 	if (!logdata->backlogging) {
-		list_it_init(&lfg->file_group, &logdata->file_it);
 		logdata->backlogging = 1;
 		mylog(LOG_INFO, "backlogging!");
+		if (lfg->memlog)
+			list_it_init(lfg->memlog, &lfg->backlog_it);
+		else
+			list_it_init(&lfg->file_group, &logdata->file_it);
 	}
+
+	if (lfg->memlog) {
+		char *ptr;
+		ptr = list_it_item(&lfg->backlog_it);
+		if (!ptr) {
+			logdata->backlogging = 0;
+			return NULL;
+		}
+		list_it_next(&lfg->backlog_it);
+		return strdup(ptr);
+	}
+
+	if (!conf_log)
+		return NULL;
+
+	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
+
 next_file:
 	/* check the files containing data to backlog */
 	lf = list_it_item(&logdata->file_it);
@@ -812,7 +901,9 @@ next_file:
 					goto next_file;
 				}
 				buf[pos] = 0;
-				return log_beautify(buf, destination, raw);
+				ret = log_beautify(buf, destination, raw);
+				free(buf);
+				return ret;
 			}
 			buf[pos++] = c;
 		}
@@ -859,7 +950,9 @@ next_file:
 			if (conf_always_backlog && c == EOF)
 				lf->backlog_offset--;
 			buf[pos] = 0;
-			return log_beautify(buf, destination, raw);
+			ret = log_beautify(buf, destination, raw);
+			free(buf);
+			return ret;
 		}
 		buf[pos++] = c;
 	}
@@ -868,10 +961,54 @@ next_file:
 	return NULL;
 }
 
-static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *str) 
+char *log_backread(log_t *log, char *dest)
+{
+	int raw;
+	char *line;
+	char *buf;
+	int count;
+
+	line = _log_backread(log, dest, &raw);
+	if (raw)
+		return line;
+
+	buf = malloc(LOGLINE_MAXLEN + 1);
+	count = snprintf(buf, LOGLINE_MAXLEN + 1,
+			":" P_IRCMASK " PRIVMSG %s :%s", dest, line);
+	if (count >= LOGLINE_MAXLEN + 1) {
+		buf[LOGLINE_MAXLEN - 2] = '\r';
+		buf[LOGLINE_MAXLEN - 1] = '\n';
+		buf[LOGLINE_MAXLEN] = 0;
+	}
+	free(line);
+	return buf;
+}
+
+
+static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
+		char *str) 
 {
 	size_t nbwrite;
 	size_t len;
+
+	if (str[LOGLINE_MAXLEN - 1] != 0) {
+		str[LOGLINE_MAXLEN - 1] = '\n';
+		str[LOGLINE_MAXLEN] = 0;
+	}
+
+	if (lfg->memlog) {
+		int raw;
+		char *r = log_beautify(str, destination, &raw);
+		list_add_last(lfg->memlog, r);
+		if (lfg->memc == conf_backlog_lines)
+			free(list_remove_first(lfg->memlog));
+		else
+			lfg->memc++;
+	}
+
+	if (!conf_log)
+		return 0;
+
 	logfile_t *lf = list_get_last(&lfg->file_group);
 
 	/* str alloced size is LOGLINE_MAXLEN + 1 */
@@ -897,7 +1034,7 @@ void log_write(log_t *logdata, char *destination, char *str)
 				destination);
 		return;
 	}
-	_log_write(logdata, lfg, str);
+	_log_write(logdata, lfg, destination, str);
 }
 
 static list_t *log_all_logs = NULL;

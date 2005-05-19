@@ -42,6 +42,10 @@ typedef struct logfilegroup
 	char *name;
 	list_t file_group;
 	int skip_advance;
+
+	list_t *memlog;
+	int memc;
+	list_iterator_t backlog_it;
 } logfilegroup_t;
 
 typedef struct log {
@@ -69,6 +73,10 @@ void log_nick(log_t *logdata, char *ircmask, char *channel, char *newnick);
 void log_privmsg(log_t *logdata, char *ircmask, char *destination,
 		char *message);
 void log_notice(log_t *logdata, char *ircmask, char *channel, char *message);
+void log_cli_privmsg(log_t *logdata, char *ircmask, char *destination,
+		char *message);
+void log_cli_notice(log_t *logdata, char *ircmask, char *channel,
+		char *message);
 void log_write(log_t *logdata, char *str, char *destination);
 void log_mode(log_t *logdata, char *ircmask, char *channel,
 		char *modes, char **modargv, unsigned modargc);
@@ -80,7 +88,7 @@ void log_disconnected(log_t *logdata);
 void log_ping_timeout(log_t *logdata);
 void log_client_disconnected(log_t *logdata);
 void log_client_connected(log_t *logdata);
-char *log_backread(log_t *logdata, char *destination, int *raw);
+char *log_backread(log_t *logdata, char *destination);
 int log_has_backlog(log_t *logdata, char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);

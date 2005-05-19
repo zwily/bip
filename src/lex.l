@@ -69,7 +69,8 @@ list_t *parse_conf(FILE *file)
 "log_root"		{ return LEX_LOG_ROOT; }
 "log_format"		{ return LEX_LOG_FORMAT; }
 "backlog_lines"		{ return LEX_BACKLOG_LINES; }
-"no_backlog"		{ return LEX_NO_BACKLOG; }
+"backlog"		{ return LEX_BACKLOG; }
+"log"			{ return LEX_LOG; }
 "always_backlog"	{ return LEX_ALWAYS_BACKLOG; }
 "log_sync_interval"	{ return LEX_LOG_SYNC_INTERVAL; }
 "follow_nick"		{ return LEX_FOLLOW_NICK; }

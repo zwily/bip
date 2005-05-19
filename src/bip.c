@@ -46,7 +46,9 @@ hash_t adm_users;
 
 /* log options, for sure the trickiest :) */
 /* no backlog at all */
-int conf_no_backlog;
+int conf_backlog;
+int conf_memlog;
+int conf_log;
 /* number of lines in backlog */
 int conf_backlog_lines = 10;
 /* backlog even lines already backlogged */
@@ -576,8 +578,11 @@ int fireup(FILE *conf)
 		case LEX_ALWAYS_BACKLOG:
 			conf_always_backlog = t->ndata;
 			break;
-		case LEX_NO_BACKLOG:
-			conf_no_backlog = t->ndata;
+		case LEX_BACKLOG:
+			conf_backlog = t->ndata;
+			break;
+		case LEX_LOG:
+			conf_log = t->ndata;
 			break;
 		case LEX_BACKLOG_LINES:
 			conf_backlog_lines = t->ndata;
@@ -623,6 +628,25 @@ int fireup(FILE *conf)
 		}
 	}
 
+	if (conf_backlog && !conf_log) {
+		if (conf_backlog_lines == 0) {
+			fatal("you must set conf_backlog_lines if conf_log = "
+					"false and conf_backlog = true");
+		}
+	}
+
+	if (conf_always_backlog) {
+		if (conf_backlog_lines == 0) {
+			fatal("you must have not nul conf_backlog_lines if "
+					"conf_always_backlog is enabled");
+		}
+	}
+
+	if (!conf_log)
+		conf_memlog = 1;
+	else
+		conf_memlog = 0;
+
 	/*
 	check_networks(networkl);
 	check_clients(userl);
@@ -667,6 +691,8 @@ int fireup(FILE *conf)
 #endif
 	if (!conf_log_format)
 		conf_log_format = "%u/%n/%Y-%m/%c.%d.log";
+
+
 	return 1;
 }
 
@@ -851,7 +877,8 @@ int main(int argc, char **argv)
 	conf_log_root = NULL;
 	conf_log_format = NULL;
 	conf_log_level = LOG_ERROR;
-	conf_no_backlog = 0;
+	conf_backlog = 1;
+	conf_log = 1;
 	conf_backlog_lines = 100;
 	conf_log_sync_interval = 5;
 	conf_daemonize = 1;

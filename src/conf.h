@@ -1,4 +1,4 @@
-/* A Bison parser, made by GNU Bison 1.875d.  */
+/* A Bison parser, made by GNU Bison 2.0.  */
 
 /* Skeleton parser for Yacc-like parsing with Bison,
    Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
@@ -59,18 +59,19 @@
      LEX_LOG_FORMAT = 285,
      LEX_LOG_LEVEL = 286,
      LEX_BACKLOG_LINES = 287,
-     LEX_NO_BACKLOG = 288,
-     LEX_LOG_SYNC_INTERVAL = 289,
-     LEX_FOLLOW_NICK = 290,
-     LEX_ON_CONNECT_SEND = 291,
-     LEX_AWAY_NICK = 292,
-     LEX_PID_FILE = 293,
-     LEX_IGN_FIRST_NICK = 294,
-     LEX_ALWAYS_BACKLOG = 295,
-     LEX_LOGIN = 296,
-     LEX_BOOL = 297,
-     LEX_INT = 298,
-     LEX_STRING = 299
+     LEX_BACKLOG = 288,
+     LEX_LOG = 289,
+     LEX_LOG_SYNC_INTERVAL = 290,
+     LEX_FOLLOW_NICK = 291,
+     LEX_ON_CONNECT_SEND = 292,
+     LEX_AWAY_NICK = 293,
+     LEX_PID_FILE = 294,
+     LEX_IGN_FIRST_NICK = 295,
+     LEX_ALWAYS_BACKLOG = 296,
+     LEX_LOGIN = 297,
+     LEX_BOOL = 298,
+     LEX_INT = 299,
+     LEX_STRING = 300
    };
 #endif
 #define LEX_IP 258
@@ -103,18 +104,19 @@
 #define LEX_LOG_FORMAT 285
 #define LEX_LOG_LEVEL 286
 #define LEX_BACKLOG_LINES 287
-#define LEX_NO_BACKLOG 288
-#define LEX_LOG_SYNC_INTERVAL 289
-#define LEX_FOLLOW_NICK 290
-#define LEX_ON_CONNECT_SEND 291
-#define LEX_AWAY_NICK 292
-#define LEX_PID_FILE 293
-#define LEX_IGN_FIRST_NICK 294
-#define LEX_ALWAYS_BACKLOG 295
-#define LEX_LOGIN 296
-#define LEX_BOOL 297
-#define LEX_INT 298
-#define LEX_STRING 299
+#define LEX_BACKLOG 288
+#define LEX_LOG 289
+#define LEX_LOG_SYNC_INTERVAL 290
+#define LEX_FOLLOW_NICK 291
+#define LEX_ON_CONNECT_SEND 292
+#define LEX_AWAY_NICK 293
+#define LEX_PID_FILE 294
+#define LEX_IGN_FIRST_NICK 295
+#define LEX_ALWAYS_BACKLOG 296
+#define LEX_LOGIN 297
+#define LEX_BOOL 298
+#define LEX_INT 299
+#define LEX_STRING 300
 
 
 
@@ -127,8 +129,8 @@ typedef union YYSTYPE {
 	void *list;
 	struct tuple *tuple;
 } YYSTYPE;
-/* Line 1285 of yacc.c.  */
-#line 132 "y.tab.h"
+/* Line 1318 of yacc.c.  */
+#line 134 "y.tab.h"
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1

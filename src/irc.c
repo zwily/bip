@@ -41,7 +41,7 @@ void irc_server_shutdown(struct link_server *s);
 
 void irc_client_free(struct link_client *cli);
 static char *make_irc_mask(char *nick, char *oldim);
-extern int conf_no_backlog;
+extern int conf_backlog;
 extern int conf_log_sync_interval;
 extern int conf_error;
 extern char conf_errstr[];
@@ -457,16 +457,10 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 				chan->name, chan->creator, chan->create_ts);
 
 	/* XXX: could be more efficient */
-	if (!conf_no_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
+	if (conf_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
-		int raw;
-		while ((line = log_backread(LINK(ic)->log, chan->name, &raw))) {
-			mylog(LOG_DEBUG, "backread:%s\n", line);
-			if (raw)
-				write_line(CONN(ic), line);
-			else
-				WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG",
-						chan->name, line);
+		while ((line = log_backread(LINK(ic)->log, chan->name))) {
+			write_line(CONN(ic), line);
 			free(line);
 		}
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
@@ -633,14 +627,8 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 
 	/* backlog privates */
 	char *str;
-	int raw;
-	while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &raw))) {
-		mylog(LOG_DEBUG, "backread:%s\n", line);
-		if (raw)
-			write_line(CONN(ic), str);
-		else
-			WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG",
-					LINK(ic)->l_server->nick, str);
+	while ((str = log_backread(LINK(ic)->log, S_PRIVATES))) {
+		write_line(CONN(ic), str);
 		free(str);
 	}
 
@@ -717,14 +705,14 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 
 static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 {
-	log_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
+	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
 	return OK_COPY_CLI;
 }
 
 static int irc_cli_notice(struct link_client *ic, struct line *line)
 {
-	log_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
+	log_cli_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
 	return OK_COPY_CLI;
 }
