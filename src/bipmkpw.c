@@ -6,6 +6,7 @@
 
 int conf_log_level;
 FILE *conf_global_log_file;
+int conf_log;
 
 int main(int argc, char **argv)
 {
