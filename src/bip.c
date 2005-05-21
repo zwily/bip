@@ -168,17 +168,22 @@ static pid_t daemonize(void)
 	}
 	if (setsid() < 0)
 		fatal("setsid() failed");
-	snprintf(buf, 4095, "%s/bip.log", conf_log_root);
-	FILE *f = fopen(buf, "a");
-	if (!f)
-		fatal("Can't open %s: %s", buf, strerror(errno));
+
+	if (conf_log) {
+		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
+		FILE *f = fopen(buf, "a");
+		if (!f)
+			fatal("Can't open %s: %s", buf, strerror(errno));
+		conf_global_log_file = f;
+	} else {
+		conf_global_log_file = stderr;
+	}
 
 	close(0);
 	close(1);
 	close(2);
 	/* This better be the very last action since fatal makes use of
 	 * conf_global_log_file */
-	conf_global_log_file = f;
 	return getpid();
 }
 

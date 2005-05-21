@@ -24,6 +24,7 @@
 #include <errno.h>
 
 extern int conf_log_level;
+extern int conf_log;
 extern int errno;
 
 /*
@@ -117,6 +118,10 @@ void _mylog(int level, char *fmt, va_list ap)
 void mylog(int level, char *fmt, ...)
 {
 	va_list ap;
+
+	if (!conf_log)
+		return;
+
 	va_start(ap, fmt);
 	_mylog(level, fmt, ap);
 	va_end(ap);
