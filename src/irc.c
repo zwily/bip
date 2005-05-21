@@ -50,7 +50,7 @@ void write_user_list(connection_t *c, char *dest);
 
 #define LAGOUT_TIME (360)
 #define LAGCHECK_TIME (90)
-#define RECONN_TIMER (30)
+#define RECONN_TIMER (120)
 #define LOGGING_TIMEOUT (360)
 #define CONN_INTERVAL 60
 #define CONNECT_TIMEOUT 60
@@ -460,6 +460,7 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	if (conf_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
 		while ((line = log_backread(LINK(ic)->log, chan->name))) {
+			mylog(LOG_INFO, "br:%s", line);
 			write_line(CONN(ic), line);
 			free(line);
 		}
@@ -574,8 +575,10 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	free(ic->init_real_name);
 	ic->init_real_name = NULL;
 
-	if (!LINK(ic))
+	if (!LINK(ic)) {
+		free(init_nick);
 		return ERR_AUTH;
+	}
 
 	if (LINK(ic)->s_state == IRCS_NONE) {
 		/* drop it if corresponding server hasn't connected at all. */
@@ -583,6 +586,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 				":ERROR Proxy not yet connected, try again "
 				"later\r\n");
 		unbind_from_link(ic);
+		free(init_nick);
 		return OK_CLOSE;
 	}
 
@@ -618,7 +622,6 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		return OK_FORGET;
 	}
 
-
 	hash_iterator_t hi;
 	for (hash_it_init(&LINK(ic)->l_server->channels, &hi);
 			hash_it_item(&hi); hash_it_next(&hi)) {
@@ -628,6 +631,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	/* backlog privates */
 	char *str;
 	while ((str = log_backread(LINK(ic)->log, S_PRIVATES))) {
+		mylog(LOG_INFO, "br:%s", str);
 		write_line(CONN(ic), str);
 		free(str);
 	}

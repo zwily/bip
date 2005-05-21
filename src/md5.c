@@ -397,6 +397,7 @@ unsigned char *chash_double(char *str, unsigned int seed)
 	md5_starts(&ctx);
 	md5_update(&ctx, md5, 20);
 	md5_finish(&ctx, md5 + 4);
+	free(ptr);
 	return md5;
 }
 

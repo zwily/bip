@@ -215,13 +215,15 @@ static int _write_socket(connection_t *cn, char* message)
 	size_t tcount = 0;
 	ssize_t count;
 
-	size = sizeof(char) * strlen(message);
+	size = strlen(message);
 	while ((count = write(cn->handle, ((const char*)message) + tcount,
 					size - tcount)) > 0) {
 		tcount += count;
 		if (tcount == size)
 			break;
 	}
+	if (count <= 0 && tcount > 0)
+		fatal("shit happens\n");
 	if (count <= 0) {
 		/*
 		 * if no fatal error, return WRITE_KEEP, which makes caller
@@ -934,7 +936,6 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	conn = (connection_t*)malloc(sizeof(connection_t));
 	incoming = (char*)malloc(sizeof(char) * CONN_BUFFER_SIZE);
 	outgoing = list_new(NULL);
-	incoming_lines = list_new(NULL);
 
 	conn->anti_flood = anti_flood;
 	conn->ssl = ssl;
