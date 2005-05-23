@@ -21,6 +21,8 @@
 #include "connection.h"
 #include "md5.h"
 
+#define S_CONN_DELAY (10)
+
 extern int sighup;
 
 static int irc_join(struct link_server *server, struct line *line);
@@ -1941,12 +1943,18 @@ void irc_main(connection_t *inc, list_t *ll)
 
 		/* Compute timeouts for next reconnections and lagouts */
 		if (timeleft == 0) {
+			static int throttle_prot = S_CONN_DELAY - 1;
+
 			timeleft = 1000;
 
-			/* Lauch one reconnection at a time */
-			if ((link = list_remove_first(&reconnectl))) {
-				conn = irc_server_connect(link);
-				list_add_last(&connl, conn);
+			if (++throttle_prot == S_CONN_DELAY) {
+				throttle_prot = 0;
+
+				/* Lauch one reconnection at a time */
+				if ((link = list_remove_first(&reconnectl))) {
+					conn = irc_server_connect(link);
+					list_add_last(&connl, conn);
+				}
 			}
 
 			/* log flushs */
