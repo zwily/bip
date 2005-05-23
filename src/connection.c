@@ -209,28 +209,36 @@ static int _write_socket_SSL(connection_t *cn, char* message)
 }
 #endif
 
-static int _write_socket(connection_t *cn, char* message)
+static int _write_socket(connection_t *cn, char *message)
 {
 	size_t size;
 	size_t tcount = 0;
 	ssize_t count;
 
 	size = strlen(message);
-	while ((count = write(cn->handle, ((const char*)message) + tcount,
+	do {
+		while ((count = write(cn->handle,
+					((const char *)message) + tcount,
 					size - tcount)) > 0) {
-		tcount += count;
-		if (tcount == size)
-			break;
-	}
+			tcount += count;
+			if (tcount == size)
+				break;
+		}
+	} while (count < 0 &&
+		(errno == EAGAIN || errno == EINTR || errno == EINPROGRESS));
 	if (count <= 0 && tcount > 0)
-		fatal("shit happens\n");
+		fatal("shit happens errno:%d count:%d tcount:%d (%s)\n", errno,
+				count, tcount, message);
 	if (count <= 0) {
 		/*
 		 * if no fatal error, return WRITE_KEEP, which makes caller
 		 * keep line in its FIFO
-		 */
+		 *
+		 * Cannot do: we might have written a partial line
+		 * 
 		if (errno == EAGAIN || errno == EINTR || errno == EINPROGRESS)
 			return WRITE_KEEP;
+		 */
 
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUG, "write(fd %d) : %s", cn->handle,
