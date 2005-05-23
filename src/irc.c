@@ -1939,15 +1939,15 @@ void irc_main(connection_t *inc, list_t *ll)
 		struct link *link;
 		connection_t *conn;
 
-		/* Lauch reconnections */
-		while ((link = list_remove_first(&reconnectl))) {
-			conn = irc_server_connect(link);
-			list_add_last(&connl, conn);
-		}
-
 		/* Compute timeouts for next reconnections and lagouts */
 		if (timeleft == 0) {
 			timeleft = 1000;
+
+			/* Lauch one reconnection at a time */
+			if ((link = list_remove_first(&reconnectl))) {
+				conn = irc_server_connect(link);
+				list_add_last(&connl, conn);
+			}
 
 			/* log flushs */
 			if (logflush_timer-- <= 0) {
