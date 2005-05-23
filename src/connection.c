@@ -226,6 +226,7 @@ static int _write_socket(connection_t *cn, char *message)
 		}
 	} while (count < 0 &&
 		(errno == EAGAIN || errno == EINTR || errno == EINPROGRESS));
+
 	if (count <= 0 && tcount > 0)
 		fatal("shit happens errno:%d count:%d tcount:%d (%s)\n", errno,
 				count, tcount, message);

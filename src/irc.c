@@ -1912,8 +1912,15 @@ void irc_main(connection_t *inc, list_t *ll)
 			list_add_last(&reconnectl, link);
 		if (link->l_clientc) {
 			int i;
-			for (i = 0; i < link->l_clientc; i++)
-				list_add_last(&connl, CONN(link->l_clientv[i]));
+			for (i = 0; i < link->l_clientc; i++) {
+				struct link_client *c;
+				c = link->l_clientv[i];
+				list_add_last(&connl, CONN(c));
+				if (TYPE(c) == IRC_TYPE_LOGING_CLIENT)
+					list_add_last(&connecting_c, c);
+				if (TYPE(c) == IRC_TYPE_CLIENT)
+					list_add_last(&connected_c, c);
+			}
 		}
 	}
 	if (conf_error && reloading_client) {
