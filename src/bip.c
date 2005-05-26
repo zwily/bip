@@ -55,14 +55,8 @@ int conf_backlog_lines = 10;
 int conf_always_backlog;
 int conf_log_sync_interval;
 
-static void conf_die(char *fmt, ...)
-{
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-	exit(1);
-}
+list_t *parse_conf(FILE *file);
+static void conf_die(char *fmt, ...);
 
 static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 {
@@ -98,10 +92,11 @@ void server_free(struct server *s)
 	free(s);
 }
 
-static void add_server(list_t *serverl, list_t *data)
+static int add_server(list_t *serverl, list_t *data)
 {
 	struct tuple *t;
 	struct server *s;
+
 	s = calloc(sizeof(struct server), 1);
 	s->port = 6667; /* default port */
 
@@ -117,40 +112,38 @@ static void add_server(list_t *serverl, list_t *data)
 			fatal("Config error in server block (%d)", t->type);
 		}
 	}
-	if (!s->host)
-		fatal("Server conf: host not set");
+	if (!s->host) {
+		free(s);
+		conf_die("Server conf: host not set");
+		return 0;
+	}
 	list_add_last(serverl, s);
+	return 1;
 }
+
+#define ERRBUFSZ 128
 
 extern list_t *root_list;
 int yyparse();
 int conf_error;
-#define ERRBUFSZ 80
 char conf_errstr[ERRBUFSZ];
-void free_conf(list_t *l);
 
-list_t *parse_conf(FILE *file);
-
-void free_conf(list_t *l)
+static void conf_start(void)
 {
-	struct tuple *t;
-	list_iterator_t li;
-	for (list_it_init(l, &li); (t = list_it_item(&li)); list_it_next(&li)) {
-		switch (t->tuple_type) {
-		case TUPLE_STR:
-			free(t->pdata);	/* no break, for the style */
-		case TUPLE_INT:	
-			free(t);
-			break;
-		case TUPLE_LIST:
-			free_conf(t->pdata);
-			break;
-		default:
-			fatal("internal error free_conf");
-			break;
-		}
-	}
+	conf_error = 0;
 }
+
+static void conf_die(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+
+	vsnprintf(conf_errstr, ERRBUFSZ, fmt, ap);
+	conf_errstr[ERRBUFSZ - 1] = 0;
+
+	va_end(ap);
+}
+
 
 FILE *conf_global_log_file;
 
@@ -357,12 +350,14 @@ void c_network_free(struct c_network *on)
 	free(on);
 }
 
-void add_network(list_t *data)
+static int add_network(list_t *data)
 {
 	struct tuple *t;
 	struct c_network *n;
-	n = calloc(sizeof(struct c_network), 1);
+	struct c_network *old_n;
+	int r;
 
+	n = calloc(sizeof(struct c_network), 1);
 	list_init(&n->serverl, NULL);
 
 	while ((t = list_remove_first(data))) {
@@ -376,28 +371,39 @@ void add_network(list_t *data)
 			break;
 #endif
 		case LEX_SERVER:
-			add_server(&n->serverl, t->pdata);
+			r = add_server(&n->serverl, t->pdata);
+			free(t->pdata);
+			if (!r)
+				return 0;
 			break;
 		default:
 			conf_die("uknown keyword in network statement");
+			if (t->type == TUPLE_STR)
+				free(t->pdata);
+			return 0;
 			break;
 		}
+		free(t);
 	}
-	if (!n->name)
+	if (!n->name) {
 		conf_die("Network with no name");
-	struct c_network *old_n;
+		return 0;
+	}
+
 	old_n = hash_get(&conf_networks, n->name);
 	if (old_n) {
 		hash_remove(&conf_networks, n->name);
 		c_network_free(old_n);
 	}
 	hash_insert(&conf_networks, n->name, n);
+	return 1;
 }
 
-void add_channel(list_t *channell, list_t *data)
+static int add_channel(list_t *channell, list_t *data)
 {
 	struct tuple *t;
 	struct c_channel *c;
+
 	c = calloc(sizeof(struct c_channel), 1);
 
 	while ((t = list_remove_first(data))) {
@@ -410,12 +416,17 @@ void add_channel(list_t *channell, list_t *data)
 			break;
 		default:
 			conf_die("uknown keyword in channel statement");
+			if (t->type == TUPLE_STR)
+				free(t->pdata);
+			return 0;
 			break;
 		}
+		free(t);
 	}
 	if (!c->name)
 		conf_die("channel wo a name !");
 	list_add_last(channell, c);
+	return 1;
 }
 
 void c_connection_free(struct c_connection *c)
@@ -437,12 +448,14 @@ void c_connection_free(struct c_connection *c)
 	free(c->on_connect_send);
 }
 
-void add_connection(list_t *connectionl, list_t *data, list_t *old_c_connl)
+static int add_connection(list_t *connectionl, list_t *data,
+		list_t *old_c_connl)
 {
 	struct tuple *t;
 	struct c_connection *c, *old_c = NULL;
-	c = calloc(sizeof(struct c_connection), 1);
+	int r;
 
+	c = calloc(sizeof(struct c_connection), 1);
 	list_init(&c->channell, NULL);
 
 	while ((t = list_remove_first(data))) {
@@ -452,13 +465,19 @@ void add_connection(list_t *connectionl, list_t *data, list_t *old_c_connl)
 			break;
 		case LEX_NETWORK:
 			c->network = hash_get(&conf_networks, t->pdata);
-			if (!c->network)
+			if (!c->network) {
+				free(c);
 				conf_die("networkd:%s used but not defined\n",
 						t->pdata);
+				return 0;
+			}
 			break;
 		case LEX_LOGIN:
-			if (!is_valid_username(t->pdata))
+			if (!is_valid_username(t->pdata)) {
+				free(c);
 				conf_die("Invalid login (%s)", t->pdata);
+				return 0;
+			}
 			c->login = t->pdata;
 			break;
 		case LEX_NICK:
@@ -476,7 +495,10 @@ void add_connection(list_t *connectionl, list_t *data, list_t *old_c_connl)
 			c->password = t->pdata;
 			break;
 		case LEX_CHANNEL:
-			add_channel(&c->channell, t->pdata);
+			r = add_channel(&c->channell, t->pdata);
+			free(t->pdata);
+			if (!r)
+				return 0;
 			break;
 		case LEX_FOLLOW_NICK:
 			c->follow_nick = t->ndata;
@@ -492,21 +514,28 @@ void add_connection(list_t *connectionl, list_t *data, list_t *old_c_connl)
 			break;
 		default:
 			conf_die("uknown keyword in connection statement");
-			break;
+			if (t->type == TUPLE_STR)
+				free(t->pdata);
+			return 0;
 		}
+		free(t);
 	}
 	/* checks that can only be here, or must */
-	if (!c->network)
+	if (!c->network) {
 		conf_die("Missing network in connection block");
-	if (!c->user)
+		return 0;
+	}
+	if (!c->user) {
 		conf_die("Missing user in connection block");
-
+		return 1;
+	}
 	list_add_last(connectionl, c);
 	if (old_c_connl) {
 		old_c = list_remove_first(old_c_connl);
 		if (old_c)
 			c_connection_free(old_c);
 	}
+	return 1;
 }
 
 void c_user_free(struct c_user *cu)
@@ -519,13 +548,14 @@ void c_user_free(struct c_user *cu)
 	free(cu);
 }
 
-void add_user(list_t *data)
+static int add_user(list_t *data)
 {
+	int r;
 	struct tuple *t;
 	struct c_user *u;
 	struct c_user *old_u;
-	u = calloc(sizeof(struct c_user), 1);
 
+	u = calloc(sizeof(struct c_user), 1);
 	list_init(&u->connectionl, NULL);
 
 	while ((t = list_remove_first(data))) {
@@ -543,39 +573,54 @@ void add_user(list_t *data)
 				conf_die("name statement must be first in user"
 						"block");
 			if (!old_u)
-				add_connection(&u->connectionl, t->pdata, NULL);
+				r = add_connection(&u->connectionl, t->pdata,
+						NULL);
 			else
-				add_connection(&u->connectionl, t->pdata, 
+				r = add_connection(&u->connectionl, t->pdata, 
 						&old_u->connectionl);
+			free(t->pdata);
+			if (!r)
+				return 0;
 			break;
 		default:
-			conf_die("uknown keyword in user statement");
+			conf_die("Uknown keyword in user statement");
+			if (t->type == TUPLE_STR)
+				free(t->pdata);
 			break;
 		}
+		free(t);
 	}
-	if (!u->name)
+	if (!u->name) {
 		conf_die("User w/o a name!");
-	if (!u->password)
+		return 0;
+	}
+	if (!u->password) {
 		conf_die("Missing password in user block");
+		return 0;
+	}
 
 	if (old_u) {
 		hash_remove(&conf_users, u->name);
 		c_user_free(old_u);
 	}
 	hash_insert(&conf_users, u->name, u);
+	return 1;
 }
 
 int fireup(FILE *conf)
 {
 	struct tuple *t;
 	list_t *l;
+	list_iterator_t li;
+	int r;
+
+	conf_start();
+
 	l = parse_conf(conf);
 	if (conf_error)
 		return 0;
 
-	list_iterator_t li;
-	
-	for (list_it_init(l, &li); (t = list_it_item(&li)); list_it_next(&li)) {
+	while ((t = list_remove_first(l))) {
 		switch (t->type) {
 		case LEX_LOG_SYNC_INTERVAL:
 			conf_log_sync_interval = t->ndata;
@@ -622,28 +667,42 @@ int fireup(FILE *conf)
 			conf_pid_file = t->pdata;
 			break;
 		case LEX_NETWORK:
-			add_network(t->pdata);
+			r = add_network(t->pdata);
+			list_free(t->pdata);
+			if (!r)
+				return 0;
 			break;
 		case LEX_USER:
-			add_user(t->pdata);
+			r = add_user(t->pdata);
+			list_free(t->pdata);
+			if (!r)
+				return 0;
 			break;
 		default:
-			fatal("Config error in base config (%d)", t->type);
-			break;
+			if (t->type == TUPLE_STR)
+				free(t->pdata);
+			conf_die("Config error in base config (%d)", t->type);
+			return;
 		}
+		free(t);
 	}
+	free(root_list);
+	root_list = NULL;
 
 	if (conf_backlog && !conf_log) {
 		if (conf_backlog_lines == 0) {
-			fatal("you must set conf_backlog_lines if conf_log = "
-					"false and conf_backlog = true");
+			conf_die("You must set conf_backlog_lines if "
+					"conf_log = false and "
+					"conf_backlog = true");
+			return;
 		}
 	}
 
 	if (conf_always_backlog) {
 		if (conf_backlog_lines == 0) {
-			fatal("you must have not nul conf_backlog_lines if "
+			conf_die("You must have not nul conf_backlog_lines if "
 					"conf_always_backlog is enabled");
+			return;
 		}
 	}
 
@@ -660,7 +719,7 @@ int fireup(FILE *conf)
 	if (!conf_biphome) {
 		char *home = getenv("HOME");
 		if (!home)
-			fatal("no $HOME !, do you live in a trailer ?");
+			conf_die("no $HOME !, do you live in a trailer ?");
 		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
 		strcpy(conf_biphome, home);
 		strcat(conf_biphome, "/.bip");
@@ -687,6 +746,10 @@ int fireup(FILE *conf)
 		char *ap = "/.bip/bip.pem";
 		if (!home)
 			fatal("no $HOME !, do you live in a trailer ?");
+		if (conf_ssl_certfile) {
+			free(conf_ssl_certfile);
+			conf_ssl_certfile = NULL;
+		}
 		conf_ssl_certfile = malloc(strlen(home) + strlen(ap) + 1);
 		strcpy(conf_ssl_certfile, home);
 		strcat(conf_ssl_certfile, ap);
@@ -696,7 +759,6 @@ int fireup(FILE *conf)
 #endif
 	if (!conf_log_format)
 		conf_log_format = "%u/%n/%Y-%m/%c.%d.log";
-
 
 	return 1;
 }
@@ -1011,3 +1073,23 @@ void adm_bip(struct link_client *ic, struct line *line)
 	}
 }
 
+void free_conf(list_t *l)
+{
+	struct tuple *t;
+	list_iterator_t li;
+	for (list_it_init(l, &li); (t = list_it_item(&li)); list_it_next(&li)) {
+		switch (t->tuple_type) {
+		case TUPLE_STR:
+			free(t->pdata);	/* no break, for the style */
+		case TUPLE_INT:	
+			free(t);
+			break;
+		case TUPLE_LIST:
+			free_conf(t->pdata);
+			break;
+		default:
+			fatal("internal error free_conf");
+			break;
+		}
+	}
+}

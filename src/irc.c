@@ -351,6 +351,7 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		char *resps;
 		irc_line_append(resp, "PONG");
 		irc_line_append(resp, line->elemv[1]);
+		resp->colon = 1; /* it seems some ircds want it */
 		resps = irc_line_to_string(resp);
 		write_line_fast(CONN(server), resps);
 		irc_line_free(resp);
@@ -2102,6 +2103,16 @@ prot_err:
 		}
 		list_free(ready);
 	}
+	while (list_remove_first(&connecting_c))
+		;
+	while (list_remove_first(&connected_c))
+		;
+	while (list_remove_first(&connl))
+		;
+	while (list_remove_first(&timerwaitl))
+		;
+	while (list_remove_first(&reconnectl))
+		;
 	return;
 }
 

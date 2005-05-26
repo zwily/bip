@@ -1,4 +1,4 @@
-/* A Bison parser, made by GNU Bison 2.0.  */
+/* A Bison parser, made by GNU Bison 1.875d.  */
 
 /* Skeleton parser for Yacc-like parsing with Bison,
    Copyright (C) 1984, 1989, 1990, 2000, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
@@ -228,6 +228,7 @@ struct tuple *tuple_l_new(int type, void *p)
 }
 
 
+
 /* Enabling traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -242,15 +243,15 @@ struct tuple *tuple_l_new(int type, void *p)
 #endif
 
 #if ! defined (YYSTYPE) && ! defined (YYSTYPE_IS_DECLARED)
-#line 84 "conf.y"
+#line 85 "conf.y"
 typedef union YYSTYPE {
 	int number;
 	char *string;
 	void *list;
 	struct tuple *tuple;
 } YYSTYPE;
-/* Line 190 of yacc.c.  */
-#line 254 "y.tab.c"
+/* Line 191 of yacc.c.  */
+#line 255 "y.tab.c"
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1
@@ -261,8 +262,8 @@ typedef union YYSTYPE {
 /* Copy the second part of user declarations.  */
 
 
-/* Line 213 of yacc.c.  */
-#line 266 "y.tab.c"
+/* Line 214 of yacc.c.  */
+#line 267 "y.tab.c"
 
 #if ! defined (yyoverflow) || YYERROR_VERBOSE
 
@@ -277,10 +278,14 @@ typedef union YYSTYPE {
 
 # ifdef YYSTACK_USE_ALLOCA
 #  if YYSTACK_USE_ALLOCA
+#   define YYSTACK_ALLOC alloca
+#  endif
+# else
+#  if defined (alloca) || defined (_ALLOCA_H)
+#   define YYSTACK_ALLOC alloca
+#  else
 #   ifdef __GNUC__
 #    define YYSTACK_ALLOC __builtin_alloca
-#   else
-#    define YYSTACK_ALLOC alloca
 #   endif
 #  endif
 # endif
@@ -459,12 +464,12 @@ static const yysigned_char yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const unsigned char yyrline[] =
 {
-       0,    99,    99,   100,   104,   105,   107,   108,   109,   110,
-     111,   113,   115,   116,   118,   120,   121,   123,   126,   127,
-     130,   131,   132,   136,   137,   140,   142,   144,   148,   149,
-     153,   154,   156,   157,   158,   159,   161,   163,   164,   166,
-     167,   169,   171,   173,   175,   178,   179,   182,   183,   186,
-     187,   190,   191
+       0,   100,   100,   101,   105,   106,   108,   109,   110,   111,
+     112,   114,   116,   117,   119,   121,   122,   124,   127,   128,
+     131,   132,   133,   137,   138,   141,   143,   145,   149,   150,
+     154,   155,   157,   158,   159,   160,   162,   164,   165,   167,
+     168,   170,   172,   174,   176,   179,   180,   183,   184,   187,
+     188,   191,   192
 };
 #endif
 
@@ -694,52 +699,19 @@ do								\
     }								\
 while (0)
 
-
 #define YYTERROR	1
 #define YYERRCODE	256
 
+/* YYLLOC_DEFAULT -- Compute the default location (before the actions
+   are run).  */
 
-/* YYLLOC_DEFAULT -- Set CURRENT to span from RHS[1] to RHS[N].
-   If N is 0, then set CURRENT to the empty location which ends
-   the previous symbol: RHS[0] (always defined).  */
-
-#define YYRHSLOC(Rhs, K) ((Rhs)[K])
 #ifndef YYLLOC_DEFAULT
-# define YYLLOC_DEFAULT(Current, Rhs, N)				\
-    do									\
-      if (N)								\
-	{								\
-	  (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;	\
-	  (Current).first_column = YYRHSLOC (Rhs, 1).first_column;	\
-	  (Current).last_line    = YYRHSLOC (Rhs, N).last_line;		\
-	  (Current).last_column  = YYRHSLOC (Rhs, N).last_column;	\
-	}								\
-      else								\
-	{								\
-	  (Current).first_line   = (Current).last_line   =		\
-	    YYRHSLOC (Rhs, 0).last_line;				\
-	  (Current).first_column = (Current).last_column =		\
-	    YYRHSLOC (Rhs, 0).last_column;				\
-	}								\
-    while (0)
+# define YYLLOC_DEFAULT(Current, Rhs, N)		\
+   ((Current).first_line   = (Rhs)[1].first_line,	\
+    (Current).first_column = (Rhs)[1].first_column,	\
+    (Current).last_line    = (Rhs)[N].last_line,	\
+    (Current).last_column  = (Rhs)[N].last_column)
 #endif
-
-
-/* YY_LOCATION_PRINT -- Print the location on the stream.
-   This macro was not mandated originally: define only if we know
-   we won't break user code: when these are the locations we know.  */
-
-#ifndef YY_LOCATION_PRINT
-# if YYLTYPE_IS_TRIVIAL
-#  define YY_LOCATION_PRINT(File, Loc)			\
-     fprintf (File, "%d.%d-%d.%d",			\
-              (Loc).first_line, (Loc).first_column,	\
-              (Loc).last_line,  (Loc).last_column)
-# else
-#  define YY_LOCATION_PRINT(File, Loc) ((void) 0)
-# endif
-#endif
-
 
 /* YYLEX -- calling `yylex' with the right arguments.  */
 
@@ -763,13 +735,19 @@ do {						\
     YYFPRINTF Args;				\
 } while (0)
 
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)		\
+# define YYDSYMPRINT(Args)			\
+do {						\
+  if (yydebug)					\
+    yysymprint Args;				\
+} while (0)
+
+# define YYDSYMPRINTF(Title, Token, Value, Location)		\
 do {								\
   if (yydebug)							\
     {								\
       YYFPRINTF (stderr, "%s ", Title);				\
       yysymprint (stderr, 					\
-                  Type, Value);	\
+                  Token, Value);	\
       YYFPRINTF (stderr, "\n");					\
     }								\
 } while (0)
@@ -836,7 +814,8 @@ do {					\
 int yydebug;
 #else /* !YYDEBUG */
 # define YYDPRINTF(Args)
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)
+# define YYDSYMPRINT(Args)
+# define YYDSYMPRINTF(Title, Token, Value, Location)
 # define YY_STACK_PRINT(Bottom, Top)
 # define YY_REDUCE_PRINT(Rule)
 #endif /* !YYDEBUG */
@@ -853,6 +832,10 @@ int yydebug;
    Do not make this value too large; the results are undefined if
    SIZE_MAX < YYSTACK_BYTES (YYMAXDEPTH)
    evaluated with infinite-precision integer arithmetic.  */
+
+#if defined (YYMAXDEPTH) && YYMAXDEPTH == 0
+# undef YYMAXDEPTH
+#endif
 
 #ifndef YYMAXDEPTH
 # define YYMAXDEPTH 10000
@@ -935,15 +918,15 @@ yysymprint (yyoutput, yytype, yyvaluep)
   (void) yyvaluep;
 
   if (yytype < YYNTOKENS)
-    YYFPRINTF (yyoutput, "token %s (", yytname[yytype]);
+    {
+      YYFPRINTF (yyoutput, "token %s (", yytname[yytype]);
+# ifdef YYPRINT
+      YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
+# endif
+    }
   else
     YYFPRINTF (yyoutput, "nterm %s (", yytname[yytype]);
 
-
-# ifdef YYPRINT
-  if (yytype < YYNTOKENS)
-    YYPRINT (yyoutput, yytoknum[yytype], *yyvaluep);
-# endif
   switch (yytype)
     {
       default:
@@ -959,21 +942,16 @@ yysymprint (yyoutput, yytype, yyvaluep)
 
 #if defined (__STDC__) || defined (__cplusplus)
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep)
+yydestruct (int yytype, YYSTYPE *yyvaluep)
 #else
 static void
-yydestruct (yymsg, yytype, yyvaluep)
-    const char *yymsg;
+yydestruct (yytype, yyvaluep)
     int yytype;
     YYSTYPE *yyvaluep;
 #endif
 {
   /* Pacify ``unused variable'' warnings.  */
   (void) yyvaluep;
-
-  if (!yymsg)
-    yymsg = "Deleting";
-  YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
 
   switch (yytype)
     {
@@ -1002,10 +980,10 @@ int yyparse ();
 
 
 
-/* The look-ahead symbol.  */
+/* The lookahead symbol.  */
 int yychar;
 
-/* The semantic value of the look-ahead symbol.  */
+/* The semantic value of the lookahead symbol.  */
 YYSTYPE yylval;
 
 /* Number of syntax errors so far.  */
@@ -1041,7 +1019,7 @@ yyparse ()
   int yyresult;
   /* Number of tokens to shift before error messages enabled.  */
   int yyerrstatus;
-  /* Look-ahead token as an internal (translated) token number.  */
+  /* Lookahead token as an internal (translated) token number.  */
   int yytoken = 0;
 
   /* Three stacks and their tools:
@@ -1092,8 +1070,6 @@ yyparse ()
   yyssp = yyss;
   yyvsp = yyvs;
 
-
-  yyvsp[0] = yylval;
 
   goto yysetstate;
 
@@ -1184,18 +1160,18 @@ yyparse ()
 yybackup:
 
 /* Do appropriate processing given the current state.  */
-/* Read a look-ahead token if we need one and don't already have one.  */
+/* Read a lookahead token if we need one and don't already have one.  */
 /* yyresume: */
 
-  /* First try to decide what to do without reference to look-ahead token.  */
+  /* First try to decide what to do without reference to lookahead token.  */
 
   yyn = yypact[yystate];
   if (yyn == YYPACT_NINF)
     goto yydefault;
 
-  /* Not known => get a look-ahead token if don't already have one.  */
+  /* Not known => get a lookahead token if don't already have one.  */
 
-  /* YYCHAR is either YYEMPTY or YYEOF or a valid look-ahead symbol.  */
+  /* YYCHAR is either YYEMPTY or YYEOF or a valid lookahead symbol.  */
   if (yychar == YYEMPTY)
     {
       YYDPRINTF ((stderr, "Reading a token: "));
@@ -1210,7 +1186,7 @@ yybackup:
   else
     {
       yytoken = YYTRANSLATE (yychar);
-      YY_SYMBOL_PRINT ("Next token is", yytoken, &yylval, &yylloc);
+      YYDSYMPRINTF ("Next token is", yytoken, &yylval, &yylloc);
     }
 
   /* If the proper action on seeing token YYTOKEN is to reduce or to
@@ -1230,8 +1206,8 @@ yybackup:
   if (yyn == YYFINAL)
     YYACCEPT;
 
-  /* Shift the look-ahead token.  */
-  YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
+  /* Shift the lookahead token.  */
+  YYDPRINTF ((stderr, "Shifting token %s, ", yytname[yytoken]));
 
   /* Discard the token being shifted unless it is eof.  */
   if (yychar != YYEOF)
@@ -1281,285 +1257,285 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 99 "conf.y"
-    { (yyval.list) = root_list = list_new(NULL); }
+#line 100 "conf.y"
+    { yyval.list = root_list = list_new(NULL); }
     break;
 
   case 3:
-#line 100 "conf.y"
-    { list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+#line 101 "conf.y"
+    { list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 4:
-#line 104 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_LOG_ROOT, (yyvsp[0].string)); }
+#line 105 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_LOG_ROOT, yyvsp[0].string); }
     break;
 
   case 5:
-#line 105 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_LOG_FORMAT,
-						(yyvsp[0].string)); }
+#line 106 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_LOG_FORMAT,
+						yyvsp[0].string); }
     break;
 
   case 6:
-#line 107 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_LOG_LEVEL, (yyvsp[0].number)); }
+#line 108 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_LOG_LEVEL, yyvsp[0].number); }
     break;
 
   case 7:
-#line 108 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_IP, (yyvsp[0].string)); }
+#line 109 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_IP, yyvsp[0].string); }
     break;
 
   case 8:
-#line 109 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_PORT, (yyvsp[0].number)); }
+#line 110 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_PORT, yyvsp[0].number); }
     break;
 
   case 9:
-#line 110 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_CSS, (yyvsp[0].number)); }
+#line 111 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_CSS, yyvsp[0].number); }
     break;
 
   case 10:
-#line 111 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_BACKLOG_LINES,
-      						(yyvsp[0].number)); }
+#line 112 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_BACKLOG_LINES,
+      						yyvsp[0].number); }
     break;
 
   case 11:
-#line 113 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_BACKLOG,
-       						(yyvsp[0].number)); }
+#line 114 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_BACKLOG,
+       						yyvsp[0].number); }
     break;
 
   case 12:
-#line 115 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_LOG, (yyvsp[0].number)); }
+#line 116 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_LOG, yyvsp[0].number); }
     break;
 
   case 13:
-#line 116 "conf.y"
-    { (yyval.tuple) = tuple_i_new(
-       						LEX_ALWAYS_BACKLOG, (yyvsp[0].number)); }
+#line 117 "conf.y"
+    { yyval.tuple = tuple_i_new(
+       						LEX_ALWAYS_BACKLOG, yyvsp[0].number); }
     break;
 
   case 14:
-#line 118 "conf.y"
-    { (yyval.tuple) = tuple_i_new(
-       						LEX_LOG_SYNC_INTERVAL, (yyvsp[0].number)); }
+#line 119 "conf.y"
+    { yyval.tuple = tuple_i_new(
+       						LEX_LOG_SYNC_INTERVAL, yyvsp[0].number); }
     break;
 
   case 15:
-#line 120 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_PID_FILE, (yyvsp[0].string)); }
+#line 121 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_PID_FILE, yyvsp[0].string); }
     break;
 
   case 16:
-#line 121 "conf.y"
-    { (yyval.tuple) = tuple_l_new(LEX_NETWORK,
-       						(yyvsp[-1].list)); }
+#line 122 "conf.y"
+    { yyval.tuple = tuple_l_new(LEX_NETWORK,
+       						yyvsp[-1].list); }
     break;
 
   case 17:
-#line 123 "conf.y"
-    { (yyval.tuple) = tuple_l_new(LEX_USER, (yyvsp[-1].list)); }
+#line 124 "conf.y"
+    { yyval.tuple = tuple_l_new(LEX_USER, yyvsp[-1].list); }
     break;
 
   case 18:
-#line 126 "conf.y"
-    { (yyval.list) = list_new(NULL); }
+#line 127 "conf.y"
+    { yyval.list = list_new(NULL); }
     break;
 
   case 19:
-#line 127 "conf.y"
-    { list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+#line 128 "conf.y"
+    { list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 20:
-#line 130 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_NAME, (yyvsp[0].string)); }
+#line 131 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_NAME, yyvsp[0].string); }
     break;
 
   case 21:
-#line 131 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_SSL, (yyvsp[0].number)); }
+#line 132 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_SSL, yyvsp[0].number); }
     break;
 
   case 22:
-#line 132 "conf.y"
+#line 133 "conf.y"
     {
-		   	(yyval.tuple) = tuple_l_new(LEX_SERVER, (yyvsp[-1].list)); }
+		   	yyval.tuple = tuple_l_new(LEX_SERVER, yyvsp[-1].list); }
     break;
 
   case 23:
-#line 136 "conf.y"
-    { (yyval.list) = list_new(NULL); }
+#line 137 "conf.y"
+    { yyval.list = list_new(NULL); }
     break;
 
   case 24:
-#line 137 "conf.y"
-    { list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+#line 138 "conf.y"
+    { list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 25:
-#line 140 "conf.y"
+#line 141 "conf.y"
     {
-		   (yyval.tuple) = tuple_s_new(LEX_NAME, (yyvsp[0].string)); }
+		   yyval.tuple = tuple_s_new(LEX_NAME, yyvsp[0].string); }
     break;
 
   case 26:
-#line 142 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_PASSWORD,
-	   	(yyvsp[0].string)); }
+#line 143 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_PASSWORD,
+	   	yyvsp[0].string); }
     break;
 
   case 27:
-#line 144 "conf.y"
+#line 145 "conf.y"
     {
-		  		 (yyval.tuple) = tuple_l_new(LEX_CONNECTION, (yyvsp[-1].list)); }
+		  		 yyval.tuple = tuple_l_new(LEX_CONNECTION, yyvsp[-1].list); }
     break;
 
   case 28:
-#line 148 "conf.y"
-    { (yyval.list) = list_new(NULL); }
+#line 149 "conf.y"
+    { yyval.list = list_new(NULL); }
     break;
 
   case 29:
-#line 149 "conf.y"
+#line 150 "conf.y"
     {
-	       list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+	       list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 30:
-#line 153 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_NAME, (yyvsp[0].string)); }
+#line 154 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_NAME, yyvsp[0].string); }
     break;
 
   case 31:
-#line 154 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_NETWORK,
-	  		 (yyvsp[0].string)); }
+#line 155 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_NETWORK,
+	  		 yyvsp[0].string); }
     break;
 
   case 32:
-#line 156 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_LOGIN, (yyvsp[0].string)); }
+#line 157 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_LOGIN, yyvsp[0].string); }
     break;
 
   case 33:
-#line 157 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_NICK, (yyvsp[0].string)); }
+#line 158 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_NICK, yyvsp[0].string); }
     break;
 
   case 34:
-#line 158 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_USER, (yyvsp[0].string)); }
+#line 159 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_USER, yyvsp[0].string); }
     break;
 
   case 35:
-#line 159 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_REALNAME,
-	  	 (yyvsp[0].string)); }
+#line 160 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_REALNAME,
+	  	 yyvsp[0].string); }
     break;
 
   case 36:
-#line 161 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_PASSWORD,
-	  	 (yyvsp[0].string)); }
+#line 162 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_PASSWORD,
+	  	 yyvsp[0].string); }
     break;
 
   case 37:
-#line 163 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_VHOST, (yyvsp[0].string)); }
+#line 164 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_VHOST, yyvsp[0].string); }
     break;
 
   case 38:
-#line 164 "conf.y"
+#line 165 "conf.y"
     {
-		   (yyval.tuple) = tuple_i_new(LEX_SOURCE_PORT, (yyvsp[0].number)); }
+		   yyval.tuple = tuple_i_new(LEX_SOURCE_PORT, yyvsp[0].number); }
     break;
 
   case 39:
-#line 166 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_SSL, (yyvsp[0].number)); }
+#line 167 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_SSL, yyvsp[0].number); }
     break;
 
   case 40:
-#line 167 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_AWAY_NICK,
-	  					(yyvsp[0].string)); }
+#line 168 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_AWAY_NICK,
+	  					yyvsp[0].string); }
     break;
 
   case 41:
-#line 169 "conf.y"
+#line 170 "conf.y"
     {
-		   (yyval.tuple) = tuple_i_new(LEX_FOLLOW_NICK, (yyvsp[0].number)); }
+		   yyval.tuple = tuple_i_new(LEX_FOLLOW_NICK, yyvsp[0].number); }
     break;
 
   case 42:
-#line 171 "conf.y"
-    { (yyval.tuple) = tuple_i_new(
-					   LEX_IGN_FIRST_NICK, (yyvsp[0].number)); }
+#line 172 "conf.y"
+    { yyval.tuple = tuple_i_new(
+					   LEX_IGN_FIRST_NICK, yyvsp[0].number); }
     break;
 
   case 43:
-#line 173 "conf.y"
-    { (yyval.tuple) = tuple_l_new(
-	   					LEX_CHANNEL, (yyvsp[-1].list)); }
+#line 174 "conf.y"
+    { yyval.tuple = tuple_l_new(
+	   					LEX_CHANNEL, yyvsp[-1].list); }
     break;
 
   case 44:
-#line 175 "conf.y"
-    { (yyval.tuple) = tuple_s_new(
-	   					LEX_ON_CONNECT_SEND, (yyvsp[0].string)); }
+#line 176 "conf.y"
+    { yyval.tuple = tuple_s_new(
+	   					LEX_ON_CONNECT_SEND, yyvsp[0].string); }
     break;
 
   case 45:
-#line 178 "conf.y"
-    { (yyval.list) = list_new(NULL); }
+#line 179 "conf.y"
+    { yyval.list = list_new(NULL); }
     break;
 
   case 46:
-#line 179 "conf.y"
-    { list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+#line 180 "conf.y"
+    { list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 47:
-#line 182 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_NAME, (yyvsp[0].string)); }
+#line 183 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_NAME, yyvsp[0].string); }
     break;
 
   case 48:
-#line 183 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_KEY, (yyvsp[0].string)); }
+#line 184 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_KEY, yyvsp[0].string); }
     break;
 
   case 49:
-#line 186 "conf.y"
-    { (yyval.list) = list_new(NULL); }
+#line 187 "conf.y"
+    { yyval.list = list_new(NULL); }
     break;
 
   case 50:
-#line 187 "conf.y"
-    { list_add_last((yyvsp[-2].list), (yyvsp[-1].tuple)); (yyval.list) = (yyvsp[-2].list); }
+#line 188 "conf.y"
+    { list_add_last(yyvsp[-2].list, yyvsp[-1].tuple); yyval.list = yyvsp[-2].list; }
     break;
 
   case 51:
-#line 190 "conf.y"
-    { (yyval.tuple) = tuple_s_new(LEX_HOST, (yyvsp[0].string)); }
+#line 191 "conf.y"
+    { yyval.tuple = tuple_s_new(LEX_HOST, yyvsp[0].string); }
     break;
 
   case 52:
-#line 191 "conf.y"
-    { (yyval.tuple) = tuple_i_new(LEX_PORT, (yyvsp[0].number)); }
+#line 192 "conf.y"
+    { yyval.tuple = tuple_i_new(LEX_PORT, yyvsp[0].number); }
     break;
 
 
     }
 
-/* Line 1037 of yacc.c.  */
-#line 1563 "y.tab.c"
+/* Line 1010 of yacc.c.  */
+#line 1539 "y.tab.c"
 
   yyvsp -= yylen;
   yyssp -= yylen;
@@ -1659,7 +1635,7 @@ yyerrlab:
 
   if (yyerrstatus == 3)
     {
-      /* If just tried and failed to reuse look-ahead token after an
+      /* If just tried and failed to reuse lookahead token after an
 	 error, discard it.  */
 
       if (yychar <= YYEOF)
@@ -1669,22 +1645,23 @@ yyerrlab:
 	  if (yychar == YYEOF)
 	     for (;;)
 	       {
-
 		 YYPOPSTACK;
 		 if (yyssp == yyss)
 		   YYABORT;
-		 yydestruct ("Error: popping",
-                             yystos[*yyssp], yyvsp);
+		 YYDSYMPRINTF ("Error: popping", yystos[*yyssp], yyvsp, yylsp);
+		 yydestruct (yystos[*yyssp], yyvsp);
 	       }
         }
       else
 	{
-	  yydestruct ("Error: discarding", yytoken, &yylval);
+	  YYDSYMPRINTF ("Error: discarding", yytoken, &yylval, &yylloc);
+	  yydestruct (yytoken, &yylval);
 	  yychar = YYEMPTY;
+
 	}
     }
 
-  /* Else will try to reuse look-ahead token after shifting the error
+  /* Else will try to reuse lookahead token after shifting the error
      token.  */
   goto yyerrlab1;
 
@@ -1701,7 +1678,7 @@ yyerrorlab:
      goto yyerrorlab;
 #endif
 
-yyvsp -= yylen;
+  yyvsp -= yylen;
   yyssp -= yylen;
   yystate = *yyssp;
   goto yyerrlab1;
@@ -1731,8 +1708,8 @@ yyerrlab1:
       if (yyssp == yyss)
 	YYABORT;
 
-
-      yydestruct ("Error: popping", yystos[yystate], yyvsp);
+      YYDSYMPRINTF ("Error: popping", yystos[*yyssp], yyvsp, yylsp);
+      yydestruct (yystos[yystate], yyvsp);
       YYPOPSTACK;
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -1741,11 +1718,10 @@ yyerrlab1:
   if (yyn == YYFINAL)
     YYACCEPT;
 
+  YYDPRINTF ((stderr, "Shifting error token, "));
+
   *++yyvsp = yylval;
 
-
-  /* Shift the error token. */
-  YY_SYMBOL_PRINT ("Shifting", yystos[yyn], yyvsp, yylsp);
 
   yystate = yyn;
   goto yynewstate;
@@ -1762,9 +1738,6 @@ yyacceptlab:
 | yyabortlab -- YYABORT comes here.  |
 `-----------------------------------*/
 yyabortlab:
-  yydestruct ("Error: discarding lookahead",
-              yytoken, &yylval);
-  yychar = YYEMPTY;
   yyresult = 1;
   goto yyreturn;
 

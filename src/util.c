@@ -374,11 +374,6 @@ void *list_it_remove(list_iterator_t *li)
 	return ptr;
 }
 
-void list_free_force(list_t *t)
-{
-	free(t);
-}
-
 void list_free(list_t *t)
 {
 	if (t->first != NULL)

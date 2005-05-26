@@ -74,7 +74,6 @@ void list_it_next(list_iterator_t *ti);
 void *list_it_item(list_iterator_t *ti);
 void *list_it_remove(list_iterator_t *li);
 void list_free(list_t *t);
-void list_free_force(list_t *t);
 void list_copy(list_t *src, list_t *dest);
 void list_append(list_t *src, list_t *dest);
 int list_is_empty(list_t *l);
