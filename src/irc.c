@@ -1877,6 +1877,8 @@ void oidentd_dump(list_t *connl)
 }
 #endif
 
+/* do not use */
+list_t *_connections = NULL;
 
 struct link_client *reloading_client;
 /*
@@ -1899,6 +1901,8 @@ void irc_main(connection_t *inc, list_t *ll)
 	list_init(&connl, list_ptr_cmp);
 	list_init(&connecting_c, list_ptr_cmp);
 	list_init(&connected_c, list_ptr_cmp);
+
+	_connections = &connl;
 
 	/* XXX: This one MUST be first */
 	list_add_first(&connl, inc);
@@ -2113,6 +2117,7 @@ prot_err:
 		;
 	while (list_remove_first(&reconnectl))
 		;
+	_connections = NULL;
 	return;
 }
 

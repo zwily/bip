@@ -266,8 +266,21 @@ void reload_config(int i)
 	sighup = 1;
 }
 
+extern list_t *_connections;
+
 void bad_quit(int i)
 {
+	list_iterator_t it;
+	for (list_it_init(_connections, &it); list_it_item(&it);
+			list_it_next(&it)) {
+		connection_t *c = list_it_item(&it);
+		struct link_any *la = c->user_data;
+		if (c->connected == CONN_OK && la &&
+				TYPE(la) == IRC_TYPE_SERVER) {
+			write_line_fast(CONN(la), "QUIT :Coyote finally "
+					"caught me\r\n");
+		}
+	}
 	unlink(conf_pid_file);
 	exit(i);
 }
