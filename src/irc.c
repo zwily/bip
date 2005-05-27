@@ -1647,8 +1647,8 @@ static void irc_close(struct link_any *l)
 
 		server_next(LINK(is));
 		server_cleanup(is);
-		if (LINK(is)->last_reconnection &&
-				time(NULL) - LINK(is)->last_reconnection
+		if (LINK(is)->last_connection &&
+				time(NULL) - LINK(is)->last_connection
 					< CONN_INTERVAL)
 			timer = RECONN_TIMER;
 		mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds",
@@ -1955,6 +1955,7 @@ void irc_main(connection_t *inc, list_t *ll)
 				if ((link = list_remove_first(&reconnectl))) {
 					conn = irc_server_connect(link);
 					list_add_last(&connl, conn);
+					link->last_connection = time(NULL);
 				}
 			}
 
@@ -1972,7 +1973,6 @@ void irc_main(connection_t *inc, list_t *ll)
 				if (l->recon_timer <= 0) {
 					list_it_remove(&li);
 					list_add_last(&reconnectl, l);
-					l->last_reconnection = time(NULL);
 				} else {
 					l->recon_timer--;
 				}

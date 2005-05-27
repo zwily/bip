@@ -69,7 +69,7 @@ struct link {
 
 	/* connection state (reconnecting, was_connected ...) */
 	int recon_timer;
-	time_t last_reconnection;
+	time_t last_connection;
 
 	/** link options */
 
