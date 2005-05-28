@@ -757,8 +757,20 @@ char *log_beautify(char *buf, char *dest)
 	}
 
 	if (out && strcmp(dest, "privates") == 0) {
+		char *stmp;
+		size_t ltmp;
+/*
 		son = sod;
 		lon = lod;
+*/
+		stmp = sod;
+		ltmp = lod;
+
+		sod = son;
+		lod = lon;
+
+		son = stmp;
+		lon = ltmp;
 	}
 
 	som = p;
