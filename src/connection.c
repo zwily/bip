@@ -650,10 +650,6 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 	return 0;
 }
 
-static void connection_ready_output(connection_t *c)
-{
-}
-
 /* starts empty */
 /* capacity: 4 token */
 #define TOKEN_MAX 4
@@ -804,6 +800,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 
 	for (list_it_init(cn_list, &it); list_it_item(&it); list_it_next(&it)) {
 		connection_t *cn = list_it_item(&it);
+		int toadd = 0;
 
 		if (check_event_except(&fds_except, cn)) {
 			mylog(LOG_DEBUGVERB,"Notify on FD %d (state %d)",
@@ -811,14 +808,18 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 			list_add_first(cn_newdata, cn);
 			continue;
  		}
-		if (check_event_write(&fds_write, cn, nc))
-			connection_ready_output(cn);
+		if (check_event_write(&fds_write, cn, nc)) {
+			if (cn_is_in_error(cn))
+				toadd = 1;
+		}
 
 		if (check_event_read(&fds_read, cn)) {
 			mylog(LOG_DEBUGVERB, "Notify on FD %d (state %d)",
 					cn->handle, cn->connected);
-			list_add_first(cn_newdata, cn);
+			toadd = 1;
 		}
+		if (toadd)
+			list_add_first(cn_newdata, cn);
 	}
 	return cn_newdata;
 }
@@ -1124,8 +1125,9 @@ static int SSLize(connection_t *cn, int *nc)
 		return 0;
 	}
 
-	if (!SSL_set_fd(cn->ssl_h,cn->handle)) {
+	if (!SSL_set_fd(cn->ssl_h, cn->handle)) {
 		mylog(LOG_DEBUG, "unable to associate FD to SSL structure");
+		cn->connected = CONN_ERROR;
 		return 1;
 	}
 	
@@ -1160,6 +1162,11 @@ static int SSLize(connection_t *cn, int *nc)
 		return 0;
 	}
 	
+	if (err2 == SSL_ERROR_SYSCALL) {
+		/* socked died */
+		cn->connected = CONN_ERROR;
+		return 1;
+	}
 	/* From now on, we are on error, thus we return 1 to check timeout */
 	if (err2 == SSL_ERROR_ZERO_RETURN || err2 == SSL_ERROR_SSL) {
 		mylog(LOG_DEBUG, "Error in SSL handshake.");
