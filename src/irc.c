@@ -50,6 +50,9 @@ extern char conf_errstr[];
 
 void write_user_list(connection_t *c, char *dest);
 
+static void irc_copy_cli(struct link_client *src, struct link_client *dest,
+		struct line *line);
+
 #define LAGOUT_TIME (360)
 #define LAGCHECK_TIME (90)
 #define RECONN_TIMER (120)
@@ -906,22 +909,65 @@ static int irc_dispatch_client(struct link_client *ic, struct line *line)
 					"later...\r\n");
 
 		free(str);
-		if (r != OK_COPY) {
+		if (r == OK_COPY_CLI) {
 			int i;
 			struct link_server *s = LINK(ic)->l_server;
-			for (i = 0; i < LINK(s)->l_clientc; i++) {
-				if (LINK(s)->l_clientv[i] != ic) {
-					line->origin = s->irc_mask;
-					str = irc_line_to_string(line);
-					write_line(CONN(LINK(s)->l_clientv[i]),
-							str);
-					free(str);
-					line->origin = NULL;
-				}
-			}
+
+			for (i = 0; i < LINK(s)->l_clientc; i++)
+				irc_copy_cli(ic, LINK(s)->l_clientv[i], line);
 		}
 	}
 	return r;
+}
+
+static void irc_copy_cli(struct link_client *src, struct link_client *dest,
+		struct line *line)
+{
+	char *str;
+	if (src == dest)
+		return;
+
+	if (line->elemc <= 2 || strcmp(line->elemv[0], "PRIVMSG") != 0) {
+		str = irc_line_to_string(line);
+		write_line(CONN(dest), str);
+		free(str);
+		return;
+	}
+
+	if (ischannel(*line->elemv[1]) || LINK(src) != LINK(dest)) {
+		line->origin = LINK(src)->l_server->irc_mask;
+		str = irc_line_to_string(line);
+		line->origin = NULL;
+		write_line(CONN(dest), str);
+		free(str);
+		return;
+	}
+
+	/* LINK(src) == LINK(dest) */
+	size_t len = strlen(line->elemv[2]) + 5;
+	char *tmp;
+
+	if (len == 0)
+		return;
+
+	tmp = malloc(len);
+
+	snprintf(tmp, len, " -> %s", line->elemv[2]);
+	tmp[len - 1] = 0;
+
+	line->origin = line->elemv[1];
+	/* tricky: */
+	line->elemv[1] = LINK(src)->l_server->irc_mask;
+
+	free(line->elemv[2]);
+	line->elemv[2] = tmp;
+	str = irc_line_to_string(line);
+	/* end of trick: */
+	line->elemv[1] = line->origin;
+	line->origin = NULL;
+	write_line(CONN(dest), str);
+	free(str);
+	return;
 }
 
 static int irc_dispatch_loging_client(struct link_client *ic, struct line *line,
