@@ -624,7 +624,6 @@ int fireup(FILE *conf)
 {
 	struct tuple *t;
 	list_t *l;
-	list_iterator_t li;
 	int r;
 
 	conf_start();
@@ -695,7 +694,7 @@ int fireup(FILE *conf)
 			if (t->type == TUPLE_STR)
 				free(t->pdata);
 			conf_die("Config error in base config (%d)", t->type);
-			return;
+			return 0;
 		}
 		free(t);
 	}
@@ -707,7 +706,7 @@ int fireup(FILE *conf)
 			conf_die("You must set conf_backlog_lines if "
 					"conf_log = false and "
 					"conf_backlog = true");
-			return;
+			return 0;
 		}
 	}
 
@@ -715,7 +714,7 @@ int fireup(FILE *conf)
 		if (conf_backlog_lines == 0) {
 			conf_die("You must have not nul conf_backlog_lines if "
 					"conf_always_backlog is enabled");
-			return;
+			return 0;
 		}
 	}
 
@@ -1079,6 +1078,14 @@ void adm_bip(struct link_client *ic, struct line *line)
 			WRITE_LINE1(CONN(LINK(ic)->l_server), NULL, "QUIT",
 					"jumpin' jumpin'");
 			connection_close(CONN(LINK(ic)->l_server));
+		}
+	} else if (strcasecmp(line->elemv[1], "BLRESET") == 0) {
+		hash_iterator_t it;
+		for (hash_it_init(&LINK(ic)->log->logfgs, &it);
+				hash_it_item(&it);
+				hash_it_next(&it)) {
+			 logfilegroup_t *lfg = hash_it_item(&it);
+			 log_reset(lfg);
 		}
 	} else if (strcasecmp(line->elemv[1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,

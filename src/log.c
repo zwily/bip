@@ -178,21 +178,36 @@ void log_updatelast(logfile_t *lf)
 	localtime_r(&t, &lf->last_log);
 }
 
-void log_reinit(logfilegroup_t *lfg)
+void log_reset(logfilegroup_t *lfg)
 {
-	mylog(LOG_ERROR, "%s is inconsistant, droping backlog info",
-			lfg->name);
 	logfile_t *olf;
+
+	if (lfg->memlog) {
+		while (!list_is_empty(lfg->memlog))
+			free(list_remove_first(lfg->memlog));
+		return;
+	}
+
 	while ((olf = list_get_first(&lfg->file_group)) !=
 			list_get_last(&lfg->file_group)) {
 		logfile_free(olf);
 		list_remove_first(&lfg->file_group);
 	}
+	if (!olf)
+		return;
+
 	if (!olf->file)
 		fatal("internal, (NULL logfile)");
 	fseek(olf->file, 0, SEEK_END);
 	olf->len = ftell(olf->file);
 	olf->backlog_offset = olf->len;
+}
+
+void log_reinit(logfilegroup_t *lfg)
+{
+	mylog(LOG_ERROR, "%s is inconsistant, droping backlog info",
+			lfg->name);
+	log_reset(lfg);
 }
 
 static int log_add_file(log_t *logdata, char *destination, char *filename)
@@ -784,7 +799,7 @@ char *log_beautify(char *buf, char *dest)
 
 	p = ret = (char *)malloc(
 		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +
-		1 + 3 + lom + 3 + action * (2 + strlen("ACTION ")));
+		1 + 5 + lom + 3 + action * (2 + strlen("ACTION ")));
 	if (!p)
 		fatal("out of memory");
 	*p++ = ':';
@@ -807,7 +822,7 @@ char *log_beautify(char *buf, char *dest)
 		p += strlen("ACTION ");
 	}
 	if (out) {
-		memcpy(p, "->", 2);
+		memcpy(p, " -> ", 4);
 		p += 2;
 	}
 	memcpy(p, sots, lots);

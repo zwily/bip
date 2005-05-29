@@ -92,4 +92,5 @@ char *log_backread(log_t *logdata, char *destination);
 int log_has_backlog(log_t *logdata, char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);
+void log_reset(logfilegroup_t *);
 #endif

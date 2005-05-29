@@ -944,7 +944,7 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 {
 	connection_t *conn;
 	char *incoming;
-	list_t *outgoing, *incoming_lines;
+	list_t *outgoing;
 
 	conn = (connection_t*)malloc(sizeof(connection_t));
 	incoming = (char*)malloc(sizeof(char) * CONN_BUFFER_SIZE);
