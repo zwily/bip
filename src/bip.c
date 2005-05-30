@@ -54,6 +54,7 @@ int conf_backlog_lines = 10;
 /* backlog even lines already backlogged */
 int conf_always_backlog;
 int conf_log_sync_interval;
+int conf_blreset_on_talk = 0;
 
 list_t *parse_conf(FILE *file);
 static void conf_die(char *fmt, ...);
@@ -678,6 +679,9 @@ int fireup(FILE *conf)
 				free(conf_pid_file);
 			conf_pid_file = t->pdata;
 			break;
+		case LEX_BLRESET_ON_TALK:
+			conf_blreset_on_talk = t->ndata;
+			break;
 		case LEX_NETWORK:
 			r = add_network(t->pdata);
 			list_free(t->pdata);
@@ -1057,6 +1061,16 @@ void write_user_list(connection_t *c, char *dest)
 }
 
 extern struct link_client *reloading_client;
+void adm_blreset(struct link_client *ic)
+{
+	hash_iterator_t it;
+	for (hash_it_init(&LINK(ic)->log->logfgs, &it);
+			hash_it_item(&it);
+			hash_it_next(&it)) {
+		logfilegroup_t *lfg = hash_it_item(&it);
+		log_reset(lfg);
+	}
+}
 
 void adm_bip(struct link_client *ic, struct line *line)
 {
@@ -1080,16 +1094,10 @@ void adm_bip(struct link_client *ic, struct line *line)
 			connection_close(CONN(LINK(ic)->l_server));
 		}
 	} else if (strcasecmp(line->elemv[1], "BLRESET") == 0) {
-		hash_iterator_t it;
-		for (hash_it_init(&LINK(ic)->log->logfgs, &it);
-				hash_it_item(&it);
-				hash_it_next(&it)) {
-			 logfilegroup_t *lfg = hash_it_item(&it);
-			 log_reset(lfg);
-		}
+		adm_blreset(ic);
 	} else if (strcasecmp(line->elemv[1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
-			"/BIP (RELOAD|LIST|JUMP|HELP)");
+			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP)");
 	}
 }
 

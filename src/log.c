@@ -181,6 +181,7 @@ void log_updatelast(logfile_t *lf)
 void log_reset(logfilegroup_t *lfg)
 {
 	logfile_t *olf;
+	lfg->skip_advance = 0;
 
 	if (lfg->memlog) {
 		while (!list_is_empty(lfg->memlog))

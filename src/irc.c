@@ -47,6 +47,7 @@ extern int conf_backlog;
 extern int conf_log_sync_interval;
 extern int conf_error;
 extern char conf_errstr[];
+extern int conf_blreset_on_talk;
 
 void write_user_list(connection_t *c, char *dest);
 
@@ -713,10 +714,13 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 	return OK_CLOSE;
 }
 
+void adm_blreset(struct link_client *ic);
 static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 {
 	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
+	if (conf_blreset_on_talk)
+		adm_blreset(ic);
 	return OK_COPY_CLI;
 }
 
