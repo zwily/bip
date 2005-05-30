@@ -1569,7 +1569,7 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 		hash_remove(&channel->nicks, s_nick);
 		nick_free(nick);
 		
-		log_quit(LINK(server)->log, s_nick, channel->name,
+		log_quit(LINK(server)->log, line->origin, channel->name,
 				line->elemc == 2 ?  line->elemv[1] : NULL);
 	}
 	free(s_nick);
