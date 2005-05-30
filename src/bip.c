@@ -852,10 +852,13 @@ void ircize(list_t *ll)
 					struct c_channel *chan =
 						list_it_item(&chit);
 					struct chan_info *ci = chan_info_new();
+					printf("%s\n",chan->name);
 					ci->name = strdup(chan->name);
 					ci->key = strmaydup(chan->key);
 					hash_insert(&link->chan_infos,
 							ci->name, ci);
+					list_add_last(&link->chan_infos_order,
+							ci);
 				}
 				list_add_last(ll, link);
 			} else {

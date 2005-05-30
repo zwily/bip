@@ -281,10 +281,10 @@ void irc_lag_init(struct link_server *is)
 
 static void irc_server_join(struct link_server *s)
 {
-	hash_iterator_t it;
-	for (hash_it_init(&LINK(s)->chan_infos, &it); hash_it_item(&it);
-			hash_it_next(&it)) {
-		struct chan_info *ci = hash_it_item(&it);
+	list_iterator_t it;
+	for (list_it_init(&LINK(s)->chan_infos_order, &it); list_it_item(&it);
+			list_it_next(&it)) {
+		struct chan_info *ci = list_it_item(&it);
 		if (!ci->key)
 			WRITE_LINE1(CONN(s), NULL, "JOIN", ci->name);
 		else
@@ -629,10 +629,23 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		return OK_FORGET;
 	}
 
+	/* join channels, step one, those in conf, in order */
+	list_iterator_t li;
+	for (list_it_init(&LINK(ic)->chan_infos_order, &li);
+			list_it_item(&li); list_it_next(&li)) {
+		struct chan_info *ci = (struct chan_info *)list_it_item(&li);
+		struct channel *chan;
+		if ((chan = hash_get(&LINK(ic)->l_server->channels, ci->name)))
+			irc_send_join(ic, chan);
+	}
+
+	/* step two, those not in conf */
 	hash_iterator_t hi;
 	for (hash_it_init(&LINK(ic)->l_server->channels, &hi);
 			hash_it_item(&hi); hash_it_next(&hi)) {
-		irc_send_join(ic, (struct channel *)hash_it_item(&hi));
+		struct channel *chan = (struct channel *)hash_it_item(&hi);
+		if (!hash_get(&LINK(ic)->chan_infos, chan->name))
+			irc_send_join(ic, chan);
 	}
 
 	/* backlog privates */
@@ -799,6 +812,7 @@ void irc_add_channel_info(struct link_server *ircs, char *chan, char *key)
 		ci->name = strdup(chan);
 		ci->key = key ? strdup(key) : NULL;
 		hash_insert(&LINK(ircs)->chan_infos, chan, ci);
+		list_add_last(&LINK(ircs)->chan_infos_order, ci);
 	} else {
 		if (ci->key) {
 			free(ci->key);
@@ -865,6 +879,7 @@ static int irc_cli_part(struct link_client *irc, struct line *line)
 	struct chan_info *ci;
 	if ((ci = hash_remove_if_exists(&LINK(irc)->chan_infos,
 					line->elemv[1])) != NULL) {
+		list_remove(&LINK(irc)->chan_infos_order, ci);
 		free(ci->name);
 		if (ci->key)
 			free(ci->key);
@@ -2200,6 +2215,7 @@ struct link *irc_link_new()
 		fatal("calloc");
 
 	hash_init(&link->chan_infos, HASH_NOCASE);
+	list_init(&link->chan_infos_order, list_ptr_cmp);
 	return link;
 }
 
