@@ -413,22 +413,30 @@ static void _log_privmsg(log_t *logdata, char *ircmask, int src,
 	if (src)
 		dir = '>';
 
-	if (*message == '\001' && *(message + strlen(message) - 1) == '\001') {
-		char *msg = strdup(message);
+	if (strlen(message) > 11 && ((*message == '\001' ||
+		((*message == '+' || *message == '-') &&
+			 (*(message + 1) == '\001'))) &&
+		(*(message + strlen(message) - 1) == '\001'))) {
+		char *msg;
+		/* hack for freenode and the like */
+		char *real_message = message;
+
+		if (*message == '+' || *message == '-')
+			real_message++; 
+
+		if (strncmp(real_message, "\001ACTION ", 8) != 0)
+			return;
+		msg = strdup(real_message);
 		if (!msg)
 			fatal("out of memory");
-		if (strncmp(msg, "\001ACTION ", 8) != 0) {
-			free(msg);
-			return;
-		}
 		*(msg + strlen(msg) - 1) = '\0';
 		if (ischannel(*destination) || strchr(destination, '@')) {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s * %c %s %s", timestamp(), dir,
+					"%s %c * %s %s", timestamp(), dir,
 					ircmask, msg + 8);
 		} else {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s (%s) * %c %s %s", timestamp(),
+					"%s (%s) %c * %s %s", timestamp(),
 					destination, dir, ircmask, msg + 8);
 		}
 		free(msg);
@@ -595,22 +603,18 @@ void log_client_disconnected(log_t *logdata)
 void log_client_none_connected(log_t *logdata)
 {
 	logfilegroup_t *lfg;
-	logfile_t *lf;
 	hash_iterator_t hi;
 
 	logdata->connected = 0;
 
 	if (conf_always_backlog)
 		return;
+
 	
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		lfg = hash_it_item(&hi);
-		lf = list_get_last(&lfg->file_group);
-		if (lf != list_get_first(&lfg->file_group))
-			fatal("internal log_client_none_connected");
-		lf->backlog_offset = lf->len;
-		lfg->skip_advance = 0;
+		log_reset(lfg);
 	}
 }
 
@@ -1030,7 +1034,6 @@ static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
 
 	if (lfg->memlog) {
 		char *r = log_beautify(str, destination);
-		mylog(LOG_ERROR, "lb:%s", r);
 		list_add_last(lfg->memlog, r);
 		if (lfg->memc == conf_backlog_lines)
 			free(list_remove_first(lfg->memlog));

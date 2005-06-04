@@ -167,7 +167,6 @@ con_command:
 	   | LEX_VHOST LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_VHOST, $3); }
 	   | LEX_SOURCE_PORT LEX_EQ LEX_INT {
 		   $$ = tuple_i_new(LEX_SOURCE_PORT, $3); }
-	   | LEX_SSL LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_SSL, $3); }
 	   | LEX_AWAY_NICK LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_AWAY_NICK,
 	  					$3); }
            | LEX_FOLLOW_NICK LEX_EQ LEX_BOOL {
