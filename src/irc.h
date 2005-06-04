@@ -101,6 +101,9 @@ struct link {
 	char *vhost;
 	int bind_port;
 	int s_ssl;
+
+	int ssl_check_mode;
+	char *ssl_check_store;
 };
 
 struct link_connection {

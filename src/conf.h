@@ -53,26 +53,28 @@
      LEX_BUNCH = 279,
      LEX_REALNAME = 280,
      LEX_SSL = 281,
-     LEX_CHANNEL = 282,
-     LEX_KEY = 283,
-     LEX_LOG_ROOT = 284,
-     LEX_LOG_FORMAT = 285,
-     LEX_LOG_LEVEL = 286,
-     LEX_BACKLOG_LINES = 287,
-     LEX_BACKLOG = 288,
-     LEX_LOG = 289,
-     LEX_LOG_SYNC_INTERVAL = 290,
-     LEX_FOLLOW_NICK = 291,
-     LEX_ON_CONNECT_SEND = 292,
-     LEX_AWAY_NICK = 293,
-     LEX_PID_FILE = 294,
-     LEX_IGN_FIRST_NICK = 295,
-     LEX_ALWAYS_BACKLOG = 296,
-     LEX_LOGIN = 297,
-     LEX_BLRESET_ON_TALK = 298,
-     LEX_BOOL = 299,
-     LEX_INT = 300,
-     LEX_STRING = 301
+     LEX_SSL_CHECK_MODE = 282,
+     LEX_SSL_CHECK_STORE = 283,
+     LEX_CHANNEL = 284,
+     LEX_KEY = 285,
+     LEX_LOG_ROOT = 286,
+     LEX_LOG_FORMAT = 287,
+     LEX_LOG_LEVEL = 288,
+     LEX_BACKLOG_LINES = 289,
+     LEX_BACKLOG = 290,
+     LEX_LOG = 291,
+     LEX_LOG_SYNC_INTERVAL = 292,
+     LEX_FOLLOW_NICK = 293,
+     LEX_ON_CONNECT_SEND = 294,
+     LEX_AWAY_NICK = 295,
+     LEX_PID_FILE = 296,
+     LEX_IGN_FIRST_NICK = 297,
+     LEX_ALWAYS_BACKLOG = 298,
+     LEX_LOGIN = 299,
+     LEX_BLRESET_ON_TALK = 300,
+     LEX_BOOL = 301,
+     LEX_INT = 302,
+     LEX_STRING = 303
    };
 #endif
 #define LEX_IP 258
@@ -99,26 +101,28 @@
 #define LEX_BUNCH 279
 #define LEX_REALNAME 280
 #define LEX_SSL 281
-#define LEX_CHANNEL 282
-#define LEX_KEY 283
-#define LEX_LOG_ROOT 284
-#define LEX_LOG_FORMAT 285
-#define LEX_LOG_LEVEL 286
-#define LEX_BACKLOG_LINES 287
-#define LEX_BACKLOG 288
-#define LEX_LOG 289
-#define LEX_LOG_SYNC_INTERVAL 290
-#define LEX_FOLLOW_NICK 291
-#define LEX_ON_CONNECT_SEND 292
-#define LEX_AWAY_NICK 293
-#define LEX_PID_FILE 294
-#define LEX_IGN_FIRST_NICK 295
-#define LEX_ALWAYS_BACKLOG 296
-#define LEX_LOGIN 297
-#define LEX_BLRESET_ON_TALK 298
-#define LEX_BOOL 299
-#define LEX_INT 300
-#define LEX_STRING 301
+#define LEX_SSL_CHECK_MODE 282
+#define LEX_SSL_CHECK_STORE 283
+#define LEX_CHANNEL 284
+#define LEX_KEY 285
+#define LEX_LOG_ROOT 286
+#define LEX_LOG_FORMAT 287
+#define LEX_LOG_LEVEL 288
+#define LEX_BACKLOG_LINES 289
+#define LEX_BACKLOG 290
+#define LEX_LOG 291
+#define LEX_LOG_SYNC_INTERVAL 292
+#define LEX_FOLLOW_NICK 293
+#define LEX_ON_CONNECT_SEND 294
+#define LEX_AWAY_NICK 295
+#define LEX_PID_FILE 296
+#define LEX_IGN_FIRST_NICK 297
+#define LEX_ALWAYS_BACKLOG 298
+#define LEX_LOGIN 299
+#define LEX_BLRESET_ON_TALK 300
+#define LEX_BOOL 301
+#define LEX_INT 302
+#define LEX_STRING 303
 
 
 
@@ -132,7 +136,7 @@ typedef union YYSTYPE {
 	struct tuple *tuple;
 } YYSTYPE;
 /* Line 1285 of yacc.c.  */
-#line 136 "y.tab.h"
+#line 140 "y.tab.h"
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1

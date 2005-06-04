@@ -18,11 +18,13 @@
 
 extern int errno;
 #ifdef HAVE_LIBSSL
+static int ssl_initialized = 0;
 static SSL_CTX *sslctx = NULL;
+static int ssl_cx_idx;
 static BIO *errbio = NULL;
 extern char *conf_ssl_certfile;
 static int SSLize(connection_t *cn, int *nc);
-static int SSL_init_context(void);
+static SSL_CTX *SSL_init_context(void);
 #endif
 
 static int connection_timedout(connection_t *cn);
@@ -81,6 +83,10 @@ void connection_free(connection_t *cn)
 			SSL_shutdown(cn->ssl_h);
 			SSL_free(cn->ssl_h);
 			cn->ssl_h = NULL;
+		}
+		if (cn->ssl_ctx_h) {
+			SSL_CTX_free(cn->ssl_ctx_h);
+			cn->ssl_ctx_h = NULL;
 		}
 	}
 #endif
@@ -967,8 +973,11 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	conn->ip_list = NULL;
 	conn->connecting_data = NULL;
 #ifdef HAVE_LIBSSL
+	conn->ssl_ctx_h = NULL;
 	conn->ssl_h = NULL;
 	conn->cert = NULL;
+	conn->ssl_check_store = NULL;
+	conn->ssl_check_mode = SSL_CHECK_NONE;
 #endif
 	conn->connected = CONN_NEW;
 	
@@ -996,9 +1005,10 @@ connection_t *accept_new(connection_t *cn)
 #ifdef HAVE_LIBSSL
 	if (cn->ssl) {
 		if (!sslctx) {
-			mylog(LOG_DEBUG, "No SSL context availaible. "
+			mylog(LOG_DEBUG, "No SSL context available for "
+					"accepted connections. "
 					"Initializing...");
-			if (SSL_init_context()) {
+			if (!(sslctx = SSL_init_context())) {
 				mylog(LOG_DEBUG, "SSL context initialization "
 						"failed");
 				connection_free(conn);
@@ -1051,66 +1061,138 @@ static connection_t *_connection_new(char *dsthostname, char *dstport,
 }
 
 #ifdef HAVE_LIBSSL
-static int SSL_init_context(void)
+static SSL_CTX *SSL_init_context(void)
 {
 	int fd, flags, ret, rng;
 	char buf[1025];
+	SSL_CTX *ctx;
 	
 	if (sslctx) {
 		mylog(LOG_DEBUG, "SSL already initialized");
 		return 0;
 	}
 
-	SSL_library_init();
-	SSL_load_error_strings();
-	errbio = BIO_new_fp(stderr,BIO_NOCLOSE);
+	if (!ssl_initialized) {
+		SSL_library_init();
+		SSL_load_error_strings();
+		errbio = BIO_new_fp(stderr,BIO_NOCLOSE);
+		
+		ssl_cx_idx = SSL_get_ex_new_index(0, "bip connection_t",
+			NULL, NULL,NULL);
 	
+		flags = O_RDONLY;
+		flags |= O_NONBLOCK;
+		fd = open("/dev/random", flags);
+		if (fd < 0) {
+			mylog(LOG_DEBUG, "SSL: /dev/random not ready, unable "
+					"to manually seed PRNG.");
+			goto prng_end;
+		}
+
+		do {
+			ret = read(fd, buf, 1024);
+			if (ret <= 0) {
+				mylog(LOG_DEBUG,"/dev/random: %s",
+						strerror(errno));
+				goto prng_end;
+			}
+			mylog(LOG_DEBUG, "PRNG seeded with %d /dev/random "
+					"bytes", ret);
+			RAND_seed(buf, ret);
+		} while (!(rng = RAND_status()));
+
+prng_end:
+		do {
+			ret = close(fd);
+		} while (ret != 0 && errno == EINTR);
+		if (RAND_status()) {
+			mylog(LOG_DEBUG, "SSL: PRNG is seeded !");
+		} else {
+			mylog(LOG_WARN, "SSL: PRNG is not seeded enough");
+			mylog(LOG_WARN, "     OpenSSL will use /dev/urandom if "
+					 "available.");
+		}
+
+		ssl_initialized = 1;
+	}
+		
 	/* allocated by function */
-	sslctx = SSL_CTX_new(SSLv23_method());
-	if (!sslctx)
-		return 1;
-	if (!SSL_CTX_use_certificate_chain_file(sslctx,conf_ssl_certfile)) {
+	ctx = SSL_CTX_new(SSLv23_method());
+	if (!SSL_CTX_use_certificate_chain_file(ctx,conf_ssl_certfile)) {
 		mylog(LOG_DEBUG, "SSL: Unable to load certificate file");
 	}
-	if (!SSL_CTX_use_PrivateKey_file(sslctx, conf_ssl_certfile,
+	if (!SSL_CTX_use_PrivateKey_file(ctx, conf_ssl_certfile,
 				SSL_FILETYPE_PEM)) {
 		mylog(LOG_DEBUG, "SSL: Unable to load key file");
 	}
-	SSL_CTX_set_session_cache_mode(sslctx, SSL_SESS_CACHE_BOTH);
-	SSL_CTX_set_timeout(sslctx,(long)60);
-	SSL_CTX_set_options(sslctx, SSL_OP_ALL);
-	flags = O_RDONLY;
-	flags |= O_NONBLOCK;
-	fd = open("/dev/random", flags);
-	if (fd < 0) {
-		mylog(LOG_DEBUG, "SSL: /dev/random not ready, unable to "
-				"manually seed PRNG.");
-		goto prng_end;
-	}
+	SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_BOTH);
+	SSL_CTX_set_timeout(ctx,(long)60);
+	SSL_CTX_set_options(ctx, SSL_OP_ALL);
 
-	do {
-		ret = read(fd, buf, 1024);
-		if (ret <= 0) {
-			mylog(LOG_DEBUG,"/dev/random: %s",strerror(errno));
-			goto prng_end;
+	return ctx;
+}
+
+static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+{
+	char subject[256];
+	char issuer[256];
+	X509 *err_cert;
+	int err, depth;
+	SSL *ssl;
+	connection_t *c;
+	X509_OBJECT xobj;
+	int is_in_store;
+	int result;
+
+	err_cert = X509_STORE_CTX_get_current_cert(ctx);
+	err = X509_STORE_CTX_get_error(ctx);
+	depth = X509_STORE_CTX_get_error_depth(ctx);
+
+	/* Retrieve the SSL and connection_t objects from the store */
+	ssl = X509_STORE_CTX_get_ex_data(ctx,
+			SSL_get_ex_data_X509_STORE_CTX_idx());
+	c = SSL_get_ex_data(ssl, ssl_cx_idx);
+
+	mylog(LOG_INFO, "SSL cert check: now at depth=%d", depth);
+	X509_NAME_oneline(X509_get_subject_name(err_cert), subject, 256);
+	X509_NAME_oneline(X509_get_issuer_name(err_cert), issuer, 256);
+	mylog(LOG_INFO, "Subject: %s", subject);
+	mylog(LOG_INFO, "Issuer: %s", issuer);
+
+	result = preverify_ok;
+	
+	/* in basic mode (mode 1), accept a leaf certificate if we can find it
+	 * in the store */
+	if (c->ssl_check_mode == SSL_CHECK_BASIC && depth == 0 && result == 0 &&
+			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
+			 err == X509_V_ERR_CERT_UNTRUSTED ||
+			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE)) {
+		
+		if (X509_STORE_get_by_subject(ctx, X509_LU_X509,
+				X509_get_subject_name(err_cert), &xobj) > 0 &&
+				!X509_cmp(xobj.data.x509, err_cert)) {
+			
+			mylog(LOG_INFO, "Basic mode; peer certificate found "
+					"in store, accepting it!");
+					
+			result = 1;
+			err = X509_V_OK;
+			X509_STORE_CTX_set_error(ctx, err);
+		} else {
+			mylog(LOG_INFO, "Basic mode; peer certificate NOT "
+					"in store, rejecting it!");
+			err = X509_V_ERR_CERT_REJECTED;
+			X509_STORE_CTX_set_error(ctx, err);
 		}
-		mylog(LOG_DEBUG, "PRNG seeded with %d /dev/random bytes",
-				ret);
-		RAND_seed(buf, ret);
-	} while (!(rng = RAND_status()));
-
-prng_end:
-	do {
-		ret = close(fd);
-	} while (ret != 0 && errno == EINTR);
-	if (RAND_status()) {
-		mylog(LOG_DEBUG, "SSL: PRNG is seeded !");
-	} else {
-		mylog(LOG_WARN, "SSL: PRNG is not seeded enough");
-		mylog(LOG_WARN, "     OpenSSL will use /dev/urandom if "
-				 "available.");
 	}
-	return 0;
+	
+	if (!result) {
+		/* We have a verify error! Log it */
+		mylog(LOG_ERROR, "SSL cert check failed at depth=%d: %s (%d)",
+				depth, X509_verify_cert_error_string(err), err);
+	}
+
+	return result;
 }
 
 static int SSLize(connection_t *cn, int *nc)
@@ -1143,6 +1225,7 @@ static int SSLize(connection_t *cn, int *nc)
 		SSL_CIPHER *cipher;
 		char buf[128];
 		int len;
+		int err;
 
 		cipher = SSL_get_current_cipher(cn->ssl_h);
 		SSL_CIPHER_description(cipher, buf, 128);
@@ -1150,13 +1233,15 @@ static int SSLize(connection_t *cn, int *nc)
 		if (len > 0)
 			buf[len-1] = '\0';
 		mylog(LOG_DEBUG, "Negociated cyphers: %s",buf);
-/*
-		if (SSL_get_verify_result(cn->ssl_h) != X509_V_OK) {
-			mylog(LOG_ERROR, "Invalid certificate !");
+
+		if ((err = SSL_get_verify_result(cn->ssl_h)) != X509_V_OK) {
+			mylog(LOG_ERROR, "Certificate check failed: %s (%d)!",
+					X509_verify_cert_error_string(err),
+					err);
 			cn->connected = CONN_ERROR;
 			return 1;
 		}
-*/
+
 		cn->connected = CONN_OK;
 		*nc = 1;
 		return 0;
@@ -1179,31 +1264,58 @@ static int SSLize(connection_t *cn, int *nc)
 }
 
 static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
-		char *srchostname, char *srcport, int timeout)
+		char *srchostname, char *srcport, int check_mode,
+		char *check_store, int timeout)
 {
 	connection_t *conn;
 
 	conn = connection_init(1, 1, timeout, 0);
-	if (!sslctx) {
-		mylog(LOG_DEBUG, "No SSL context availaible. Initializing...");
-		if (SSL_init_context()) {
-			mylog(LOG_DEBUG, "SSL context initialization failed");
-			return conn;
-		}
+	if (!(conn->ssl_ctx_h = SSL_init_context())) {
+		mylog(LOG_DEBUG, "SSL context initialization failed");
+		return conn;
 	}
 	conn->cert = NULL;
-	conn->ssl_h = SSL_new(sslctx);
+	conn->ssl_check_mode = check_mode;
+	conn->ssl_check_store = check_store;
+	if (!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, NULL,
+			check_store)) {
+		mylog(LOG_DEBUG, "Can't assign check store to SSL connection!");
+		return conn;
+	}
+
+	switch (conn->ssl_check_mode) {
+	case SSL_CHECK_NONE:
+		SSL_CTX_set_verify(conn->ssl_ctx_h, SSL_VERIFY_NONE, NULL);
+		break;
+	case SSL_CHECK_BASIC:
+		SSL_CTX_set_verify(conn->ssl_ctx_h, SSL_VERIFY_PEER,
+				bip_ssl_verify_callback);
+		SSL_CTX_set_verify_depth(conn->ssl_ctx_h, 0);
+		break;
+	case SSL_CHECK_CA:
+		SSL_CTX_set_verify(conn->ssl_ctx_h, SSL_VERIFY_PEER,
+				bip_ssl_verify_callback);
+		break;
+	default:
+		fatal("Unknown SSL cert check mode.");
+	}
+	
+	conn->ssl_h = SSL_new(conn->ssl_ctx_h);
 	if (conn->ssl_h == NULL) {
 		mylog(LOG_DEBUG, "Unable to allocate SSL structures");
 		return conn;
 	}
-
+	/* ys: useless as long as we have a context by connection
 	if (sslctx->session_cache_head)
 		if (!SSL_set_session(conn->ssl_h, sslctx->session_cache_head))
 			mylog(LOG_DEBUG, "unable to set SSL session id to"
 					" most recent used");
+	*/
 	SSL_set_connect_state(conn->ssl_h);
-
+	
+	/* Put our connection_t in the SSL object for the verify callback */
+	SSL_set_ex_data(conn->ssl_h, ssl_cx_idx, conn);
+	
 	create_socket(dsthostname, dstport, srchostname, srcport, conn);
 
 	return conn;
@@ -1211,7 +1323,8 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 #endif
 
 connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
-		int srcport, int ssl, int timeout)
+		int srcport, int ssl, int ssl_check_mode, char *ssl_check_store,
+		int timeout)
 {
 	char dstportbuf[20], srcportbuf[20], *tmp;
 	/* TODO: allow litteral service name in the function interface */
@@ -1227,7 +1340,7 @@ connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
 #ifdef HAVE_LIBSSL
 	if (ssl)
 		return _connection_new_SSL(dsthostname, dstportbuf, srchostname,
-				tmp, timeout);
+				tmp, ssl_check_mode, ssl_check_store, timeout);
 	else
 #endif
 		return _connection_new(dsthostname, dstportbuf, srchostname,

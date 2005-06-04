@@ -556,6 +556,9 @@ void c_user_free(struct c_user *cu)
 {
 	free(cu->name);
 	free(cu->password);
+#ifdef HAVE_LIBSSL
+	free(cu->ssl_check_store);
+#endif
 	struct c_connection *con;
 	while ((con = list_remove_first(&cu->connectionl)))
 		c_connection_free(con);
@@ -596,6 +599,18 @@ static int add_user(list_t *data)
 			if (!r)
 				return 0;
 			break;
+#ifdef HAVE_LIBSSL
+		case LEX_SSL_CHECK_MODE:
+			if (!strncmp(t->pdata, "basic", 5))
+				u->ssl_check_mode = SSL_CHECK_BASIC;
+			if (!strncmp(t->pdata, "ca", 2))
+				u->ssl_check_mode = SSL_CHECK_CA;
+			free(t->pdata);
+			break;
+		case LEX_SSL_CHECK_STORE:
+			u->ssl_check_store = t->pdata;
+			break;
+#endif
 		default:
 			conf_die("Uknown keyword in user statement");
 			if (t->type == TUPLE_STR)
@@ -921,6 +936,8 @@ void ircize(list_t *ll)
 			link->bind_port = c->source_port;
 #ifdef HAVE_LIBSSL
 			link->s_ssl = c->network->ssl;
+			link->ssl_check_mode = u->ssl_check_mode;
+			link->ssl_check_store = strmaydup(u->ssl_check_store);
 #endif
 
 			if (!link->user)

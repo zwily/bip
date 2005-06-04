@@ -63,6 +63,8 @@ list_t *parse_conf(FILE *file)
 "vhost"			{ return LEX_VHOST; }
 "password"		{ return LEX_PASSWORD; }
 "ssl"		        { return LEX_SSL; }
+"ssl_check_mode"        { return LEX_SSL_CHECK_MODE; }
+"ssl_check_store"       { return LEX_SSL_CHECK_STORE; }
 "key"			{ return LEX_KEY; }
 "channel"		{ return LEX_CHANNEL; }
 "log_level"		{ return LEX_LOG_LEVEL; }

@@ -1848,7 +1848,8 @@ connection_t *irc_server_connect(struct link *link)
 	conn = connection_new(link->serverv[link->cur_server]->host,
 				link->serverv[link->cur_server]->port,
 				link->vhost, link->bind_port,
-				link->s_ssl, CONNECT_TIMEOUT);
+				link->s_ssl, link->ssl_check_mode,
+				link->ssl_check_store, CONNECT_TIMEOUT);
 	if (!conn)
 		fatal("connection_new");
 

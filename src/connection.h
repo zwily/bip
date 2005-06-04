@@ -55,6 +55,12 @@
 #define WRITE_ERROR -1
 #define WRITE_KEEP -2
 
+#ifdef HAVE_LIBSSL
+#define SSL_CHECK_NONE (0)
+#define SSL_CHECK_BASIC (1)
+#define SSL_CHECK_CA (2)
+#endif
+
 struct connecting_data;
 typedef struct connection {
 	int anti_flood;
@@ -75,13 +81,17 @@ typedef struct connection {
 	list_t *ip_list;
 	struct connecting_data *connecting_data;
 #ifdef HAVE_LIBSSL
+	SSL_CTX *ssl_ctx_h;
 	SSL *ssl_h;
+	int ssl_check_mode;
+	char *ssl_check_store;
 	X509 *cert;
 #endif
 } connection_t;
 
 connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
-		int srcport, int ssl, int timeout);
+		int srcport, int ssl, int ssl_check_mode,
+		char *ssl_check_store,int timeout);
 connection_t *listen_new(char *hostname, int port, int ssl);
 connection_t *accept_new(connection_t *cn);
 void connection_free(connection_t *cn);

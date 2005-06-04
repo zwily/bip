@@ -28,6 +28,10 @@ struct c_user
 	char *name;
 	unsigned char *password;
 	unsigned int seed;
+#ifdef HAVE_LIBSSL
+	int ssl_check_mode;
+	char *ssl_check_store;
+#endif
 	list_t connectionl;
 };
 
