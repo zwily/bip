@@ -1067,11 +1067,6 @@ static SSL_CTX *SSL_init_context(void)
 	char buf[1025];
 	SSL_CTX *ctx;
 	
-	if (sslctx) {
-		mylog(LOG_DEBUG, "SSL already initialized");
-		return 0;
-	}
-
 	if (!ssl_initialized) {
 		SSL_library_init();
 		SSL_load_error_strings();
@@ -1234,7 +1229,9 @@ static int SSLize(connection_t *cn, int *nc)
 			buf[len-1] = '\0';
 		mylog(LOG_DEBUG, "Negociated cyphers: %s",buf);
 
-		if ((err = SSL_get_verify_result(cn->ssl_h)) != X509_V_OK) {
+		if (cn->ssl_check_mode > 0 &&
+				(err = SSL_get_verify_result(cn->ssl_h))
+				!= X509_V_OK) {
 			mylog(LOG_ERROR, "Certificate check failed: %s (%d)!",
 					X509_verify_cert_error_string(err),
 					err);
@@ -1277,9 +1274,10 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 	conn->cert = NULL;
 	conn->ssl_check_mode = check_mode;
 	conn->ssl_check_store = check_store;
-	if (!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, NULL,
-			check_store)) {
-		mylog(LOG_DEBUG, "Can't assign check store to SSL connection!");
+	if (conn->ssl_check_mode != SSL_CHECK_NONE &&
+		!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, NULL,
+				check_store)) {
+		mylog(LOG_ERROR, "Can't assign check store to SSL connection!");
 		return conn;
 	}
 
