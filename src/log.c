@@ -704,6 +704,7 @@ char *log_beautify(char *buf, char *dest)
 	size_t lots, lon, lom, lod;
 	char *ret;
 	int out;
+	int done;
 #if 0
 	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
 #endif
@@ -747,12 +748,14 @@ char *log_beautify(char *buf, char *dest)
 	if (!p[0] || !p[1])
 		return _log_wrap(dest, buf);
 	lon = p - son;
+
+	done = *p == ':';
+
 	p = strchr(p, ' ');
 	if (!p || !p[0] || !p[1])
 		return _log_wrap(dest, buf);
 	p++;
-
-	if (*p == '(') {
+	if (!done && *p == '(') {
 		p++;
 		if (!p[0] || !p[1] || p[0] == ')')
 			return _log_wrap(dest, buf);
@@ -779,10 +782,7 @@ char *log_beautify(char *buf, char *dest)
 	if (out && strcmp(dest, "privates") == 0) {
 		char *stmp;
 		size_t ltmp;
-/*
-		son = sod;
-		lon = lod;
-*/
+
 		stmp = sod;
 		ltmp = lod;
 
@@ -797,10 +797,6 @@ char *log_beautify(char *buf, char *dest)
 	lom = strlen(p);
 	if (lom == 0)
 		return _log_wrap(dest, buf);
-	/*
-	if (som[lom - 1] == '\n')
-		lom--;
-	*/
 
 	p = ret = (char *)malloc(
 		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +
