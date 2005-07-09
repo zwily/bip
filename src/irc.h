@@ -82,7 +82,7 @@ struct link {
 
 	/** client connection static data **/
 
-	char *login;
+	char *username;
 	unsigned char *password;
 	unsigned int seed;
 
@@ -131,8 +131,6 @@ struct link_client {
 
 	char *init_nick;
 	char *init_pass;
-	char *init_user;
-	char *init_real_name;
 	int state;
 	int logging_timer;
 };

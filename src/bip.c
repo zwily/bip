@@ -141,6 +141,7 @@ static void conf_die(char *fmt, ...)
 
 	vsnprintf(conf_errstr, ERRBUFSZ, fmt, ap);
 	conf_errstr[ERRBUFSZ - 1] = 0;
+	conf_error = 1;
 
 	va_end(ap);
 }
@@ -286,75 +287,6 @@ void bad_quit(int i)
 	exit(i);
 }
 
-#if 0
-void check_networks(list_t *networkl)
-{
-	list_iterator_t li;
-	struct irc_server *is;
-	hash_t *netnames;
-	
-	netnames = hash_new(HASH_DEFAULT);
-	for (list_it_init(networkl, &li); (is = list_it_item(&li));
-			list_it_next(&li)) {
-/*
-		hash_iterator_t hi;
-*/
-
-		/* Should *NEVER* happen */
-		if (!is->name)
-			fatal("CONF: Unnamed network !");
-		if (hash_get(netnames, is->name))
-			fatal("CONF: Two networks have the same name !");
-		hash_insert(netnames, is->name, is);
-		if (!is->serverc)
-			fatal("CONF: No servers to connect to in network %s",
-					is->name);
-
-		/* TODO check for identical channels or servers */
-		
-		/* It could be great to check it here, but we need to check it
-		 * before...
-		 */
-		/*
-		for (hash_it_init(&is->chan_infos, &hi); hash_it_item(&hi);
-				hash_it_next(&hi)) {
-			struct chan_info *ci = hash_it_item(&hi);
-			if (!ci->name)
-				fatal("CONF: Unnamed channel in network %s",
-						is->name);
-		}
-		*/
-	}
-	hash_free(netnames);
-}
-
-void check_clients(list_t *clientl)
-{
-	list_iterator_t li;
-	struct client *ic;
-	
-	for (list_it_init(clientl, &li); (ic = list_it_item(&li));
-			list_it_next(&li)) {
-		char *netname;
-		
-		/* TODO hash(user => pass) to check for auth collision */
-		
-		/* Should *NEVER* happen */
-		if (!ic->server)
-			fatal("CONF: Unaffected client in list...");
-		netname = ic->server->name;
-		/*
-		if (!ic->user)
-			fatal("CONF: Client block with no user in network %s",
-					netname);
-		*/
-		if (!ic->pass)
-			fatal("CONF: Client block with no pass in network %s",
-					netname);
-	}
-}
-#endif
-
 void c_network_free(struct c_network *on)
 {
 	struct server *s;
@@ -486,14 +418,6 @@ static int add_connection(list_t *connectionl, list_t *data,
 				return 0;
 			}
 			break;
-		case LEX_LOGIN:
-			if (!is_valid_username(t->pdata)) {
-				free(c);
-				conf_die("Invalid login (%s)", t->pdata);
-				return 0;
-			}
-			c->login = t->pdata;
-			break;
 		case LEX_NICK:
 			if (!is_valid_nick(t->pdata))
 				conf_die("Invalid nickname (%s)", t->pdata);
@@ -539,10 +463,6 @@ static int add_connection(list_t *connectionl, list_t *data,
 		conf_die("Missing network in connection block");
 		return 0;
 	}
-	if (!c->user) {
-		conf_die("Missing user in connection block");
-		return 1;
-	}
 	list_add_last(connectionl, c);
 	if (old_c_connl) {
 		old_c = list_remove_first(old_c_connl);
@@ -584,6 +504,15 @@ static int add_user(list_t *data)
 		case LEX_PASSWORD:
 			hash_binary(t->pdata, &u->password, &u->seed);
 			free(t->pdata);
+			break;
+		case LEX_DEFAULT_NICK:
+			u->default_nick = t->pdata;
+			break;
+		case LEX_DEFAULT_USER:
+			u->default_user = t->pdata;
+			break;
+		case LEX_DEFAULT_REALNAME:
+			u->default_realname = t->pdata;
 			break;
 		case LEX_CONNECTION:
 			if (!u->name)
@@ -886,7 +815,6 @@ void ircize(list_t *ll)
 		} \
 	} while(0);
 				MAYFREE(link->away_nick);
-				MAYFREE(link->login);
 				MAYFREE(link->password);
 				MAYFREE(link->user);
 				MAYFREE(link->real_name);
@@ -906,7 +834,7 @@ void ircize(list_t *ll)
 			link->on_connect_send = strmaydup(c->on_connect_send);
 			link->away_nick = strmaydup(c->away_nick);
 
-			link->login = strmaydup(c->login);
+			link->username = strmaydup(u->name);
 			link->password = malloc(20);
 			memcpy(link->password, u->password, 20);
 			link->seed = u->seed;
@@ -928,9 +856,16 @@ void ircize(list_t *ll)
 			}
 
 			link->user = strmaydup(c->user);
+			if (!link->user)
+				link->user = strmaydup(u->default_user);
 			link->real_name = strmaydup(c->realname);
+			if (!link->real_name)
+				link->real_name =
+						strmaydup(u->default_realname);
 			link->s_password = strmaydup(c->password);
 			link->connect_nick = strmaydup(c->nick);
+			if (!link->connect_nick)
+				link->connect_nick = strmaydup(u->default_nick);
 
 			link->vhost = strmaydup(c->vhost);
 			link->bind_port = c->source_port;
@@ -1045,6 +980,8 @@ int main(int argc, char **argv)
 	for (;;) {
 		if (r)
 			ircize(ll);
+		if (conf_error)
+			mylog(LOG_ERROR, "conf error: %s", conf_errstr);
 
 		irc_main(inc, ll);
 

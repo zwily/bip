@@ -28,6 +28,9 @@ struct c_user
 	char *name;
 	unsigned char *password;
 	unsigned int seed;
+	char *default_user;
+	char *default_nick;
+	char *default_realname;
 #ifdef HAVE_LIBSSL
 	int ssl_check_mode;
 	char *ssl_check_store;
@@ -40,7 +43,6 @@ struct c_connection
 	char *name;
 	struct c_network *network;
 	char *realname, *user, *nick; 
-	char *login; 		/* connection id for a user */
 	char *password; 	/* server pass */
 	char *vhost;
 	unsigned short source_port;

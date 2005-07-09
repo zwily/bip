@@ -963,7 +963,6 @@ next_file:
 
 	c = fgetc(lf->file);
 	if (c == EOF) {
-		mylog(LOG_INFO, "end of backlog");
 		logdata->lastfile_seeked = 0;
 		logdata->backlogging = 0;
 		free(buf);

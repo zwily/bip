@@ -59,6 +59,9 @@ list_t *parse_conf(FILE *file)
 "connection"		{ return LEX_CONNECTION; }
 "nick"			{ return LEX_NICK; }
 "realname"		{ return LEX_REALNAME; }
+"default_nick"		{ return LEX_DEFAULT_NICK; }
+"default_user"		{ return LEX_DEFAULT_USER; }
+"default_realname"	{ return LEX_DEFAULT_REALNAME; }
 "source_port"		{ return LEX_SOURCE_PORT; }
 "vhost"			{ return LEX_VHOST; }
 "password"		{ return LEX_PASSWORD; }

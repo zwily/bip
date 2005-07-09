@@ -72,9 +72,12 @@
      LEX_ALWAYS_BACKLOG = 298,
      LEX_LOGIN = 299,
      LEX_BLRESET_ON_TALK = 300,
-     LEX_BOOL = 301,
-     LEX_INT = 302,
-     LEX_STRING = 303
+     LEX_DEFAULT_USER = 301,
+     LEX_DEFAULT_NICK = 302,
+     LEX_DEFAULT_REALNAME = 303,
+     LEX_BOOL = 304,
+     LEX_INT = 305,
+     LEX_STRING = 306
    };
 #endif
 #define LEX_IP 258
@@ -120,9 +123,12 @@
 #define LEX_ALWAYS_BACKLOG 298
 #define LEX_LOGIN 299
 #define LEX_BLRESET_ON_TALK 300
-#define LEX_BOOL 301
-#define LEX_INT 302
-#define LEX_STRING 303
+#define LEX_DEFAULT_USER 301
+#define LEX_DEFAULT_NICK 302
+#define LEX_DEFAULT_REALNAME 303
+#define LEX_BOOL 304
+#define LEX_INT 305
+#define LEX_STRING 306
 
 
 
@@ -136,7 +142,7 @@ typedef union YYSTYPE {
 	struct tuple *tuple;
 } YYSTYPE;
 /* Line 1285 of yacc.c.  */
-#line 140 "y.tab.h"
+#line 146 "y.tab.h"
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 # define YYSTYPE_IS_TRIVIAL 1

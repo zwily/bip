@@ -467,7 +467,6 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	if (conf_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
 		while ((line = log_backread(LINK(ic)->log, chan->name))) {
-			mylog(LOG_INFO, "br:%s", line);
 			write_line(CONN(ic), line);
 			free(line);
 		}
@@ -548,39 +547,90 @@ int irc_cli_bip(struct link_client *ic, struct line *line)
 	return OK_FORGET;
 }
 
+#define PASS_SEP ':'
+
+static char *get_str_elem(char *str, int num)
+{
+	char *ret;
+	char *c;
+	char *cur = str;
+	int index = 0;
+
+	while (c = strchr(cur, PASS_SEP)){
+		if (index < num) {
+			index++;
+			cur = c + 1;
+			continue;
+		}
+		if (c - cur < 1)
+			return NULL;
+		ret = malloc(c - cur + 1);
+		strncpy(ret, cur, c - cur);
+		ret[c - cur] = 0;
+		return ret;
+	}
+	if (index == num) {
+		c = str + strlen(str);
+		if (c - cur < 1)
+			return NULL;
+		ret = malloc(c - cur + 1);
+		strncpy(ret, cur, c - cur);
+		ret[c - cur] = 0;
+		return ret;
+	}
+	return NULL;
+}
+
 static int irc_cli_startup(struct link_client *ic, struct line *line,
 		list_t *linkl)
 {
-	char *init_nick;
 	char *initmask;
+	char *init_nick;
+	char *user, *pass, *connname;
 
-	if (!ic->init_pass || !ic->init_nick || !ic->init_user
-			|| !ic->init_real_name)
+	if (!ic->init_pass)
 		fatal("internal irc_cli_startup");
+
+	user = get_str_elem(ic->init_pass, 0);
+	if (!user)
+		return ERR_AUTH;
+	pass = get_str_elem(ic->init_pass, 1);
+	if (!pass) {
+		free(user);
+		return ERR_AUTH;
+	}
+	connname = get_str_elem(ic->init_pass, 2);
+	if (!connname) {
+		free(pass);
+		free(user);
+		return ERR_AUTH;
+	}
 
 	list_iterator_t it;
 	for (list_it_init(linkl, &it); list_it_item(&it); list_it_next(&it)) {
 		struct link *l = list_it_item(&it);
-		if (chash_cmp(ic->init_pass, l->password, l->seed) == 0 &&
-				 (strcmp(ic->init_user, l->login) == 0 ||
-				  strcmp(ic->init_real_name, l->login) == 0)) {
-			bind_to_link(l, ic);
-			break;
+		if (strcmp(user, l->username) == 0
+				&& strcmp(connname, l->name) == 0) {
+			if (chash_cmp(pass, l->password, l->seed) == 0) {
+				bind_to_link(l, ic);
+				break;
+			}
 		}
 	}
 
 	if (!LINK(ic))
-		mylog(LOG_ERROR, "Invalid credentials (user: %s realname:%s)",
-				ic->init_user, ic->init_real_name);
+		mylog(LOG_ERROR, "Invalid credentials (user:%s connection:%s)",
+				user, connname);
+
+	free(user);
+	free(connname);
+	free(pass);
+
 
 	free(ic->init_pass);
 	ic->init_pass = NULL;
 	init_nick = ic->init_nick;
 	ic->init_nick = NULL;
-	free(ic->init_user);
-	ic->init_user = NULL;
-	free(ic->init_real_name);
-	ic->init_real_name = NULL;
 
 	if (!LINK(ic)) {
 		free(init_nick);
@@ -651,7 +701,6 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	/* backlog privates */
 	char *str;
 	while ((str = log_backread(LINK(ic)->log, S_PRIVATES))) {
-		mylog(LOG_INFO, "br:%s", str);
 		write_line(CONN(ic), str);
 		free(str);
 	}
@@ -694,12 +743,6 @@ static int irc_cli_user(struct link_client *ic, struct line *line, list_t *cl)
 		return ERR_PROTOCOL;
 
 	ic->state |= IRCC_USER;
-	if (ic->init_user)
-		free(ic->init_user);
-	ic->init_user = strdup(line->elemv[1]);
-	if (ic->init_real_name)
-		free(ic->init_real_name);
-	ic->init_real_name = strdup(line->elemv[4]);
 	if ((ic->state & IRCC_READY) == IRCC_READY)
 		return irc_cli_startup(ic, line, cl);
 	return OK_FORGET;
@@ -1727,89 +1770,6 @@ static void irc_close(struct link_any *l)
 	}
 }
 
-/*
-#ifdef DEBUG
-void debug_hell(void *ptr, list_t *a, list_t *b, list_t *c, list_t *d,
-		list_t *e, list_t *f, list_t *g, list_t *h)
-{
-	connection_t *cn;
-	
-	cn = (connection_t *)ptr;
-	printf ("Freed connection details :\n");
-	printf ("ssl: %d, fd: %d, connstate: %d, listen: %d\n", cn->ssl,
-			cn->handle, cn->connected, cn->listening);
-	printf ("SSL: %x, X509: %x\n", cn->ssl_h, cn->cert);
-#endif
-	
-	if ( ((struct irc*)cn->user_data)->type == IRC_TYPE_CLIENT) {
-		struct irc_client *c = (struct irc_client *)cn->user_data;
-		printf("Client nick %s, user %s, real %s, state %d\n",
-			c->init_nick, c->init_user, c->init_real_name,
-			c->state);
-	} else if ( ((struct irc*)cn->user_data)->type == IRC_TYPE_SERVER) {
-		struct irc_server *s = (struct irc_server *)cn->user_data;
-		printf("Server, name %s, serverc %d, nick %s, user %s\n",
-			s->name, s->serverc, s->nick, s->user);
-		printf("real %s, ssl %d, state %d, rtimer %d, mask %s\n",
-			s->real_name, s->state, s->ssl, s->recon_timer, s->irc_mask);
-		printf("cli_mask %s, user_mode %s, lag %d, last_recon %lu\n",
-			s->cli_mask, s->user_mode, s->lag, s->last_reconnection);
-	} else {
-		printf("Not an irc client nor server\n");
-	}
-	if (list_get(c, cn)) {
-		printf ("%x est dans la liste des connexions\n", cn);
-	}
-	if (list_get(d, cn)) {
-		printf ("%x est dans la liste en cours de connexion\n", cn);
-	}
-	if (list_get(e, cn)) {
-		printf ("%x est dans la liste des connectés\n", cn);
-	}
-	if (list_get(f, cn)) {
-		printf ("%x est dans koc\n", cn);
-	}
-}
-
-void debug_print_list_dummy(char *c, list_t *l)
-{
-	printf("%s", c);
-	list_iterator_t li;
-	for (list_it_init(l, &li); list_it_item(&li); list_it_next(&li)) {
-		printf("%x ", list_it_item(&li));
-	}
-	printf("\n");
-}
-*/
-/* for link init
-struct link_server *irc_server_new()
-{
-	struct link_server *s;
-	struct passwd *pwusr;
-	
-	s = calloc(sizeof(struct link_server), 1);
-	if (!s)
-		fatal("calloc");
-
-	TYPE(s) = IRC_TYPE_SERVER;
-	s->state = IRCS_NONE;
-	hash_init(&s->channels, HASH_NOCASE);
-	hash_init(&s->chan_infos, HASH_NOCASE);
-	list_init(&s->chan_infos_join, list_ptr_cmp);
-	list_init(&s->init_strings, NULL);
-	s->recon_timer = 0;
-	s->lag = 0;
-	s->on_connect_send = NULL;
-	s->connect_nick = NULL;
-	s->vhost = NULL;
-	s->bind_port = 0;
-	irc_lag_init(s);
-	s->follow_nick = 1;
-	s->ignore_first_nick = 1;
-	return s;
-}
-*/
-
 struct link_server *irc_server_new(struct link *link, connection_t *conn)
 {
 	struct link_server *s;
@@ -2195,10 +2155,6 @@ void irc_client_free(struct link_client *cli)
 		free(cli->init_pass);
 	if (cli->init_nick)
 		free(cli->init_nick);
-	if (cli->init_user)
-		free(cli->init_user);
-	if (cli->init_real_name)
-		free(cli->init_real_name);
 	free(cli);
 }
 
