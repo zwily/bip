@@ -687,8 +687,13 @@ int log_has_backlog(log_t *logdata, char *destination)
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 
 /*
- * 13-05-2005 12:14:29 > nohar (nohar): coucou
- * 13-05-2005 12:14:30 < nohar!~nohar@je.suis.t1r.net (nohar): coucou
+ * chan:
+ * 13-05-2005 12:14:29 > nohar: coucou
+ * 13-05-2005 12:14:30 < nohar!~nohar@je.suis.t1r.net: coucou
+ *
+ * private:
+ * 13-05-2005 12:14:53 > nohar (jj): 1 luv PHP
+ * 13-05-2005 12:14:55 < jj!john@thebox.ofjj.net (nohar): t00 s3xy
  */
 
 /* must *not* return NULL */
@@ -697,7 +702,7 @@ char *log_beautify(char *buf, char *dest)
 	int action = 0;
 	char *p;
 	/*
-	 * so = start, lo = length
+	 * so = startov, lo = lengthov
 	 * ts = timestamp, n = sender nick, m = message or action
 	 */
 	char *sots, *son, *som, *sod = NULL;
@@ -705,9 +710,6 @@ char *log_beautify(char *buf, char *dest)
 	char *ret;
 	int out;
 	int done;
-#if 0
-	mylog(LOG_INFO, "beautify in: \"%s\"", buf);
-#endif
 
 	if (!buf)
 		mylog(LOG_INFO, "BUG!");
@@ -741,39 +743,43 @@ char *log_beautify(char *buf, char *dest)
 			return _log_wrap(dest, buf);
 		p += 2;
 	}
+	
 	son = p;
-	/* 'date time blawithnoexcl bla bla ! bla' --> ? */
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
 	if (!p[0] || !p[1])
 		return _log_wrap(dest, buf);
 	lon = p - son;
 
-	done = *p == ':';
-
 	p = strchr(p, ' ');
 	if (!p || !p[0] || !p[1])
 		return _log_wrap(dest, buf);
+	
+	done = ((p[-1] == ':') || (action && (p[1] != '(')));
 	p++;
-	if (!done && *p == '(') {
+	
+	/*
+	 * TODO add a : before the action text in the log files
+	 * otherwise "/me (bla) blabla" on a chan is logged exactly as
+	 * "/me blabla" in a query with bla.
+	 */
+	if (!done) {
 		p++;
 		if (!p[0] || !p[1] || p[0] == ')')
 			return _log_wrap(dest, buf);
 		sod = p;
-		while (*p && *p != ')' && *p != ' ')
+		while (*p && *p != ')' && *p != ' ' && *p != '!')
 			p++;
-		if (*p != ')')
-			return _log_wrap(dest, buf);
 		lod = p - sod;
-		p++;
-		if (*p != ':')
+		
+		if (*p == '!')
+			while (*p && *p != ')' && *p != ' ')
+				p++;
+
+		if (!p[0] || p[0] != ')' || !p[1] || p[1] != ':' ||
+				!p[2] || p[2] != ' ' || !p[3] || !p[4])
 			return _log_wrap(dest, buf);
-		p++;
-		if (*p != ' ')
-			return _log_wrap(dest, buf);
-		p++;
-		if (!p[0] || !p[1])
-			return _log_wrap(dest, buf);
+		p += 3;
 	} else {
 		sod = dest;
 		lod = strlen(dest);
@@ -799,10 +805,11 @@ char *log_beautify(char *buf, char *dest)
 		return _log_wrap(dest, buf);
 
 	p = ret = (char *)malloc(
-		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +
-		1 + 5 + lom + 3 + action * (2 + strlen("ACTION ")));
+		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	1 + lom + 3
+		+ action * (2 + strlen("ACTION ")) + out * strlen(" -> "));
 	if (!p)
 		fatal("out of memory");
+
 	*p++ = ':';
 
 	memcpy(p, son, lon);
@@ -814,17 +821,17 @@ char *log_beautify(char *buf, char *dest)
 	memcpy(p, sod, lod);
 	p += lod;
 
-	strcpy(p, " :");
-	p += 2;
+	*p++ = ' ';
+	*p++ = ':';
 
 	if (action) {
 		*p++ = 1;
-		memcpy(p, "ACTION ", strlen("ACTION "));
+		strcpy(p, "ACTION ");
 		p += strlen("ACTION ");
 	}
 	if (out) {
-		memcpy(p, " -> ", 4);
-		p += 2;
+		strcpy(p, " -> ");
+		p += strlen(" -> ");
 	}
 	memcpy(p, sots, lots);
 	p += lots;
@@ -836,6 +843,7 @@ char *log_beautify(char *buf, char *dest)
 
 	if (action)
 		*p++ = 1;
+	
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
@@ -1111,30 +1119,3 @@ log_t *log_new(char *user, char *network)
 	list_add_last(log_all_logs, logdata);
 	return logdata;
 }
-
-#ifdef TEST
-int main(void)
-{
-	log_t *logdata;
-
-	log_level = 4;
-	check_dir_r("/home/bip//subdir///subdir2");
-	
-	conf_log_root = "/home/bip/logs";
-	conf_log_format = "%n/%Y-%m/%c.%d.log";
-	logdata = log_new(strdup("Marmite"));
-	log_privmsg(logdata, strdup("blah!ident@host"), strdup("to"),
-			strdup("Message"));
-	log_privmsg(logdata, strdup("blah!ident@host"), strdup("to"),
-			strdup("Message"));
-	log_join(logdata, strdup("blah!ident@host"), strdup("#pOrcSy"));
-	log_part(logdata, strdup("blah!ident@host"), strdup("#bip"),
-			strdup("blah"));
-	log_privmsg(logdata, strdup("blah!ident@host"), strdup("#poRcsy"),
-			strdup("Message"));
-	log_join(logdata, strdup("blah!ident@host"), strdup("#marmite"));
-	log_join(logdata, strdup("blah!ident@host"), strdup("#bip"));
-	log_join(logdata, strdup("blah!ident@host"), strdup("#bip"));
-	return 0;
-}
-#endif
