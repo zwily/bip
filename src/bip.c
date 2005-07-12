@@ -658,14 +658,6 @@ int fireup(FILE *conf)
 		}
 	}
 
-	if (conf_always_backlog) {
-		if (conf_backlog_lines == 0) {
-			conf_die("You must have not nul conf_backlog_lines if "
-					"conf_always_backlog is enabled");
-			return 0;
-		}
-	}
-
 	if (!conf_log)
 		conf_memlog = 1;
 	else
