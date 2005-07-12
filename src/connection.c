@@ -682,12 +682,12 @@ int cn_want_write(connection_t *cn)
 				cn->token = 1;
 				cn->lasttoken = now;
 			} else if (now > cn->lasttoken + TOKEN_INTERVAL) {
-				/* there may be an overflow here
-				 * but the impact is insignificant */
 				cn->token += (now - cn->lasttoken) /
 					TOKEN_INTERVAL;
 				if (cn->token > TOKEN_MAX)
 					cn->token = TOKEN_MAX;
+				if (!cn->token)
+					cn->token = 1;
 				cn->lasttoken = now;
 			}
 		} else
