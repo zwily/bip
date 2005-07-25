@@ -833,9 +833,9 @@ static void irc_notify_disconnection(struct link_server *is)
 		for (hash_it_init(&is->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 			struct channel *c = (struct channel *)hash_it_item(&hi);
-			WRITE_LINE2(CONN(ic), is->irc_mask, "PART",
-					c->name, "Server disconnected, "
-					"reconnecting");
+			WRITE_LINE3(CONN(ic), P_IRCMASK, "KICK",
+					c->name, is->nick,
+					"Server disconnected, reconnecting");
 		}
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", is->irc_mask,
 					"Server disconnected, reconnecting");
