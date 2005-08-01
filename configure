@@ -2910,13 +2910,13 @@ fi
 fi
 
 
-CFLAGS=-O2 -g -W -Wall -Werror
+CFLAGS=-O2 -g -W -Wall
 
 debug=false
 # Check whether --enable-debug or --disable-debug was given.
 if test "${enable_debug+set}" = set; then
   enableval="$enable_debug"
-  debug=true && CFLAGS="-O0 -g  -W -Wall -Werror"
+  debug=true && CFLAGS="-O0 -g  -W -Wall"
 fi;
 
 
