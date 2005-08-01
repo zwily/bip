@@ -21,12 +21,14 @@ extern list_t *root_list;
 void yyparse(void);
 void free_conf(list_t*);
 
+#if 0
 /* SPANK ME WITH A SHOVEL */
 static void yyunput(int c, char *buf);
 void dummy_lex_FFS(void)
 {
 	yyunput(0, NULL);
 }
+#endif
 
 list_t *parse_conf(FILE *file)
 {
