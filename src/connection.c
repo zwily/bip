@@ -1136,7 +1136,6 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	SSL *ssl;
 	connection_t *c;
 	X509_OBJECT xobj;
-	int is_in_store;
 	int result;
 
 	err_cert = X509_STORE_CTX_get_current_cert(ctx);

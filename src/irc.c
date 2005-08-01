@@ -556,7 +556,7 @@ static char *get_str_elem(char *str, int num)
 	char *cur = str;
 	int index = 0;
 
-	while (c = strchr(cur, PASS_SEP)){
+	while ((c = strchr(cur, PASS_SEP))) {
 		if (index < num) {
 			index++;
 			cur = c + 1;
@@ -1367,21 +1367,25 @@ static int irc_mode(struct link_server *server, struct line *line)
 	if (line->elemc < 3)
 		return ERR_PROTOCOL;
 
-	if (ischannel(line->elemv[1][0])) {
-		channel = hash_get(&server->channels, line->elemv[1]);
-		/* we can't get mode message for chans we're not on */
-		if (!channel)
-			return ERR_PROTOCOL;
-		log_mode(LINK(server)->log, line->origin, line->elemv[1],
-				line->elemv[2], line->elemv + 3,
-				line->elemc - 3);
-	} else if (strcmp(line->elemv[1], server->nick) == 0) {
+	/* nick mode change */
+	if (strcmp(line->elemv[1], server->nick) == 0) {
 		log_mode(LINK(server)->log, line->origin, line->elemv[1],
 				line->elemv[2], line->elemv + 3,
 				line->elemc - 3);
 		irc_user_mode(server, line);
 		return OK_COPY;
 	}
+
+	if (!ischannel(line->elemv[1][0]))
+		return ERR_PROTOCOL;
+
+	/* channel mode change */
+	channel = hash_get(&server->channels, line->elemv[1]);
+	/* we can't get mode message for chans we're not on */
+	if (!channel)
+		return ERR_PROTOCOL;
+	log_mode(LINK(server)->log, line->origin, line->elemv[1],
+			line->elemv[2], line->elemv + 3, line->elemc - 3);
 
 	/*       
 	 * MODE -a+b.. #channel args
