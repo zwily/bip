@@ -597,6 +597,7 @@ void log_connected(log_t *logdata)
 
 void log_client_disconnected(log_t *logdata)
 {
+	(void)logdata;
 	mylog(LOG_DEBUG, "A client disconnected");
 }
 
@@ -627,6 +628,7 @@ void log_client_connected(log_t *logdata)
 void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 {
 	int c;
+	(void)ld;
 	if (!conf_backlog || conf_backlog_lines == 0)
 		return;
 

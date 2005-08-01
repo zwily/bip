@@ -265,6 +265,7 @@ static void usage(char *name)
 
 void reload_config(int i)
 {
+	(void)i;
 	sighup = 1;
 }
 
@@ -490,7 +491,7 @@ static int add_user(list_t *data)
 	int r;
 	struct tuple *t;
 	struct c_user *u;
-	struct c_user *old_u;
+	struct c_user *old_u = 0;
 
 	u = calloc(sizeof(struct c_user), 1);
 	list_init(&u->connectionl, NULL);
@@ -717,6 +718,7 @@ int fireup(FILE *conf)
 
 void print_link(struct link *l)
 {
+	(void)l;
 	printf("\n");
 }
 

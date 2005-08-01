@@ -587,6 +587,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	char *initmask;
 	char *init_nick;
 	char *user, *pass, *connname;
+	(void)line;
 
 	if (!ic->init_pass)
 		fatal("internal irc_cli_startup");
@@ -767,6 +768,8 @@ static int irc_cli_pass(struct link_client *ic, struct line *line, list_t *cl)
 
 static int irc_cli_quit(struct link_client *ic, struct line *line)
 {
+	(void)ic;
+	(void)line;
 	return OK_CLOSE;
 }
 
@@ -870,7 +873,7 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 	if (line->elemc != 2 && line->elemc != 3)
 		return ERR_PROTOCOL;
 
-	char *s, *e, *ks, *ke;
+	char *s, *e, *ks, *ke = 0;
 	s = line->elemv[1];
 	if (line->elemc == 3)
 		ks = line->elemv[2];

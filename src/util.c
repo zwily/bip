@@ -288,7 +288,7 @@ void *list_remove_if_exists(list_t *list, void *ptr)
 {
 	list_iterator_t li;
 	int debug = 0;
-	void *ret;
+	void *ret = 0;
 
 	if (!list->cmp)
 		fatal("list_remove: list does not have a cmp function\n");
