@@ -6,7 +6,7 @@ AC_PROG_INSTALL
 AC_PROG_YACC
 AM_PROG_LEX
 
-CFLAGS=-O2 -g -W -Wall
+CFLAGS="-O2 -g -W -Wall"
 
 debug=false
 AC_ARG_ENABLE(debug,
