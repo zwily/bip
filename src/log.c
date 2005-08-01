@@ -413,7 +413,7 @@ static void _log_privmsg(log_t *logdata, char *ircmask, int src,
 	if (src)
 		dir = '>';
 
-	if (strlen(message) > 11 && ((*message == '\001' ||
+	if (strlen(message) > 8 && ((*message == '\001' ||
 		((*message == '+' || *message == '-') &&
 			 (*(message + 1) == '\001'))) &&
 		(*(message + strlen(message) - 1) == '\001'))) {
@@ -694,6 +694,7 @@ int log_has_backlog(log_t *logdata, char *destination)
  * private:
  * 13-05-2005 12:14:53 > nohar (jj): 1 luv PHP
  * 13-05-2005 12:14:55 < jj!john@thebox.ofjj.net (nohar): t00 s3xy
+ * 01-08-2005 10:46:11 < * jj!john@thebox.ofjj.net
  */
 
 /* must *not* return NULL */
@@ -747,12 +748,12 @@ char *log_beautify(char *buf, char *dest)
 	son = p;
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
-	if (!p[0] || !p[1])
+	if (!p[0])
 		return _log_wrap(dest, buf);
 	lon = p - son;
 
 	p = strchr(p, ' ');
-	if (!p || !p[0] || !p[1])
+	if (!p || !p[0])
 		return _log_wrap(dest, buf);
 	
 	done = ((p[-1] == ':') || (action && (p[1] != '(')));
