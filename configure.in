@@ -6,10 +6,12 @@ AC_PROG_INSTALL
 AC_PROG_YACC
 AM_PROG_LEX
 
+CFLAGS=-O2 -g -W -Wall -Werror
+
 debug=false
 AC_ARG_ENABLE(debug,
 	[  --enable-debug                Turn on debugging],
-	[debug=true])
+	[debug=true && CFLAGS="-O0 -g  -W -Wall -Werror"])
 AM_CONDITIONAL(DEBUG, test x$debug = xtrue)
 
 oidentd=false

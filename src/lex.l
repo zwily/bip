@@ -21,6 +21,13 @@ extern list_t *root_list;
 void yyparse(void);
 void free_conf(list_t*);
 
+/* SPANK ME WITH A SHOVEL */
+static void yyunput(int c, char *buf);
+void dummy_lex_FFS(void)
+{
+	yyunput(0, NULL);
+}
+
 list_t *parse_conf(FILE *file)
 {
 	YY_BUFFER_STATE in = yy_create_buffer(file, YY_BUF_SIZE);
