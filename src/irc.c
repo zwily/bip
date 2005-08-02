@@ -640,7 +640,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 
 	if (LINK(ic)->s_state == IRCS_NONE) {
 		/* drop it if corresponding server hasn't connected at all. */
-		write_line_fast(CONN(ic), ":irc.proxy.net NOTICE pouet "
+		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
 				":ERROR Proxy not yet connected, try again "
 				"later\r\n");
 		unbind_from_link(ic);
