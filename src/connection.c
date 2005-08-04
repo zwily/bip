@@ -233,9 +233,11 @@ static int _write_socket(connection_t *cn, char *message)
 	} while (count < 0 &&
 		(errno == EAGAIN || errno == EINTR || errno == EINPROGRESS));
 
+#if 0
 	if (count <= 0 && tcount > 0)
 		fatal("shit happens errno:%d count:%d tcount:%d (%s)\n", errno,
 				count, tcount, message);
+#endif
 	if (count <= 0) {
 		/*
 		 * if no fatal error, return WRITE_KEEP, which makes caller
