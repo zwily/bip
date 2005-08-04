@@ -384,7 +384,8 @@ static int read_socket_SSL(connection_t *cn)
 				|| err == SSL_ERROR_WANT_ACCEPT)
 			return 0;
 		if (cn_is_connected(cn)) {
-			mylog(LOG_DEBUG, "fd %d: Connection error",cn->handle);
+			mylog(LOG_DEBUGTOOMUCH, "fd %d: Connection error",
+					cn->handle);
 			cn->connected = CONN_ERROR;
 		}
 		return 1;
@@ -395,7 +396,8 @@ static int read_socket_SSL(connection_t *cn)
 				|| err == SSL_ERROR_WANT_ACCEPT)
 			return 0;*/
 		if (cn_is_connected(cn)) {
-			mylog(LOG_DEBUG, "fd %d: Connection lost",cn->handle);
+			mylog(LOG_DEBUGTOOMUCH, "fd %d: Connection lost",
+					cn->handle);
 			cn->connected = CONN_DISCONN;
 		}
 		return 1;
@@ -420,8 +422,9 @@ static int read_socket(connection_t *cn)
 		if (errno == EAGAIN || errno == EINTR || errno == EINPROGRESS)
 			return 0;
 		if (cn_is_connected(cn)) {
-			mylog(LOG_DEBUG, "fd %d: Connection error",cn->handle);
-			mylog(LOG_DEBUG, "fd %d: read() %s", cn->handle,
+			mylog(LOG_DEBUG, "fd %d: Connection error",
+					cn->handle);
+			mylog(LOG_DEBUGTOOMUCH, "fd %d: read() %s", cn->handle,
 					strerror(errno));
 			cn->connected = CONN_ERROR;
 		}
@@ -430,7 +433,7 @@ static int read_socket(connection_t *cn)
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUG, "fd %d: Connection lost", cn->handle);
 			cn->connected = CONN_DISCONN;
-			mylog(LOG_DEBUG, "fd %d: read() %s", cn->handle,
+			mylog(LOG_DEBUGTOOMUCH, "fd %d: read() %s", cn->handle,
 					strerror(errno));
 		}
 		return 1;
@@ -533,7 +536,7 @@ static int check_event_except(fd_set *fds, connection_t *cn)
 	if (!FD_ISSET(cn->handle, fds))
 		return 0;
 	
-	mylog(LOG_DEBUG,"fd %d is in exceptions list", cn->handle);
+	mylog(LOG_DEBUGTOOMUCH,"fd %d is in exceptions list", cn->handle);
 	cn->connected = CONN_EXCEPT;
 	return 1;
 }

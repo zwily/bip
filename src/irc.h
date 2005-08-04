@@ -65,6 +65,7 @@ struct link {
 	/* server related live stuff */ 
 	int s_state;
 	char *prev_nick;
+	char *prev_ircmask;
 	list_t init_strings;
 
 	/* connection state (reconnecting, was_connected ...) */
