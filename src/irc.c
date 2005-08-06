@@ -1878,7 +1878,8 @@ void irc_server_shutdown(struct link_server *s)
 
 	if (LINK(s)->prev_ircmask)
 		free(LINK(s)->prev_ircmask);
-	LINK(s)->prev_ircmask = strdup(s->irc_mask);
+	if (s->irc_mask)
+		LINK(s)->prev_ircmask = strdup(s->irc_mask);
 }
 
 
