@@ -389,7 +389,6 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 			}
 			free(server->nick);
 			server->nick = newnick;
-			printf("nick2: %s\n", server->nick);
 
 			WRITE_LINE1(CONN(server), NULL, "NICK", server->nick);
 			ret = OK_FORGET;
@@ -1603,7 +1602,6 @@ static int irc_nick(struct link_server *server, struct line *line)
 		char *nim;
 		free(server->nick);
 		server->nick = strdup(line->elemv[1]);
-		printf("nick3: %s\n", server->nick);
 
 		/* How the hell do we handle that crap cleanly ? */
 		nim = make_irc_mask(line->elemv[1], server->irc_mask);
@@ -1688,7 +1686,6 @@ static void irc_server_startup(struct link_server *ircs)
 	}
 
 	ircs->nick = nick;
-	printf("nick1: %s\n", ircs->nick);
 	WRITE_LINE1(CONN(ircs), NULL, "NICK", ircs->nick);
 }
 

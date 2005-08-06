@@ -760,6 +760,9 @@ void ircize(list_t *ll)
 		}
 
 		/*
+		 * TODO: keep track of removed connection on sighup
+		 */
+		/*
 		 * A user has multiple connections.
 		 * For each connections create a irc_client and a irc_server
 		 * instance and register them in connection structure;
