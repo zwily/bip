@@ -49,9 +49,11 @@ static void connecting_data_free(struct connecting_data *t)
 void connection_close(connection_t *cn)
 {
 	mylog(LOG_DEBUG, "Connection close asked. FD:%d ", (long)cn->handle);
-	cn->connected = CONN_DISCONN;
-	shutdown(cn->handle, SHUT_RDWR);
-	close(cn->handle);
+	if (cn->connected != CONN_DISCONN) {
+		cn->connected = CONN_DISCONN;
+		shutdown(cn->handle, SHUT_RDWR);
+		close(cn->handle);
+	}
 }
 
 void connection_free(connection_t *cn)

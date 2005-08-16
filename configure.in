@@ -23,14 +23,17 @@ AC_DEFINE([HAVE_OIDENTD], [], [Enable oidentd.conf management support])
 	#[oidentd=true]
 AM_CONDITIONAL(OIDENTD, test x$debug = xtrue)
 
-requires_libssl=yes
+requires_libssl="yes"
 AC_ARG_ENABLE(ssl,
 	      [  --disable-ssl           Drop OpenSSL support],
 	      [requires_libssl=no])
 if test "x$requires_libssl" = "xyes" ; then
-    AC_CHECK_LIB(ssl, SSL_read, [], [
-        echo "Error! You need to have libssl around."
-        exit -1
-        ])
+    AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [],
+		 [AC_MSG_ERROR([library 'crypto' is required for OpenSSL support])]) 
+
+    AC_CHECK_LIB(ssl, SSL_read, [], 
+		 [AC_MSG_ERROR(
+		  [library 'ssl' is required for OpenSSL support])],
+		  -lcrypto) 
 fi
 AC_OUTPUT(Makefile src/Makefile samples/Makefile)
