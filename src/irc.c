@@ -1689,7 +1689,8 @@ static void irc_server_startup(struct link_server *ircs)
 			free(nick);
 		nick = strdup(LINK(ircs)->away_nick);
 	}
-	if (!LINK(ircs)->follow_nick || nick == NULL) {
+	if ((!LINK(ircs)->follow_nick && !LINK(ircs)->away_nick)
+			|| nick == NULL) {
 		if (nick)
 			free(nick);
 		nick = strdup(LINK(ircs)->connect_nick);
