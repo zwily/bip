@@ -311,8 +311,10 @@ static void irc_server_connected(struct link_server *server)
                 free(str);
         }
 
+#if 0
 	for (i = 0; i < LINK(server)->l_clientc; i++)
 		irc_cli_make_join(LINK(server)->l_clientv[i]);
+#endif
 }
 
 /*

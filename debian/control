@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Arnaud Cornet <nohar@t1r.net>
 Standards-Version: 3.6.1.1
-Build-Depends: cdbs, libssl-dev, bison, flex
+Build-Depends: cdbs, libssl-dev, bison, flex, libc6-dev
 
 Package: bip
 Architecture: any

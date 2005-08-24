@@ -716,33 +716,6 @@ int fireup(FILE *conf)
 	return 1;
 }
 
-void print_link(struct link *l)
-{
-	(void)l;
-	printf("\n");
-}
-
-void print_sumup(void)
-{
-	hash_iterator_t it;
-	for (hash_it_init(&adm_users, &it); hash_it_item(&it);
-			hash_it_next(&it)) {
-		hash_t *u = hash_it_item(&it);
-		char *uk = hash_it_key(&it);
-
-		printf("user: %s", uk);
-
-		hash_iterator_t sit;
-		for (hash_it_init(u, &sit); hash_it_item(&sit);
-				hash_it_next(&sit)) {
-			struct link *l = hash_it_item(&sit);
-			char *ck = hash_it_key(&sit);
-			printf(" connection: %s", ck);
-			print_link(l);
-		}
-	}
-}
-
 void ircize(list_t *ll)
 {
 	hash_iterator_t it;
@@ -879,10 +852,8 @@ void ircize(list_t *ll)
 			if (!link->real_name)
 				link->real_name = strmaydup("bip");
 
-			printf("clientc: %d\n", link->l_clientc);
 		}
 	}
-	print_sumup();
 }
 
 int main(int argc, char **argv)
