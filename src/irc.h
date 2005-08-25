@@ -16,6 +16,14 @@
 #include "connection.h"
 #include "line.h"
 
+
+#define ERR_PROTOCOL (-1)
+#define ERR_AUTH (-2)
+#define OK_COPY (1)
+#define OK_FORGET (2)
+#define OK_CLOSE (3)
+#define OK_COPY_CLI (4)
+
 #define P_SERV "bip.bip.bip"
 #define S_PING "BIPPING"
 #define P_IRCMASK "-bip!bip@bip.bip.bip"
@@ -103,8 +111,11 @@ struct link {
 	int bind_port;
 	int s_ssl;
 
+#ifdef HAVE_LIBSSL
 	int ssl_check_mode;
 	char *ssl_check_store;
+	STACK_OF(X509) *untrusted_certs;
+#endif
 };
 
 struct link_connection {
@@ -134,6 +145,10 @@ struct link_client {
 	char *init_pass;
 	int state;
 	int logging_timer;
+
+#ifdef HAVE_LIBSSL
+	int allow_trust;
+#endif
 };
 
 #define link_client_new() calloc(sizeof(struct link_client), 1)
@@ -180,4 +195,5 @@ int ischannel(char p);
 void irc_client_close(struct link_client *);
 void irc_client_free(struct link_client *);
 struct link *irc_link_new();
+void unbind_from_link(struct link_client *ic);
 #endif

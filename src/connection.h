@@ -50,6 +50,7 @@
 #define CONN_EXCEPT 6
 #define CONN_NEW 7
 #define CONN_NEED_SSLIZE 8
+#define CONN_UNTRUSTED 9
 
 #define WRITE_OK 0
 #define WRITE_ERROR -1

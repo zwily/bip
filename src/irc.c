@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include "util.h"
 #include "irc.h"
+#include "bip.h"
 #include "log.h"
 #include "connection.h"
 #include "md5.h"
@@ -62,13 +63,6 @@ static void irc_cli_make_join(struct link_client *ic);
 #define CONN_INTERVAL 60
 #define CONNECT_TIMEOUT 60
 
-
-#define ERR_PROTOCOL (-1)
-#define ERR_AUTH (-2)
-#define OK_COPY (1)
-#define OK_FORGET (2)
-#define OK_CLOSE (3)
-#define OK_COPY_CLI (4)
 
 struct channel *channel_new(const char *name)
 {
@@ -298,7 +292,6 @@ static void irc_server_join(struct link_server *s)
 
 static void irc_server_connected(struct link_server *server)
 {
-	int i;
         LINK(server)->s_state = IRCS_CONNECTED;
         irc_server_join(server);
         log_connected(LINK(server)->log);
@@ -310,11 +303,6 @@ static void irc_server_connected(struct link_server *server)
                 write_line(CONN(server), str);
                 free(str);
         }
-
-#if 0
-	for (i = 0; i < LINK(server)->l_clientc; i++)
-		irc_cli_make_join(LINK(server)->l_clientv[i]);
-#endif
 }
 
 /*
@@ -527,7 +515,7 @@ static void bind_to_link(struct link *l, struct link_client *ic)
 	l->l_clientv[i] = ic;
 }
 
-static void unbind_from_link(struct link_client *ic)
+void unbind_from_link(struct link_client *ic)
 {
 	struct link *l = LINK(ic);
 	int i;
@@ -550,11 +538,9 @@ static void unbind_from_link(struct link_client *ic)
 		fatal("realloc");
 }
 
-void adm_bip(struct link_client *ic, struct line *line);
 int irc_cli_bip(struct link_client *ic, struct line *line)
 {
-	adm_bip(ic, line);
-	return OK_FORGET;
+	return adm_bip(ic, line);
 }
 
 #define PASS_SEP ':'
@@ -682,6 +668,17 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		return ERR_AUTH;
 	}
 
+	if (LINK(ic)->s_state != IRCS_CONNECTED) {
+#ifdef HAVE_LIBSSL
+		/* Check if we have an untrusted certificate from the server */
+		if (ssl_check_trust(ic)) {
+			ic->allow_trust = 1;
+			free(init_nick);
+			return OK_FORGET;
+		}
+#endif	
+	}
+
 	if (LINK(ic)->s_state == IRCS_NONE) {
 		/* drop it if corresponding server hasn't connected at all. */
 		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
@@ -693,7 +690,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	}
 
 #if 0
-	TODO code this
+	TODO code this -- OR NOT!
 	if (!connection_check_source(ic, ic->client->src_ipl))
 		return ERR_AUTH;
 #endif
@@ -798,7 +795,6 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 	return OK_CLOSE;
 }
 
-void adm_blreset(struct link_client *ic);
 static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 {
 	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
@@ -1847,8 +1843,13 @@ connection_t *irc_server_connect(struct link *link)
 	conn = connection_new(link->serverv[link->cur_server]->host,
 				link->serverv[link->cur_server]->port,
 				link->vhost, link->bind_port,
+#ifdef HAVE_LIBSSL
 				link->s_ssl, link->ssl_check_mode,
-				link->ssl_check_store, CONNECT_TIMEOUT);
+				link->ssl_check_store,
+#else
+				0, 0, NULL,
+#endif
+				CONNECT_TIMEOUT);
 	if (!conn)
 		fatal("connection_new");
 

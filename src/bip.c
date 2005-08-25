@@ -58,6 +58,9 @@ int conf_blreset_on_talk = 0;
 
 list_t *parse_conf(FILE *file);
 static void conf_die(char *fmt, ...);
+#ifdef HAVE_LIBSSL
+static int adm_trust(struct link_client *ic, struct line *line);
+#endif
 
 static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 {
@@ -791,6 +794,11 @@ void ircize(list_t *ll)
 				MAYFREE(link->s_password);
 				MAYFREE(link->connect_nick);
 				MAYFREE(link->vhost);
+#ifdef HAVE_LIBSSL
+				MAYFREE(link->ssl_check_store);
+				sk_X509_free(link->untrusted_certs);
+#endif
+				
 
 				for (i = 0; i < link->serverc; i++)
 					server_free(link->serverv[i]);
@@ -843,6 +851,7 @@ void ircize(list_t *ll)
 			link->s_ssl = c->network->ssl;
 			link->ssl_check_mode = u->ssl_check_mode;
 			link->ssl_check_store = strmaydup(u->ssl_check_store);
+			link->untrusted_certs = sk_X509_new_null();
 #endif
 
 			if (!link->user)
@@ -985,6 +994,150 @@ void write_user_list(connection_t *c, char *dest)
 			"end of bip user list");
 }
 
+#ifdef HAVE_LIBSSL
+int link_add_untrusted(struct link_server *ls, X509 *cert)
+{
+	int i;
+
+	/* Check whether the cert is already in the stack */
+	for (i = 0; i < sk_X509_num(LINK(ls)->untrusted_certs); i++) {
+		if (!X509_cmp(cert,
+				sk_X509_value(LINK(ls)->untrusted_certs, i)))
+			return 1;
+	}
+
+	return sk_X509_push(LINK(ls)->untrusted_certs, cert);
+}
+
+int ssl_check_trust(struct link_client *ic)
+{
+	X509 *trustcert = NULL;
+	char subject[270];
+	char issuer[270];
+	unsigned char fp[EVP_MAX_MD_SIZE];
+	char fpstr[EVP_MAX_MD_SIZE * 3 + 20];
+	unsigned int fplen;
+	int i;
+	
+	if(!LINK(ic)->untrusted_certs ||
+			sk_X509_num(LINK(ic)->untrusted_certs) <= 0)
+		return 0;
+	
+	trustcert = sk_X509_value(LINK(ic)->untrusted_certs, 0);
+	strcpy(subject, "Subject: ");
+	strcpy(issuer, "Issuer:  ");
+	strcpy(fpstr, "MD5 fingerprint: ");
+	X509_NAME_oneline(X509_get_subject_name(trustcert), subject + 9, 256);
+	X509_NAME_oneline(X509_get_issuer_name(trustcert), issuer + 9, 256);
+
+	X509_digest(trustcert, EVP_md5(), fp, &fplen);
+	for(i = 0; i < (int)fplen; i++)
+		sprintf(fpstr + 17 + (i * 3), "%02X%c",
+				fp[i], (i == (int)fplen - 1) ? '\0' : ':');
+
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
+			"This server SSL certificate was not "
+			"accepted because it is not in your store "
+			"of trusted certificates:");
+	
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", subject);
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", issuer);
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", fpstr);
+
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
+			"WARNING: if you've already trusted a "
+			"certificate for this server before, that "
+			"probably means it has changed.");
+
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
+			"If so, YOU MAY BE SUBJECT OF A "
+			"MAN-IN-THE-MIDDLE ATTACK! PLEASE DON'T TRUST "
+			"THIS CERTIFICATE IF YOU'RE NOT SURE THIS IS "
+			"NOT THE CASE.");
+
+	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
+			"Type /QUOTE BIP TRUST OK to trust this "
+			"certificate, /QUOTE BIP TRUST NO to discard it.");
+	
+	return 1;
+}
+
+#if 0
+static int ssl_trust_next_cert(struct link_client *ic)
+{
+	(void)ic;
+}
+
+static int ssl_discard_next_cert(struct link_client *ic)
+{
+	(void)ic;
+}
+#endif /* 0 */
+#endif
+
+#ifdef HAVE_LIBSSL
+static int adm_trust(struct link_client *ic, struct line *line)
+{
+	if (ic->allow_trust != 1) {
+		mylog(LOG_ERROR, "User attempted TRUST command without "
+				"being allowed to!");
+		unbind_from_link(ic);
+		return OK_CLOSE;
+	}
+
+	if(!LINK(ic)->untrusted_certs ||
+			sk_X509_num(LINK(ic)->untrusted_certs) <= 0) {
+		/* shouldn't have been asked to /QUOTE TRUST but well... */
+		WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
+				"No untrusted certificates.");
+		return ERR_PROTOCOL;
+	}
+
+	if (line->elemc != 3)
+		return ERR_PROTOCOL;
+
+	if (!strcasecmp(line->elemv[2], "OK")) {
+		/* OK, attempt to trust the cert! */
+		BIO *bio = BIO_new_file(LINK(ic)->ssl_check_store, "a+");
+		X509 *trustcert = sk_X509_shift(LINK(ic)->untrusted_certs);
+		
+		if(!bio || !trustcert ||
+				PEM_write_bio_X509(bio, trustcert) <= 0)
+			write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
+					":==== Error while trusting test!\r\n");
+		else
+			write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
+					":==== Certificate now trusted.\r\n");
+
+		BIO_free_all(bio);
+		X509_free(trustcert);
+	} else if (!strcasecmp(line->elemv[2], "NO")) {
+		/* NO, discard the cert! */
+		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
+				":==== Certificate discarded.\r\n");
+
+		X509_free(sk_X509_shift(LINK(ic)->untrusted_certs));
+	} else
+		return ERR_PROTOCOL;
+
+	if (!ssl_check_trust(ic)) {
+		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
+				":No more certificates waiting awaiting "
+				"user trust, thanks!\r\n");
+		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
+				":If the certificate is trusted, bip should "
+				"be able to connect to the server on the "
+				"next retry. Please wait a while and try "
+				"connecting your client again.\r\n");
+
+		LINK(ic)->recon_timer = 1; /* Speed up reconnection... */
+		unbind_from_link(ic);
+		return OK_CLOSE;
+	}
+	return OK_FORGET;
+}
+#endif
+
 extern struct link_client *reloading_client;
 void adm_blreset(struct link_client *ic)
 {
@@ -997,7 +1150,8 @@ void adm_blreset(struct link_client *ic)
 	}
 }
 
-void adm_bip(struct link_client *ic, struct line *line)
+int adm_bip(struct link_client *ic, struct line *line);
+int adm_bip(struct link_client *ic, struct line *line)
 {
 	char *nick;
 	if (LINK(ic)->l_server)
@@ -1005,7 +1159,7 @@ void adm_bip(struct link_client *ic, struct line *line)
 	else
 		nick = LINK(ic)->prev_nick;
 	if (line->elemc < 2)
-		return;
+		return OK_FORGET;
 	
 	if (strcasecmp(line->elemv[1], "RELOAD") == 0) {
 		reloading_client = ic;
@@ -1023,7 +1177,12 @@ void adm_bip(struct link_client *ic, struct line *line)
 	} else if (strcasecmp(line->elemv[1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
 			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP)");
+#ifdef HAVE_LIBSSL
+	} else if (strcasecmp(line->elemv[1], "TRUST") == 0) {
+		return adm_trust(ic, line);
+#endif
 	}
+	return OK_FORGET;
 }
 
 void free_conf(list_t *l)

@@ -25,6 +25,8 @@ static BIO *errbio = NULL;
 extern char *conf_ssl_certfile;
 static int SSLize(connection_t *cn, int *nc);
 static SSL_CTX *SSL_init_context(void);
+/* SSH like trust management */
+int link_add_untrusted(void *ls, X509 *cert);
 #endif
 
 static int connection_timedout(connection_t *cn);
@@ -341,6 +343,7 @@ list_t *read_lines(connection_t *cn, int *error)
 	case CONN_ERROR:
 	case CONN_DISCONN:
 	case CONN_EXCEPT:
+	case CONN_UNTRUSTED:
 		*error = 1;
 		ret = NULL;
 		break;
@@ -488,6 +491,7 @@ int cn_is_new(connection_t *cn)
 	case CONN_EXCEPT:
 	case CONN_NEED_SSLIZE:
 	case CONN_OK:
+	case CONN_UNTRUSTED:
 		return 0;
 	case CONN_NEW:
 	case CONN_INPROGRESS:
@@ -505,6 +509,7 @@ int cn_is_in_error(connection_t *cn)
 	case CONN_ERROR:
 	case CONN_DISCONN:
 	case CONN_EXCEPT:
+	case CONN_UNTRUSTED:
 		return 1;
 	case CONN_NEW:
 	case CONN_INPROGRESS:
@@ -1184,6 +1189,8 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 					"in store, rejecting it!");
 			err = X509_V_ERR_CERT_REJECTED;
 			X509_STORE_CTX_set_error(ctx, err);
+			
+			link_add_untrusted(c->user_data, X509_dup(err_cert));
 		}
 	}
 	
@@ -1226,30 +1233,40 @@ static int SSLize(connection_t *cn, int *nc)
 		SSL_CIPHER *cipher;
 		char buf[128];
 		int len;
-		int err;
 
 		cipher = SSL_get_current_cipher(cn->ssl_h);
 		SSL_CIPHER_description(cipher, buf, 128);
 		len = strlen(buf);
 		if (len > 0)
-			buf[len-1] = '\0';
-		mylog(LOG_DEBUG, "Negociated cyphers: %s",buf);
-
-		if (cn->ssl_check_mode > 0 &&
-				(err = SSL_get_verify_result(cn->ssl_h))
-				!= X509_V_OK) {
-			mylog(LOG_ERROR, "Certificate check failed: %s (%d)!",
-					X509_verify_cert_error_string(err),
-					err);
-			cn->connected = CONN_ERROR;
-			return 1;
-		}
+			buf[len - 1] = '\0';
+		mylog(LOG_DEBUG, "Negociated cyphers: %s", buf);
 
 		cn->connected = CONN_OK;
 		*nc = 1;
 		return 0;
 	}
-	
+
+	switch (cn->ssl_check_mode) {
+	case SSL_CHECK_NONE:
+		break;
+	case SSL_CHECK_BASIC:
+		if((err = SSL_get_verify_result(cn->ssl_h)) != X509_V_OK) {
+			mylog(LOG_ERROR, "Certificate check failed: %s (%d)!",
+				X509_verify_cert_error_string(err), err);
+			cn->connected = CONN_UNTRUSTED;
+			return 1;
+		}
+		break;
+	case SSL_CHECK_CA:
+		if((err = SSL_get_verify_result(cn->ssl_h)) != X509_V_OK) {
+			mylog(LOG_ERROR, "Certificate check failed: %s (%d)!",
+				X509_verify_cert_error_string(err), err);
+			cn->connected = CONN_UNTRUSTED;
+			return 1;
+		}
+		break;
+	}
+
 	if (err2 == SSL_ERROR_SYSCALL) {
 		/* socked died */
 		cn->connected = CONN_ERROR;
@@ -1280,11 +1297,23 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 	conn->cert = NULL;
 	conn->ssl_check_mode = check_mode;
 	conn->ssl_check_store = check_store;
-	if (conn->ssl_check_mode != SSL_CHECK_NONE &&
-		!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, NULL,
+
+	switch (conn->ssl_check_mode) {
+	case SSL_CHECK_BASIC:
+		if (!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, check_store,
+				NULL)) {
+			mylog(LOG_ERROR, "Can't assign check store to "
+					"SSL connection! Proceeding without!");
+		}
+		break;
+	case SSL_CHECK_CA:
+		if (!SSL_CTX_load_verify_locations(conn->ssl_ctx_h, NULL,
 				check_store)) {
-		mylog(LOG_ERROR, "Can't assign check store to SSL connection!");
-		return conn;
+			mylog(LOG_ERROR, "Can't assign check store to "
+					"SSL connection!");
+			return conn;
+		}
+		break;
 	}
 
 	switch (conn->ssl_check_mode) {
@@ -1331,6 +1360,11 @@ connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
 		int timeout)
 {
 	char dstportbuf[20], srcportbuf[20], *tmp;
+#ifndef HAVE_LIBSSL
+	(void)ssl;
+	(void)ssl_check_mode;
+	(void)ssl_check_store;
+#endif
 	/* TODO: allow litteral service name in the function interface */
 	if (snprintf(dstportbuf, 20, "%d", dstport) >= 20)
 		dstportbuf[19] = '\0';

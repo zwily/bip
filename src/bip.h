@@ -62,4 +62,8 @@ struct c_channel
 	char *key;
 };
 
+int adm_bip(struct link_client *ic, struct line *line);
+int ssl_check_trust(struct link_client *ic);
+void adm_blreset(struct link_client *ic);
+
 #endif
