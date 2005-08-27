@@ -668,16 +668,16 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		return ERR_AUTH;
 	}
 
-	if (LINK(ic)->s_state != IRCS_CONNECTED) {
 #ifdef HAVE_LIBSSL
+	if (LINK(ic)->s_state != IRCS_CONNECTED) {
 		/* Check if we have an untrusted certificate from the server */
 		if (ssl_check_trust(ic)) {
 			ic->allow_trust = 1;
 			free(init_nick);
 			return OK_FORGET;
 		}
-#endif	
 	}
+#endif	
 
 	if (LINK(ic)->s_state == IRCS_NONE) {
 		/* drop it if corresponding server hasn't connected at all. */
@@ -1887,8 +1887,10 @@ void irc_server_shutdown(struct link_server *s)
 		free(LINK(s)->prev_nick);
 	LINK(s)->prev_nick = strdup(s->nick);
 
-	if (LINK(s)->prev_ircmask)
+	if (LINK(s)->prev_ircmask) {
 		free(LINK(s)->prev_ircmask);
+		LINK(s)->prev_ircmask = NULL;
+	}
 	if (s->irc_mask)
 		LINK(s)->prev_ircmask = strdup(s->irc_mask);
 }
