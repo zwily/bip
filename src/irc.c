@@ -79,10 +79,14 @@ static char *make_irc_mask(char *nick, char *oldim)
 {
 	char *nm;
 	char *imaskend = oldim;
-	while (*imaskend && *imaskend != '!')
-		imaskend++;
-	if (*imaskend == '\0')
+	if (!imaskend) {
 		imaskend = "!bip@bip.bip.bip";
+	} else {
+		while (*imaskend && *imaskend != '!')
+			imaskend++;
+		if (*imaskend == '\0')
+			imaskend = "!bip@bip.bip.bip";
+	}
 
 	nm = malloc(strlen(nick) + strlen(imaskend) + 1);
 	*nm = 0;
