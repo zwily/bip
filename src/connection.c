@@ -183,7 +183,7 @@ static X509 *mySSL_get_cert(SSL *ssl)
 static int _write_socket_SSL(connection_t *cn, char* message)
 {
 	int count, size;
-	
+
 	size = sizeof(char)*strlen(message);
 
 	if (!cn->client && cn->cert == NULL) {
@@ -223,6 +223,7 @@ static int _write_socket(connection_t *cn, char *message)
 {
 	size_t size;
 	size_t tcount = 0;
+	size_t p_tcount = 0;
 	ssize_t count;
 
 	size = strlen(message);
@@ -233,6 +234,11 @@ static int _write_socket(connection_t *cn, char *message)
 			tcount += count;
 			if (tcount == size)
 				break;
+			if (tcount - p_tcount == 0) {
+				/* no write at all, we give up */
+				return WRITE_ERROR;
+			}
+			p_tcount = tcount;
 		}
 	} while (count < 0 &&
 		(errno == EAGAIN || errno == EINTR || errno == EINPROGRESS));
