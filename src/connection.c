@@ -236,6 +236,7 @@ static int _write_socket(connection_t *cn, char *message)
 				break;
 			if (tcount - p_tcount == 0) {
 				/* no write at all, we give up */
+				cn->connected = CONN_ERROR;
 				return WRITE_ERROR;
 			}
 			p_tcount = tcount;
@@ -290,7 +291,7 @@ static int real_write_all(connection_t *cn)
 
 	if (cn == NULL)
 		fatal("real_write_all: wrong arguments");
-	
+
 	while ((line = list_remove_first(cn->outgoing))) {
 		ret = write_socket(cn, line);
 
@@ -313,7 +314,7 @@ static int real_write_all(connection_t *cn)
 			/* one line at a time */
 			break;
 	}
-	return 0;	
+	return 0;
 }
 
 void write_line_fast(connection_t *cn, char *line)
@@ -528,7 +529,7 @@ int cn_is_in_error(connection_t *cn)
 	}
 }
 
-int cn_is_connected(connection_t *cn) 
+int cn_is_connected(connection_t *cn)
 {
 	if (cn == NULL)
 		fatal("cn_is_connected, wrong argument");
@@ -609,7 +610,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 	if (!FD_ISSET(cn->handle, fds)) {
 		if (cn_is_connected(cn))
 			return 0;
-		
+
 		mylog(LOG_DEBUGVERB, "New socket still not connected (%d)",
 				cn->handle);
 		/* check timeout (handles connect_trynext) */
@@ -618,14 +619,14 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 
 	mylog(LOG_DEBUGVERB, "Write positif sur fd %d (state %d)",
 			cn->handle, cn->connected);
-	
+
 	if (cn_is_new(cn)) {
 		int err, err2;
 		socklen_t errSize = sizeof(err);
 
 		err2 = getsockopt(cn->handle, SOL_SOCKET, SO_ERROR,
 				(void *)&err, &errSize);
-		
+
 		if (err2 < 0) {
 			mylog(LOG_WARN, "fd:%d getsockopt error: %s",
 					cn->handle, strerror(errno));
@@ -633,7 +634,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 				connect_trynext(cn);
 			return (cn_is_new(cn) || cn->connected ==
 					CONN_NEED_SSLIZE) ? 0 : 1;
-			
+
 		} else if (err == EINPROGRESS || err == EALREADY) {
 			mylog(LOG_DEBUG, "fd:%d Connection in progress...",
 					cn->handle);
@@ -774,11 +775,11 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 					cn->handle, cn->connected,
 					cn_is_connected(cn));
 		}
-		
+
 		/* we NEVER want to check write on a listening socket */
 		if (cn->listening)
 			continue;
-		
+
 		if (!cn_is_connected(cn) || cn_want_write(cn)) {
 			FD_SET(cn->handle, &fds_write);
 			mylog(LOG_DEBUGVERB, "Test write sur fd %d %d:%d",
@@ -786,7 +787,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 					cn_is_connected(cn));
 		}
 	}
-	
+
 	/* if no connection is active, return the list... empty... */
 	if (maxfd == -1) {
 		usleep(*msec * 1000);
@@ -801,7 +802,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 			tv.tv_usec);
 	err = select(maxfd + 1, &fds_read, &fds_write, &fds_except, &tv);
 	gettimeofday(&etv, NULL);
-	
+
 	if (etv.tv_sec < btv.tv_sec)
 		mylog(LOG_ERROR, "Time rewinded ! not touching interval");
 	else
