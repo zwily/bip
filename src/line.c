@@ -1,3 +1,16 @@
+/*
+ * $Id$
+ *
+ * This file is part of the bip project
+ * Copyright (C) 2004 2005 Arnaud Cornet and Loïc Gomez
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * See the file "COPYING" for the exact licensing terms.
+ */
+
 #include "config.h"
 #include "line.h"
 
