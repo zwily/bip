@@ -1,5 +1,7 @@
-bip (0.0-1) unstable; urgency=low
+bip (0.5.0-1) unstable; urgency=low
 
+  * Initial release.
   * debian/rules: Initial package
 
- -- Arnaud Cornet <nohar@t1r.net>  Thu, 20 Apr 2005 22:00:45 -0200
+ -- Arnaud Cornet <arnaud.cornet@gmail.com>  Sun, 09 Oct 2005 14:16:42 +0200
+

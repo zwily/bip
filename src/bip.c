@@ -70,7 +70,7 @@ static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 
 	if (strlen(hex) != 40)
 		fatal("Incorrect password format %s\n", hex);
-	
+
 	md5 = malloc(20);
 	for (i = 0; i < 20; i++) {
 		sscanf(hex + 2 * i, "%02x", &buf);
@@ -1160,7 +1160,7 @@ int adm_bip(struct link_client *ic, struct line *line)
 		nick = LINK(ic)->prev_nick;
 	if (line->elemc < 2)
 		return OK_FORGET;
-	
+
 	if (strcasecmp(line->elemv[1], "RELOAD") == 0) {
 		reloading_client = ic;
 		sighup = 1;
@@ -1193,7 +1193,7 @@ void free_conf(list_t *l)
 		switch (t->tuple_type) {
 		case TUPLE_STR:
 			free(t->pdata);	/* no break, for the style */
-		case TUPLE_INT:	
+		case TUPLE_INT:
 			free(t);
 			break;
 		case TUPLE_LIST:

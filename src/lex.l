@@ -40,7 +40,7 @@ list_t *parse_conf(FILE *file)
 		return NULL;
 	}
 	return root_list;
-} 
+}
 %}
 %%
 (" "|\t)+
