@@ -1,0 +1,290 @@
+.TH BIP 10 "10 October 2005"
+
+.SH NAME
+
+bip.conf \- Configuration file for BIP IRC Proxy
+
+.SH DESCRIPTION
+
+A BIP configuration file consists of a list of variable affectations or
+sections. It contains the global options, networks definitions, users
+configuration, users connections declarations. Each section is described in
+this manpage.
+
+The bip.conf skeleton should be something like this :
+
+option1 = value;
+option2 = value;
+...
+
+network {
+    net_opt = value;
+    ...
+    server { ... };
+    server { ... };
+};
+...
+
+user {
+    user_opt = value;
+    ...
+    connection {
+        conn_opt = value;
+        ...
+        channel { ... };
+    };
+    connection {
+        conn_opt = value;
+        ...
+        channel { ... };
+        channel { ... };
+        ...
+    };
+};
+
+.SH SYNTAX RULES
+
+The syntax is quite simple :
+\- everything after the \fB#\fP character is ignored (comments)
+\- each variable affectation must be finished with a \fB;\fP
+\- each section { } must be finished with a \fB;\fP
+
+It's recommended to use vim with the provided \fBbip.vim\fP syntax file to
+avoid common syntax and lexical mistakes. You can also find an example
+configuration file along with BIP.
+
+.SH GLOBAL OPTIONS
+
+.TP
+\fBalways_backlog\fP (default: \fBfalse\fP)
+If true, clients will always receive \fBbacklog_lines\fP log lines, even if they
+were already sent before. NEVER ENABLE THIS WHEN \fBbacklog_lines\fP IS 0 !
+
+.TP
+\fBbacklog\fP (default: \fBtrue\fP)
+Enable or disable the whole backlog system, which allows clients to see a
+log replay upon connection.
+
+.TP
+\fBbacklog_lines\fP (default: \fB10\fP)
+If set to 0, BIP will replay all the logs since last client disconnect. Else,
+it'll replay exactly \fBbacklog_lines\fP lines on each channel and privates.
+Be aware that BIP will replay \fBbacklog_lines\fP lines of all privates, even
+if there are more. For example if Coyote told you 12 lines and then RoadRunner
+6, you'll only have a replay of the 6 RoadRunner's lines and the last 4 of
+Coyote's.
+
+.TP
+\fBblreset_on_talk\fP (default: \fBfalse\fP)
+When true, backlog will not be reset upon client disconnection but upon client
+talk (channel/private message or action). It's quite useful to avoid losing
+all the backlogs when the client crashes before you could read them.
+
+.TP
+\fBclient_side_ssl\fP (default: \fBfalse\fP)
+When true, clients will need to connect to BIP using SSL.
+
+.TP
+\fBip\fP (default: \fB\fP)
+euh...
+
+.TP
+\fBlog\fP (default: \fBtrue\fP)
+When true, the log system is enabled. Else, BIP will not write a single log
+file. Backlog is then stored into memory.
+
+.TP
+\fBlog_format\fP (default: \fB%u/%n/%Y-%m/%c.%d.log\fP)
+Determines the log file name depending on :
+\- %u username (name in user { }; section)
+\- %n network name (name in connection { }; section)
+\- %c channel name
+\- %Y 4 digits year
+\- %m 2 digits month
+\- %d 2 digits day
+
+.TP
+\fBlog_level\fP (default: \fB1\fP)
+Specify the verbosity of BIP from 0 (fatal errors) to 6 (huge debug output)
+
+.TP
+\fBlog_root\fP (default: \fBHOME/.bip/logs\fP)
+Main log directory. Sub-directories and files will be created from there
+depending on \fBlog_format\fP.
+
+.TP
+\fBlog_sync_interval\fP (default: \fB5\fP)
+Defines the delay between each logfiles sync to the disk. Must be a non null
+positive integer.
+
+.TP
+\fBpid_file\fP (default: \fBHOME/.bip/bip.pid\fP)
+Defines the file where BIP's pid will be stored. BIP checks if this file exists
+and if the pid is still alive upon startup. If true, BIP refuses to start.
+
+.TP
+\fBport\fP (default: \fB7778\fP)
+The port on which BIP should listen for clients.
+
+.SH NETWORK SECTION
+
+This section allows you to declare a network for use in the connection
+sections. It may appear more than once in the configuration file.
+
+.TP
+\fBssl\fP (default: \fBfalse\fP)
+If true, BIP will connect to this network using SSL only. You cannot mix
+SSL servers and non-SSL servers in the same network section since it'd be very
+unsecure !
+
+.TP
+\fBname\fP
+It's the network name used in the \fBconnection section\fP. Please not this
+value is not used in \fBlog_format\fP, since it uses the variable \fBname\fP
+from the \fBconnection section\fP.
+
+.SH SERVER SUB-SECTION
+
+BIP will cycle through the server sections list when reconnecting to a network.
+It may appear more than once in a network section.
+
+.TP
+\fBhost\fP
+The server's hostname or IP address.
+
+.TP
+\fBport\fP (default: \fB6667\fP)
+The server port to connect to.
+
+.SH USER SECTION
+
+This section allows you to define the users allowed to connect to BIP and their
+options. It may appear more than once in the configuration file.
+
+.TP
+\fBdefault_nick\fP
+The default nick option for each \fBconnection section\fP where no \fBnick\fP
+is defined. See \fBCONNECTION SECTION\fP for more details.
+
+.TP
+\fBdefault_realname\fP
+The default realname option for each \fBconnection section\fP where no \fBrealname\fP
+is defined. See \fBCONNECTION SECTION\fP for more details.
+
+.TP
+\fBdefault_user\fP
+The default user option for each \fBconnection section\fP where no \fBuser\fP
+is defined. See \fBCONNECTION SECTION\fP for more details.
+
+.TP
+\fBname\fP
+The user name. It'll be used in password and in \fBlog_format\fP.
+
+.TP
+\fBpassword\fP
+The password. It \fBMUST\fP be generated with \fBbimkpw\fP or it'll not work.
+
+.TP
+\fBssl_check_mode\fP (default: \fBnone\fP)
+Tells whether BIP should check the server SSL certificate and against what.
+Can be \fBnone\fP for no check at all, \fBca\fP to check if the cert is signed
+by a Certificate Authority in repository, or \fBbasic\fP to check if cert
+exists in repository. The repository is defined by \fBssl_check_store\fP.
+
+.TP
+\fBssl_check_store\fP (default: \fB\fP)
+This repository is browsed by BIP when a SSL certificate or CA check is needed.
+
+.SH CONNECTION SUB-SECTION
+
+Each connection section associates a user to the networks he wants to connect
+to. Thus, it must be declared in the user sections, and can be used more than
+once.
+
+.TP
+\fBaway_nick\fP (default: \fB\fP)
+If true, and if there are no more client attached, BIP will change nickname to
+this \fBaway_nick\fP. Your nickname will be restored upon client connect.
+
+.TP
+\fBfollow_nick\fP (default: \fB\fP)
+If set to true, when you change nick, BIP stores the new nickname as the new
+default nickname value. Thus, if you are disconnected from the server, BIP will
+restore the correct nickname.
+
+.TP
+\fBignore_first_nick\fP (default: \fB\fP)
+If set to true, BIP will ignore the nickname sent by the client upon connect.
+Further nickname changes will be processed as usual.
+
+.TP
+\fBnetwork\fP (default: \fB\fP)
+The network name. See the \fBNETWORK SECTION\fP.
+
+.TP
+\fBnick\fP
+BIP will send that string as your nickname upon connect. If not specified
+and if \fBdefault_nickname\fP is specified in the \fBuser section\fP, BIP will
+use that default nickname string.
+
+.TP
+\fBon_connect_send\fP
+You can specify this filed more than once. BIP will send the text as is to the
+server. It'd be useful for a greet on connect or to send you NickServ password.
+
+.TP
+\fBpassword\fP
+This is the \fBSERVER\fP password, which is sent upon connection to the server
+only.
+
+.TP
+\fBrealname\fP
+BIP will send that string as the realname part (description in whois result)
+upon connect. If not specified and if \fBdefault_realname\fP is specified in
+the \fBuser section\fP, BIP will use that default realname string.
+
+.TP
+\fBsource_port\fP
+If specified, tells BIP to connect from this port to the IRC server.
+
+.TP
+\fBuser\fP
+BIP will send that string as the user part (usually between ! and @ in a whois
+result) upon connect. It's also used by the oidentd support (if enabled). If
+not specified and if \fBdefault_user\fP is specified in the \fBuser section\fP,
+BIP will use that default user string.
+
+.TP
+\fBvhost\fP
+If specified, BIP will use \fBvhost\fP as the IP address to bind to when
+connecting to the IRC server. It'll allow you to use a specific IP address
+for this network when you have more than one. This options is totally useless
+to people who only have one IP address.
+
+.SH CHANNEL SUB-SUB-SECTION
+
+This section defines the list of channels to join for a user on a particular
+network. It is to be found in the connection sections and appear more than once
+in a connection section.
+
+.TP
+\fBname\fP
+The channel name (#bip, &bip, ...).
+
+.TP
+\fBkey\fP
+The channel key if needed.
+
+.SH SEE ALSO
+
+bip, bipmkpw
+
+.SH AUTHOR
+
+Arnaud 'nohar' Cornet
+Loïc 'Kyoshiro' Gomez
+
+Thanks to jj, YS and lafouine, for hanging around while we were coding.
+
+Crypto shamelessly taken from Christophe 'sexy' Devine.
+
