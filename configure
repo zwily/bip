@@ -2910,7 +2910,7 @@ fi
 fi
 
 
-CFLAGS="-O2 -g -W -Wall"
+CFLAGS="-O2 -W -Wall"
 
 debug=false
 # Check whether --enable-debug or --disable-debug was given.
