@@ -49,16 +49,17 @@ The syntax is quite simple :
 \- each variable affectation must be finished with a \fB;\fP
 \- each section { } must be finished with a \fB;\fP
 
-It's recommended to use vim with the provided \fBbip.vim\fP syntax file to
-avoid common syntax and lexical mistakes. You can also find an example
-configuration file along with BIP.
+If you use vim you will probably want to use vim with the provided
+\fBbip.vim\fP syntax file to avoid common syntax and lexical mistakes. You can
+also find an example configuration file along with BIP.
 
 .SH GLOBAL OPTIONS
 
 .TP
 \fBalways_backlog\fP (default: \fBfalse\fP)
-If true, clients will always receive \fBbacklog_lines\fP log lines, even if they
-were already sent before. NEVER ENABLE THIS WHEN \fBbacklog_lines\fP IS 0 !
+If true, clients will always receive \fBbacklog_lines\fP log lines, even if
+they were already sent before. This option should of course not be enabled if
+\fBbacklog_lines\fP is 0 !
 
 .TP
 \fBbacklog\fP (default: \fBtrue\fP)
@@ -77,8 +78,9 @@ Coyote's.
 .TP
 \fBblreset_on_talk\fP (default: \fBfalse\fP)
 When true, backlog will not be reset upon client disconnection but upon client
-talk (channel/private message or action). It's quite useful to avoid losing
-all the backlogs when the client crashes before you could read them.
+talk (channel/private message or action).  It means that next time you log to
+your bip session the backlogging will start at the time right after your last
+words on irc.
 
 .TP
 \fBclient_side_ssl\fP (default: \fBfalse\fP)
@@ -86,7 +88,7 @@ When true, clients will need to connect to BIP using SSL.
 
 .TP
 \fBip\fP (default: \fB\fP)
-euh...
+Ignored for the time beeing.
 
 .TP
 \fBlog\fP (default: \fBtrue\fP)
@@ -134,14 +136,14 @@ sections. It may appear more than once in the configuration file.
 .TP
 \fBssl\fP (default: \fBfalse\fP)
 If true, BIP will connect to this network using SSL only. You cannot mix
-SSL servers and non-SSL servers in the same network section since it'd be very
-unsecure !
+SSL servers and non-SSL servers in the same network section. This is by choice,
+we believe it's a bad idea.
 
 .TP
 \fBname\fP
-It's the network name used in the \fBconnection section\fP. Please not this
-value is not used in \fBlog_format\fP, since it uses the variable \fBname\fP
-from the \fBconnection section\fP.
+It's the network name used in the \fBconnection section\fP. Please note that
+this value is not used in \fBlog_format\fP, since it uses the variable
+\fBname\fP from the \fBconnection section\fP.
 
 .SH SERVER SUB-SECTION
 
@@ -168,8 +170,8 @@ is defined. See \fBCONNECTION SECTION\fP for more details.
 
 .TP
 \fBdefault_realname\fP
-The default realname option for each \fBconnection section\fP where no \fBrealname\fP
-is defined. See \fBCONNECTION SECTION\fP for more details.
+The default realname option for each \fBconnection section\fP where no
+\fBrealname\fP is defined. See \fBCONNECTION SECTION\fP for more details.
 
 .TP
 \fBdefault_user\fP
@@ -178,7 +180,7 @@ is defined. See \fBCONNECTION SECTION\fP for more details.
 
 .TP
 \fBname\fP
-The user name. It'll be used in password and in \fBlog_format\fP.
+The user name. It'll be used to authenticate to bip and in \fBlog_format\fP.
 
 .TP
 \fBpassword\fP
@@ -234,7 +236,7 @@ server. It'd be useful for a greet on connect or to send you NickServ password.
 
 .TP
 \fBpassword\fP
-This is the \fBSERVER\fP password, which is sent upon connection to the server
+This is the irc server password, which is sent upon connection to the irc server
 only.
 
 .TP
@@ -281,10 +283,13 @@ bip, bipmkpw
 
 .SH AUTHOR
 
+bip authors:
 Arnaud 'nohar' Cornet
 Loïc 'Kyoshiro' Gomez
 
 Thanks to jj, YS and lafouine, for hanging around while we were coding.
 
 Crypto shamelessly taken from Christophe 'sexy' Devine.
+
+This man page is written by Loïc 'Kyoshiro' Gomez.
 
