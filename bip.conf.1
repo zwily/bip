@@ -13,6 +13,7 @@ this manpage.
 
 The bip.conf skeleton should be something like this :
 
+.nf
 option1 = value;
 option2 = value;
 ...
@@ -41,13 +42,18 @@ user {
         ...
     };
 };
+.fi
 
 .SH SYNTAX RULES
 
 The syntax is quite simple :
+.br
 \- everything after the \fB#\fP character is ignored (comments)
+.br
 \- each variable affectation must be finished with a \fB;\fP
+.br
 \- each section { } must be finished with a \fB;\fP
+.br
 
 If you use vim you will probably want to use vim with the provided
 \fBbip.vim\fP syntax file to avoid common syntax and lexical mistakes. You can
@@ -87,7 +93,7 @@ words on irc.
 When true, clients will need to connect to BIP using SSL.
 
 .TP
-\fBip\fP (default: \fB\fP)
+\fBip\fP
 Ignored for the time beeing.
 
 .TP
@@ -98,11 +104,17 @@ file. Backlog is then stored into memory.
 .TP
 \fBlog_format\fP (default: \fB%u/%n/%Y-%m/%c.%d.log\fP)
 Determines the log file name depending on :
+.br
 \- %u username (name in user { }; section)
+.br
 \- %n network name (name in connection { }; section)
+.br
 \- %c channel name
+.br
 \- %Y 4 digits year
+.br
 \- %m 2 digits month
+.br
 \- %d 2 digits day
 
 .TP
@@ -194,7 +206,7 @@ by a Certificate Authority in repository, or \fBbasic\fP to check if cert
 exists in repository. The repository is defined by \fBssl_check_store\fP.
 
 .TP
-\fBssl_check_store\fP (default: \fB\fP)
+\fBssl_check_store\fP (default: \fBnot set\fP)
 This repository is browsed by BIP when a SSL certificate or CA check is needed.
 
 .SH CONNECTION SUB-SECTION
@@ -204,23 +216,23 @@ to. Thus, it must be declared in the user sections, and can be used more than
 once.
 
 .TP
-\fBaway_nick\fP (default: \fB\fP)
+\fBaway_nick\fP (default: \fBnot set\fP)
 If true, and if there are no more client attached, BIP will change nickname to
 this \fBaway_nick\fP. Your nickname will be restored upon client connect.
 
 .TP
-\fBfollow_nick\fP (default: \fB\fP)
+\fBfollow_nick\fP (default: \fBfalse\fP)
 If set to true, when you change nick, BIP stores the new nickname as the new
 default nickname value. Thus, if you are disconnected from the server, BIP will
 restore the correct nickname.
 
 .TP
-\fBignore_first_nick\fP (default: \fB\fP)
+\fBignore_first_nick\fP (default: \fBfalse\fP)
 If set to true, BIP will ignore the nickname sent by the client upon connect.
 Further nickname changes will be processed as usual.
 
 .TP
-\fBnetwork\fP (default: \fB\fP)
+\fBnetwork\fP
 The network name. See the \fBNETWORK SECTION\fP.
 
 .TP
@@ -284,12 +296,14 @@ bip, bipmkpw
 .SH AUTHOR
 
 bip authors:
+.br
 Arnaud 'nohar' Cornet
+.br
 Loïc 'Kyoshiro' Gomez
 
 Thanks to jj, YS and lafouine, for hanging around while we were coding.
-
+.br
 Crypto shamelessly taken from Christophe 'sexy' Devine.
-
+.br
 This man page is written by Loïc 'Kyoshiro' Gomez.
 
