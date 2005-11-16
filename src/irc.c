@@ -165,10 +165,10 @@ list_t *channel_name_list(struct channel *c)
 			strncat(str, " ", NAMESIZE);
 			len++;
 		}
-		if (n->ovmask == NICKOP) {
+		if (n->ovmask & NICKOP) {
 			strncat(str, "@", NAMESIZE);
 			len++;
-		} else if (n->ovmask == NICKVOICED) {
+		} else if (n->ovmask & NICKVOICED) {
 			strncat(str, "+", NAMESIZE);
 			len++;
 		}
@@ -309,6 +309,16 @@ static void irc_server_connected(struct link_server *server)
         }
 }
 
+static int who_arg_to_ovmask(char *str)
+{
+	int ovmask = 0;
+	if (strchr(str, '@'))
+		ovmask |= NICKOP;
+	if (strchr(str, '+'))
+		ovmask |= NICKVOICED;
+	return ovmask;
+}
+
 /*
  * Given the way irc nets disrespect the rfc, maybe we should completely forget
  * about this damn ircmask...
@@ -317,22 +327,40 @@ static void irc_server_connected(struct link_server *server)
 static int parse_352(struct link_server *server, struct line *line)
 {
 	char *im;
-	int ret = OK_FORGET;
-	if (line->elemc < 4)
-		return ERR_PROTOCOL;
-	if (strcmp(line->elemv[1], server->nick) != 0)
-		return ret;
 
-	im = malloc(strlen(server->nick) + strlen(line->elemv[3]) +
-			strlen(line->elemv[4]) + 2 + 1);
-	strcpy(im, server->nick);
-	strcat(im, "!");
-	strcat(im, line->elemv[3]);
-	strcat(im, "@");
-	strcat(im, line->elemv[4]);
-	set_ircmask(server, im);
-	free(im);
-	return ret;
+	if (line->elemc < 8)
+		return ERR_PROTOCOL;
+
+	if (strcmp(line->elemv[2], "*") == 0) {
+		if (server->irc_mask &&
+				strcmp(line->elemv[1], server->nick) == 0) {
+			im = malloc(strlen(server->nick) +
+					strlen(line->elemv[3]) +
+					strlen(line->elemv[4]) + 2 + 1);
+			strcpy(im, server->nick);
+			strcat(im, "!");
+			strcat(im, line->elemv[3]);
+			strcat(im, "@");
+			strcat(im, line->elemv[4]);
+			set_ircmask(server, im);
+			free(im);
+			return OK_FORGET;
+		}
+	} else {
+		struct channel *channel;
+		struct nick *nick;
+
+		channel = hash_get(&server->channels, line->elemv[2]);
+		if (!channel)
+			return OK_COPY;
+
+		nick = hash_get(&channel->nicks, line->elemv[6]);
+		if (!nick)
+			return OK_COPY;
+
+		nick->ovmask = who_arg_to_ovmask(line->elemv[7]);
+	}
+	return OK_COPY;
 }
 
 /*
@@ -345,10 +373,6 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 
 	if (line->elemc == 0)
 		return ERR_PROTOCOL;
-
-	if (!server->irc_mask &&
-			strcmp(line->elemv[0], "352") == 0) /* WHO RPL */
-		ret = parse_352(server, line);
 
 	if (strcmp(line->elemv[0], "PING") == 0) {
 		if (line->elemc < 2)
@@ -421,6 +445,8 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		ret = irc_332(server, line);
 	} else if (strcmp(line->elemv[0], "333") == 0) {
 		ret = irc_333(server, line);
+	} else if (strcmp(line->elemv[0], "352") == 0) {
+		ret = parse_352(server, line);
 	} else if (strcmp(line->elemv[0], "353") == 0) {
 		ret = irc_353(server, line);
 	} else if (strcmp(line->elemv[0], "366") == 0) {

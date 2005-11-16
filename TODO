@@ -9,3 +9,6 @@ Before release:
 TODO:
 - DCC proxying...
 - crypt logs
+
+- use gnutls
+- MODE #channel and WHO #channel on join

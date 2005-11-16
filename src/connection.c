@@ -157,7 +157,7 @@ static void connect_trynext(connection_t *cn)
 		close(cn->handle);
 		cn->handle = -1;
 	}
-	
+
 	cn->connected = CONN_ERROR;
 	connecting_data_free(cn->connecting_data);
 	cn->connecting_data = NULL;
@@ -168,7 +168,7 @@ static void connect_trynext(connection_t *cn)
 static X509 *mySSL_get_cert(SSL *ssl)
 {
 	X509 *cert;
-	
+
 	if (!ssl) {
 		mylog(LOG_WARN, "mySSL_get_cert() No SSL context");
 		return NULL;
@@ -1070,12 +1070,12 @@ static connection_t *_connection_new(char *dsthostname, char *dstport,
 		char *srchostname, char *srcport, int timeout)
 {
 	connection_t *conn;
-	
+
 	printf("%s\n", dsthostname);
 
 	conn = connection_init(1, 0, timeout, 0);
 	create_socket(dsthostname, dstport, srchostname, srcport, conn);
-		
+
 	return conn;
 }
 
@@ -1352,10 +1352,10 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 					" most recent used");
 	*/
 	SSL_set_connect_state(conn->ssl_h);
-	
+
 	/* Put our connection_t in the SSL object for the verify callback */
 	SSL_set_ex_data(conn->ssl_h, ssl_cx_idx, conn);
-	
+
 	create_socket(dsthostname, dstport, srchostname, srcport, conn);
 
 	return conn;
