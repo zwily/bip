@@ -17,12 +17,12 @@
 #include <unistd.h>
 
 /* Warning: must be in order, 0 = less output */
+#define LOG_STD -1
 #define LOG_FATAL 0
 #define LOG_ERROR 1
 #define LOG_WARN 2
 #define LOG_INFO 3
 #define LOG_DEBUG 4
-#define LOG_STD 4
 #define LOG_DEBUGVERB 5
 #define LOG_DEBUGTOOMUCH 6
 

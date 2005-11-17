@@ -1870,6 +1870,10 @@ connection_t *irc_server_connect(struct link *link)
 	struct link_server *ls;
 	connection_t *conn;
 
+	mylog(LOG_INFO, "Connecting user '%s' to network '%s' using server "
+		"%s:%d", link->username, link->name,
+		link->serverv[link->cur_server]->host,
+		link->serverv[link->cur_server]->port);
 	conn = connection_new(link->serverv[link->cur_server]->host,
 				link->serverv[link->cur_server]->port,
 				link->vhost, link->bind_port,

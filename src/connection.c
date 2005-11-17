@@ -1071,8 +1071,6 @@ static connection_t *_connection_new(char *dsthostname, char *dstport,
 {
 	connection_t *conn;
 
-	printf("%s\n", dsthostname);
-
 	conn = connection_init(1, 0, timeout, 0);
 	create_socket(dsthostname, dstport, srchostname, srcport, conn);
 

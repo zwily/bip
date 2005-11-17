@@ -245,8 +245,8 @@ pid_is_there:
 		}
 		if (pid)
 			mylog(LOG_INFO, "pid file found (pid %ld).", pid);
-		mylog(LOG_INFO, "Another instance of bip is certainly runing.");
-		mylog(LOG_INFO, "If you are sure this is not the case remove"
+		mylog(LOG_STD, "Another instance of bip is certainly runing.");
+		mylog(LOG_STD, "If you are sure this is not the case remove"
 					" %s.", conf_pid_file);
 		exit(2);
 	}
@@ -769,7 +769,6 @@ void ircize(list_t *ll)
 					struct c_channel *chan =
 						list_it_item(&chit);
 					struct chan_info *ci = chan_info_new();
-					printf("%s\n",chan->name);
 					ci->name = strdup(chan->name);
 					ci->key = strmaydup(chan->key);
 					hash_insert(&link->chan_infos,
@@ -891,7 +890,7 @@ int main(int argc, char **argv)
 
 	conf_log_root = NULL;
 	conf_log_format = NULL;
-	conf_log_level = LOG_ERROR;
+	conf_log_level = LOG_INFO;
 	conf_backlog = 1;
 	conf_log = 1;
 	conf_backlog_lines = 100;

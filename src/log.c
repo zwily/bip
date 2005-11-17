@@ -715,7 +715,7 @@ char *log_beautify(char *buf, char *dest)
 	int done;
 
 	if (!buf)
-		mylog(LOG_INFO, "BUG!");
+		mylog(LOG_DEBUG, "BUG!");
 
 	p = strchr(buf, ' ');
 	if (!p || !p[0] || !p[1])
@@ -850,9 +850,6 @@ char *log_beautify(char *buf, char *dest)
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
-#if 0
-	mylog(LOG_INFO, "beautify out: \"%s\"", ret);
-#endif
 	return ret;
 }
 
@@ -874,7 +871,7 @@ char *log_backread(log_t *logdata, char *destination)
 
 	if (!logdata->backlogging) {
 		logdata->backlogging = 1;
-		mylog(LOG_INFO, "backlogging!");
+		mylog(LOG_DEBUG, "backlogging!");
 		if (lfg->memlog)
 			list_it_init(lfg->memlog, &lfg->backlog_it);
 		else
@@ -901,12 +898,12 @@ next_file:
 	/* check the files containing data to backlog */
 	lf = list_it_item(&logdata->file_it);
 	if (lf != list_get_last(&lfg->file_group)) {
-		mylog(LOG_INFO, "%s not last file!", lf->filename);
+		mylog(LOG_DEBUG, "%s not last file!", lf->filename);
 		/* if the file is not the current open for logging
 		 * (it is an old file that has been rotated)
 		 * open if necessary, backlog line per line, and close */
 		if (!lf->file) {
-			mylog(LOG_INFO, "opening: %s!", lf->filename);
+			mylog(LOG_DEBUG, "opening: %s!", lf->filename);
 			lf->file = fopen(lf->filename, "r");
 			if (!lf->file) {
 				mylog(LOG_ERROR, "Can't open %s for reading",
@@ -916,7 +913,7 @@ next_file:
 				return _log_wrap("Error reading logfile",
 						destination);
 			}
-			mylog(LOG_INFO, "seeking: %d!", lf->backlog_offset);
+			mylog(LOG_DEBUG, "seeking: %d!", lf->backlog_offset);
 			if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 				log_reinit(lfg);
 				free(buf);
@@ -933,9 +930,9 @@ next_file:
 				 * then the log file is corrupted so we also
 				 * drop this file */
 				if (pos == LOGLINE_MAXLEN)
-					mylog(LOG_INFO, "logline too long");
+					mylog(LOG_DEBUG, "logline too long");
 				if (c == EOF || pos == LOGLINE_MAXLEN) {
-					mylog(LOG_INFO, "EOF: %s (%d)!",
+					mylog(LOG_DEBUG, "EOF: %s (%d)!",
 							lf->filename,
 							conf_always_backlog);
 
@@ -969,7 +966,7 @@ next_file:
 					destination);
 		}
 		logdata->lastfile_seeked = 1;
-		mylog(LOG_INFO, "last file seedked!");
+		mylog(LOG_DEBUG, "last file seedked!");
 	}
 
 	c = fgetc(lf->file);
@@ -990,7 +987,7 @@ next_file:
 			lf->backlog_offset++;
 		if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
 			if (pos == LOGLINE_MAXLEN) {
-				mylog(LOG_INFO, "logline too long");
+				mylog(LOG_DEBUG, "logline too long");
 				fseek(lf->file, 0, SEEK_END);
 				/* in the corruption case we alwayse reset
 				 * backlog offset */
@@ -1022,7 +1019,7 @@ static char *_log_wrap(char *dest, char *line)
 	count = snprintf(buf, LOGLINE_MAXLEN + 1,
 			":" P_IRCMASK " PRIVMSG %s :%s\r\n", dest, line);
 	if (count >= LOGLINE_MAXLEN + 1) {
-		mylog(LOG_INFO, "line too long");
+		mylog(LOG_DEBUG, "line too long");
 		buf[LOGLINE_MAXLEN - 2] = '\r';
 		buf[LOGLINE_MAXLEN - 1] = '\n';
 		buf[LOGLINE_MAXLEN] = 0;

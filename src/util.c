@@ -100,7 +100,7 @@ void _mylog(int level, char *fmt, va_list ap)
 			prefix = "WARNING: ";
 			break;
 		case LOG_INFO:
-			prefix = "INFO: ";
+			prefix = "";
 			break;
 		default:
 			prefix = "";

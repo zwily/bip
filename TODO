@@ -1,12 +1,6 @@
-Before release:
-- SSL certificate verification
 - keep invites when detached ?
 - allow global (or per net ?) IP filtering
-- /bip command for admin (at least rehash, jump, ...)
-- check why log_mode doesn't add closing bracket...
-- bug: bip using 100% cpu when reconnecting (to SSL only ?)
-
-TODO:
+- more /bip commands
 - DCC proxying...
 - crypt logs
 
