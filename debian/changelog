@@ -1,6 +1,8 @@
 bip (0.5.0-1) unstable; urgency=low
 
   * Initial release.
+  * Change to use the bip with GPL + OpenSSL exception licence, and link to
+    OpenSSL
 
- -- Arnaud Cornet <arnaud.cornet@gmail.com>  Sun, 09 Oct 2005 14:16:42 +0200
+ -- Arnaud Cornet <arnaud.cornet@gmail.com>  Thu, 17 Nov 2005 15:28:19 +0100
 
