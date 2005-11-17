@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Arnaud Cornet <arnaud.cornet@gmail.com>
 Standards-Version: 3.6.2.1
-Build-Depends: cdbs, debhelper (>= 4.9.13), bison, flex
+Build-Depends: cdbs, debhelper (>= 4.9.13), bison, flex, libssl-dev
 
 Package: bip
 Architecture: any
