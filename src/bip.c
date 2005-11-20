@@ -327,7 +327,7 @@ static int add_network(list_t *data)
 				return 0;
 			break;
 		default:
-			conf_die("uknown keyword in network statement");
+			conf_die("unknown keyword in network statement");
 			if (t->type == TUPLE_STR)
 				free(t->pdata);
 			return 0;
@@ -365,7 +365,7 @@ static int add_channel(list_t *channell, list_t *data)
 			c->key = t->pdata;
 			break;
 		default:
-			conf_die("uknown keyword in channel statement");
+			conf_die("unknown keyword in channel statement");
 			if (t->type == TUPLE_STR)
 				free(t->pdata);
 			return 0;
@@ -436,6 +436,9 @@ static int add_connection(list_t *connectionl, list_t *data,
 		case LEX_PASSWORD:
 			c->password = t->pdata;
 			break;
+		case LEX_VHOST:
+			c->vhost = t->pdata;
+			break;
 		case LEX_CHANNEL:
 			r = add_channel(&c->channell, t->pdata);
 			free(t->pdata);
@@ -455,7 +458,7 @@ static int add_connection(list_t *connectionl, list_t *data,
 			c->on_connect_send = t->pdata;
 			break;
 		default:
-			conf_die("uknown keyword in connection statement");
+			conf_die("unknown keyword in connection statement");
 			if (t->type == TUPLE_STR)
 				free(t->pdata);
 			return 0;
@@ -526,7 +529,7 @@ static int add_user(list_t *data)
 				r = add_connection(&u->connectionl, t->pdata,
 						NULL);
 			else
-				r = add_connection(&u->connectionl, t->pdata, 
+				r = add_connection(&u->connectionl, t->pdata,
 						&old_u->connectionl);
 			free(t->pdata);
 			if (!r)
@@ -797,7 +800,7 @@ void ircize(list_t *ll)
 				MAYFREE(link->ssl_check_store);
 				sk_X509_free(link->untrusted_certs);
 #endif
-				
+
 
 				for (i = 0; i < link->serverc; i++)
 					server_free(link->serverv[i]);

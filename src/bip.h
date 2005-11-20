@@ -42,7 +42,7 @@ struct c_connection
 {
 	char *name;
 	struct c_network *network;
-	char *realname, *user, *nick; 
+	char *realname, *user, *nick;
 	char *password; 	/* server pass */
 	char *vhost;
 	unsigned short source_port;
