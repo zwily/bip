@@ -59,7 +59,7 @@ int conf_blreset_on_talk = 0;
 list_t *parse_conf(FILE *file);
 static void conf_die(char *fmt, ...);
 #ifdef HAVE_LIBSSL
-static int adm_trust(struct link_client *ic, struct line *line);
+int adm_trust(struct link_client *ic, struct line *line);
 #endif
 
 static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
@@ -1078,7 +1078,7 @@ static int ssl_discard_next_cert(struct link_client *ic)
 #endif
 
 #ifdef HAVE_LIBSSL
-static int adm_trust(struct link_client *ic, struct line *line)
+int adm_trust(struct link_client *ic, struct line *line)
 {
 	if (ic->allow_trust != 1) {
 		mylog(LOG_ERROR, "User attempted TRUST command without "
@@ -1102,7 +1102,7 @@ static int adm_trust(struct link_client *ic, struct line *line)
 		/* OK, attempt to trust the cert! */
 		BIO *bio = BIO_new_file(LINK(ic)->ssl_check_store, "a+");
 		X509 *trustcert = sk_X509_shift(LINK(ic)->untrusted_certs);
-		
+
 		if(!bio || !trustcert ||
 				PEM_write_bio_X509(bio, trustcert) <= 0)
 			write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "

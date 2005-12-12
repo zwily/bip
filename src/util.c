@@ -106,14 +106,14 @@ void _mylog(int level, char *fmt, va_list ap)
 			prefix = "";
 			break;
 	}
-	
+
 	fprintf(conf_global_log_file, "%s %s", timestamp(), prefix);
 	vfprintf(conf_global_log_file, fmt, ap);
 	fprintf(conf_global_log_file, "\n");
 #ifdef DEBUG
 	fflush(conf_global_log_file);
 #endif
-}		
+}
 
 void mylog(int level, char *fmt, ...)
 {
@@ -132,7 +132,7 @@ void fatal(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	
+
 	_mylog(LOG_FATAL, fmt, ap);
 
 	va_end(ap);

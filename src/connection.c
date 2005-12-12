@@ -855,13 +855,13 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 	int err;
 	struct connecting_data *cdata;
 	struct addrinfo hint;
-	
+
 	memset(&hint, 0, sizeof(hint));
 	hint.ai_flags = AI_PASSIVE;
 	hint.ai_family = PF_UNSPEC;
 	hint.ai_socktype = SOCK_STREAM;
 	hint.ai_protocol = 0;
-	
+
 	cn->connected = CONN_ERROR;
 	cdata = (struct connecting_data *)
 		malloc(sizeof(struct connecting_data));
@@ -888,7 +888,7 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 			cdata->src = NULL;
 		}
 	}
-					
+
 	cdata->cur = cdata->dst;
 	cn->connecting_data = cdata;
 
@@ -1177,7 +1177,8 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	if (c->ssl_check_mode == SSL_CHECK_BASIC && depth == 0 && result == 0 &&
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
 			 err == X509_V_ERR_CERT_UNTRUSTED ||
-			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE)) {
+			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
+			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)) {
 		
 		if (X509_STORE_get_by_subject(ctx, X509_LU_X509,
 				X509_get_subject_name(err_cert), &xobj) > 0 &&

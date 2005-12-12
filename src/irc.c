@@ -420,10 +420,17 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		ret = OK_FORGET;
 		if (strcmp(line->elemv[0], "376") == 0) /* end of motd */
 			irc_server_connected(server);
+		else if (strcmp(line->elemv[0], "422") == 0) /* no motd */
+				irc_server_connected(server);
+
 	} else if (LINK(server)->s_state == IRCS_CONNECTING) {
 		ret = OK_FORGET;
 		if (strcmp(line->elemv[0], "NOTICE") == 0) {
-		} else if (strcmp(line->elemv[0], "376") == 0) {
+		} else if (strcmp(line->elemv[0], "376") == 0) { /* end of motd */
+			irc_server_connected(server);
+			list_add_last(&LINK(server)->init_strings,
+					irc_line_dup(line));
+		} else if (strcmp(line->elemv[0], "422") == 0) { /* no motd */
 			irc_server_connected(server);
 			list_add_last(&LINK(server)->init_strings,
 					irc_line_dup(line));
@@ -702,12 +709,13 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	if (LINK(ic)->s_state != IRCS_CONNECTED) {
 		/* Check if we have an untrusted certificate from the server */
 		if (ssl_check_trust(ic)) {
+			TYPE(ic) = IRC_TYPE_TRUST_CLIENT;
 			ic->allow_trust = 1;
 			free(init_nick);
 			return OK_FORGET;
 		}
 	}
-#endif	
+#endif
 
 	if (LINK(ic)->s_state == IRCS_NONE) {
 		/* drop it if corresponding server hasn't connected at all. */
@@ -985,6 +993,21 @@ static int irc_cli_part(struct link_client *irc, struct line *line)
 	return OK_COPY;
 }
 
+#ifdef HAVE_LIBSSL
+static int irc_dispatch_trust_client(struct link_client *ic, struct line *line) 
+{
+	int r = OK_COPY;
+	if (line->elemc < 2)
+		return ERR_PROTOCOL;
+
+	if (strcmp(line->elemv[0], "BIP") == 0 &&
+	    strcmp(line->elemv[1], "TRUST") == 0)
+		r = adm_trust(ic, line);
+	
+	return r;
+}
+#endif
+
 int irc_cli_bip(struct link_client *ic, struct line *line);
 static int irc_dispatch_client(struct link_client *ic, struct line *line)
 {
@@ -1120,6 +1143,11 @@ int irc_dispatch(struct link_any *l, struct line *line, list_t *linkl)
 		return irc_dispatch_loging_client((struct link_client*)l,
 				line, linkl);
 		break;
+#ifdef HAVE_LIBSSL		
+	case IRC_TYPE_TRUST_CLIENT:
+		return irc_dispatch_trust_client((struct link_client*)l, line);
+		break;
+#endif
 	default:
 		fatal("gnיייייי");
 	}
