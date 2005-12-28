@@ -790,7 +790,7 @@ static int irc_cli_nick(struct link_client *ic, struct line *line, list_t *cl)
 
 	if ((ic->state & IRCC_PASS) != IRCC_PASS)
 		WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", ic->init_nick,
-				"You should type /QUOTE PASS your_password");
+				"You should type /QUOTE PASS your_username:your_password:your_connection_name");
 
 	return OK_FORGET;
 }
