@@ -1,3 +1,13 @@
+2006-01-29  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+        Now use automake 1.9
+	fix misleading error message on wrong password
+	merged man pages
+	* samples: fixed typo in sample
+	* SSL certs: Allows to trust when not connected
+	Typos in error messages.
+	Relicensing to proper GPL with exception for OpenSSL
+
 2005-04-21  Arnaud Cornet <nohar@t1r.net>
 
         * src: Now use autoconf/automake

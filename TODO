@@ -2,7 +2,7 @@
 - allow global (or per net ?) IP filtering
 - more /bip commands
 - DCC proxying...
-- crypt logs
+- encrypt logs
 
 - use gnutls
 - MODE #channel and WHO #channel on join
