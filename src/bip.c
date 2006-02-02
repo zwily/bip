@@ -677,8 +677,10 @@ int fireup(FILE *conf)
 
 	if (!conf_biphome) {
 		char *home = getenv("HOME");
-		if (!home)
+		if (!home) {
 			conf_die("no $HOME !, do you live in a trailer ?");
+			return 0;
+		}
 		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
 		strcpy(conf_biphome, home);
 		strcat(conf_biphome, "/.bip");
