@@ -360,7 +360,19 @@ static int parse_352(struct link_server *server, struct line *line)
 
 		nick->ovmask = who_arg_to_ovmask(line->elemv[7]);
 	}
-	return OK_COPY;
+	return OK_COPY_WHO;
+}
+
+static int irc_315(struct link_server *server, struct line *line)
+{
+	if (server->who_client) {
+		--server->who_client->who_count;
+
+		if (server->who_client->who_count < 0)
+			fatal("negative who count");
+	}
+
+	return OK_COPY_WHO;
 }
 
 /*
@@ -426,7 +438,8 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 	} else if (LINK(server)->s_state == IRCS_CONNECTING) {
 		ret = OK_FORGET;
 		if (strcmp(line->elemv[0], "NOTICE") == 0) {
-		} else if (strcmp(line->elemv[0], "376") == 0) { /* end of motd */
+		} else if (strcmp(line->elemv[0], "376") == 0) {
+							/* end of motd */
 			irc_server_connected(server);
 			list_add_last(&LINK(server)->init_strings,
 					irc_line_dup(line));
@@ -454,6 +467,8 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		ret = irc_333(server, line);
 	} else if (strcmp(line->elemv[0], "352") == 0) {
 		ret = parse_352(server, line);
+	} else if (strcmp(line->elemv[0], "315") == 0) {
+		ret = irc_315(server, line);
 	} else if (strcmp(line->elemv[0], "353") == 0) {
 		ret = irc_353(server, line);
 	} else if (strcmp(line->elemv[0], "366") == 0) {
@@ -482,6 +497,41 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 			char *s = irc_line_to_string(line);
 			write_line(CONN(LINK(server)->l_clientv[i]), s);
 			free(s);
+		}
+	}
+	if (ret == OK_COPY_WHO) {
+		char *s;
+		if (!server->who_client)
+			fatal("no who client");
+
+		s = irc_line_to_string(line);
+		write_line(CONN(server->who_client), s);
+		free(s);
+
+		if (!server->who_client->who_count) {
+			int i;
+			for (i = 0; i < LINK(server)->l_clientc; i++) {
+				struct link_client *ic =
+						LINK(server)->l_clientv[i];
+				if (ic == server->who_client) {
+					if (!list_is_empty(&ic->who_queue))
+						fatal("who active and queued?");
+					continue;
+				}
+
+				if (!list_is_empty(&ic->who_queue)) {
+					char *l;
+					while ((l = list_remove_first(
+							&ic->who_queue))) {
+						write_line(CONN(server), l);
+						free(l);
+					}
+					server->who_client = ic;
+					break;
+				}
+			}
+			if (i == LINK(server)->l_clientc)
+				server->who_client = NULL;
 		}
 	}
 	return ret;
@@ -849,6 +899,23 @@ static int irc_cli_notice(struct link_client *ic, struct line *line)
 	return OK_COPY_CLI;
 }
 
+static int irc_cli_who(struct link_client *ic, struct line *line)
+{
+	struct link_server *s = LINK(ic)->l_server;
+
+	if (s->who_client && s->who_client != ic) {
+		list_add_first(&ic->who_queue, irc_line_to_string(line));
+		return OK_FORGET;
+	}
+
+	if (!s->who_client)
+		s->who_client = ic;
+
+	++ic->who_count;
+
+	return OK_COPY;
+}
+
 #if 0
 static void unbind_to_server(struct link_client *ic)
 {
@@ -1039,6 +1106,8 @@ static int irc_dispatch_client(struct link_client *ic, struct line *line)
 		r = irc_cli_privmsg(ic, line);
 	} else if (strcmp(line->elemv[0], "NOTICE") == 0) {
 		r = irc_cli_notice(ic, line);
+	} else if (strcmp(line->elemv[0], "WHO") == 0) {
+		r = irc_cli_who(ic, line);
 	}
 
 	if (r == OK_COPY || r == OK_COPY_CLI) {
@@ -1863,6 +1932,16 @@ static void irc_close(struct link_any *l)
 	}
 }
 
+struct link_client *irc_client_new(void)
+{
+	struct link_client *c;
+
+	c = calloc(sizeof(struct link_client), 1);
+	list_init(&c->who_queue, list_ptr_cmp);
+
+	return c;
+}
+
 struct link_server *irc_server_new(struct link *link, connection_t *conn)
 {
 	struct link_server *s;
@@ -1879,6 +1958,8 @@ struct link_server *irc_server_new(struct link *link, connection_t *conn)
 	CONN(s) = conn;
 
 	irc_lag_init(s);
+
+	s->who_client = NULL;
 	return s;
 }
 

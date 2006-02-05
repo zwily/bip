@@ -23,6 +23,7 @@
 #define OK_FORGET (2)
 #define OK_CLOSE (3)
 #define OK_COPY_CLI (4)
+#define OK_COPY_WHO (5)
 
 #define P_SERV "bip.bip.bip"
 #define S_PING "BIPPING"
@@ -147,12 +148,13 @@ struct link_client {
 	int state;
 	int logging_timer;
 
+	list_t who_queue;
+	int who_count;
+
 #ifdef HAVE_LIBSSL
 	int allow_trust;
 #endif
 };
-
-#define link_client_new() calloc(sizeof(struct link_client), 1)
 
 #define IRCS_NONE (0)
 #define IRCS_CONNECTING (1)
@@ -186,8 +188,11 @@ struct link_server {
 	int lag;
 	int laginit_ts;
 	int lagtest_timeout;
+
+	struct link_client *who_client;
 };
 
+struct link_client *irc_client_new(void);
 struct link_server *irc_server_new(struct link *link, connection_t *conn);
 void irc_server_free(struct link_server *is);
 struct client *client_new();
