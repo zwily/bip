@@ -1,3 +1,7 @@
+2006-02-21  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* who: Re-organized and fixed fatal.
+
 2006-02-05  Arnaud Cornet <arnaud.cornet@gmail.com>
 	* who: merged patch from lappz (Peter Zijlstra) to avoid polluting who
 	replies to all clients when a client does /who.

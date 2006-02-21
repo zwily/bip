@@ -363,14 +363,16 @@ static int parse_352(struct link_server *server, struct line *line)
 	return OK_COPY_WHO;
 }
 
-static int irc_315(struct link_server *server, struct line *line)
+static int irc_315(struct link_server *server, struct line *l)
 {
-	if (server->who_client) {
-		--server->who_client->who_count;
+	struct link *link = LINK(server);
+	if (link->who_client) {
+		--link->who_client->who_count;
 
-		if (server->who_client->who_count < 0)
+		if (link->who_client->who_count < 0)
 			fatal("negative who count");
 	}
+	l = NULL; /* keep gcc happy */
 
 	return OK_COPY_WHO;
 }
@@ -499,21 +501,19 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 			free(s);
 		}
 	}
-	if (ret == OK_COPY_WHO) {
+	if (ret == OK_COPY_WHO && LINK(server)->who_client) {
 		char *s;
-		if (!server->who_client)
-			fatal("no who client");
 
 		s = irc_line_to_string(line);
-		write_line(CONN(server->who_client), s);
+		write_line(CONN(LINK(server)->who_client), s);
 		free(s);
 
-		if (!server->who_client->who_count) {
+		if (LINK(server)->who_client->who_count == 0) {
 			int i;
 			for (i = 0; i < LINK(server)->l_clientc; i++) {
 				struct link_client *ic =
 						LINK(server)->l_clientv[i];
-				if (ic == server->who_client) {
+				if (ic == LINK(server)->who_client) {
 					if (!list_is_empty(&ic->who_queue))
 						fatal("who active and queued?");
 					continue;
@@ -526,12 +526,12 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 						write_line(CONN(server), l);
 						free(l);
 					}
-					server->who_client = ic;
+					LINK(server)->who_client = ic;
 					break;
 				}
 			}
 			if (i == LINK(server)->l_clientc)
-				server->who_client = NULL;
+				LINK(server)->who_client = NULL;
 		}
 	}
 	return ret;
@@ -606,11 +606,16 @@ void unbind_from_link(struct link_client *ic)
 {
 	struct link *l = LINK(ic);
 	int i;
+
 	for (i = 0; i < l->l_clientc; i++)
 		if (l->l_clientv[i] == ic)
 			break;
 	if (i == l->l_clientc)
 		fatal("unbind_from_link");
+
+	if (l->who_client == ic)
+		l->who_client = NULL;
+
 	for (i = i + 1; i < l->l_clientc; i++)
 		l->l_clientv[i - 1] = l->l_clientv[i];
 
@@ -901,15 +906,15 @@ static int irc_cli_notice(struct link_client *ic, struct line *line)
 
 static int irc_cli_who(struct link_client *ic, struct line *line)
 {
-	struct link_server *s = LINK(ic)->l_server;
+	struct link *l = LINK(ic);
 
-	if (s->who_client && s->who_client != ic) {
+	if (l->who_client && l->who_client != ic) {
 		list_add_first(&ic->who_queue, irc_line_to_string(line));
 		return OK_FORGET;
 	}
 
-	if (!s->who_client)
-		s->who_client = ic;
+	if (!l->who_client)
+		l->who_client = ic;
 
 	++ic->who_count;
 
@@ -1958,8 +1963,6 @@ struct link_server *irc_server_new(struct link *link, connection_t *conn)
 	CONN(s) = conn;
 
 	irc_lag_init(s);
-
-	s->who_client = NULL;
 	return s;
 }
 

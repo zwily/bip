@@ -70,6 +70,10 @@ struct link {
 	int l_clientc;
 	struct link_client **l_clientv;
 
+	/* we honnor the /who from clients one client at a time, this is the 
+	 * client that is /who-ing */
+	struct link_client *who_client;
+
 	struct log *log;
 
 	/* server related live stuff */ 
@@ -188,8 +192,6 @@ struct link_server {
 	int lag;
 	int laginit_ts;
 	int lagtest_timeout;
-
-	struct link_client *who_client;
 };
 
 struct link_client *irc_client_new(void);
