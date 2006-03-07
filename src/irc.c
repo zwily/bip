@@ -1610,12 +1610,12 @@ static int irc_mode(struct link_server *server, struct line *line)
 			}
 			break;
 		case 'l':
-			if (add) {
+			if (add)
 				cur_arg++;
-			}
 			break;
 		case 'h':
 		case 'H':
+		case 'e':
 			if (cur_arg + 3 >= line->elemc)
 				return ERR_PROTOCOL;
 			cur_arg++;
