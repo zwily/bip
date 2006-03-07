@@ -1,3 +1,7 @@
+2006-03-07  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/irc.c: count one argument on +e when parsing modes
+
 2006-02-21  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* who: Re-organized and fixed fatal.
