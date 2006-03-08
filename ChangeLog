@@ -1,3 +1,7 @@
+2006-03-08  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* bip: release 0.5.2
+
 2006-03-07  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src/irc.c: count one argument on +e when parsing modes
