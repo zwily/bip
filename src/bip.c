@@ -1062,7 +1062,7 @@ int ssl_check_trust(struct link_client *ic)
 	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
 			"Type /QUOTE BIP TRUST OK to trust this "
 			"certificate, /QUOTE BIP TRUST NO to discard it.");
-	
+
 	return 1;
 }
 
@@ -1091,7 +1091,7 @@ int adm_trust(struct link_client *ic, struct line *line)
 
 	if(!LINK(ic)->untrusted_certs ||
 			sk_X509_num(LINK(ic)->untrusted_certs) <= 0) {
-		/* shouldn't have been asked to /QUOTE TRUST but well... */
+		/* shouldn't have been asked to /QUOTE BIP TRUST but well... */
 		WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm",
 				"No untrusted certificates.");
 		return ERR_PROTOCOL;

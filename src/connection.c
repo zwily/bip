@@ -947,7 +947,7 @@ static void create_listening_socket(char *hostname, char *port,
 			continue;
 		}
 
-		err = listen(cn->handle, 1024);
+		err = listen(cn->handle, 256);
 		if (err == -1) {
 			mylog(LOG_WARN, "listen() : %s", strerror(errno));
 			close(cn->handle);

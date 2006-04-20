@@ -1,3 +1,4 @@
+- uid, gid
 - multiple on_connect_send
 - keep invites when detached ?
 - allow global (or per net ?) IP filtering
