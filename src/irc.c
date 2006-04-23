@@ -1893,7 +1893,7 @@ void irc_client_close(struct link_client *ic)
 		log_client_disconnected(LINK(ic)->log);
 		unbind_from_link(ic);
 		if (LINK(ic)->l_clientc == 0) {
-			if (LINK(ic)->away_nick)
+			if (is && LINK(ic)->away_nick)
 				WRITE_LINE1(CONN(is), NULL, "NICK",
 						LINK(ic)->away_nick);
 			log_client_none_connected(LINK(ic)->log);
