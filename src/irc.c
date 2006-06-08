@@ -100,6 +100,7 @@ char *nick_from_ircmask(char *mask)
 	char *nick = mask;
 	char *ret;
 	size_t len;
+
 	while (*nick && *nick != '!')
 		nick++;
 	if (!*nick)
@@ -190,7 +191,7 @@ static int irc_001(struct link_server *server, struct line *line)
 
 	if (LINK(server)->s_state == IRCS_WAS_CONNECTED)
 		LINK(server)->s_state = IRCS_RECONNECTING;
-	else 
+	else
 		LINK(server)->s_state = IRCS_CONNECTING;
 
 	if (line->elemc != 3)
@@ -296,10 +297,23 @@ static void irc_server_join(struct link_server *s)
 
 static void irc_server_connected(struct link_server *server)
 {
+	int i;
+	char *initmask;
         LINK(server)->s_state = IRCS_CONNECTED;
         irc_server_join(server);
         log_connected(LINK(server)->log);
 
+	/* Tell already connected clients what the nick is */
+	initmask = make_irc_mask(server->nick, server->irc_mask);
+
+	/* we change nick on client */
+	for (i = 0; i < LINK(server)->l_clientc; i++) {
+		struct link_client *ic = LINK(server)->l_clientv[i];
+		WRITE_LINE1(CONN(ic), initmask, "NICK", server->nick);
+	}
+	free(initmask);
+
+	/* basic helper for nickserv and co */
         if (LINK(server)->on_connect_send) {
                 ssize_t len = strlen(LINK(server)->on_connect_send) + 2;
                 char *str = malloc(len + 1);
@@ -744,11 +758,9 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	if (!LINK(ic))
 		mylog(LOG_ERROR, "Invalid credentials (user:%s connection:%s)",
 				user, connname);
-
 	free(user);
 	free(connname);
 	free(pass);
-
 
 	free(ic->init_pass);
 	ic->init_pass = NULL;
@@ -1075,7 +1087,7 @@ static int irc_dispatch_trust_client(struct link_client *ic, struct line *line)
 	if (strcmp(line->elemv[0], "BIP") == 0 &&
 	    strcmp(line->elemv[1], "TRUST") == 0)
 		r = adm_trust(ic, line);
-	
+
 	return r;
 }
 #endif
@@ -1230,9 +1242,11 @@ int irc_dispatch(struct link_any *l, struct line *line, list_t *linkl)
 
 static int origin_is_me(struct line *l, struct link_server *server)
 {
+	char *nick;
+
 	if (!l->origin)
 		return 0;
-	char *nick = nick_from_ircmask(l->origin);
+	nick = nick_from_ircmask(l->origin);
 	if (strcmp(nick, server->nick) == 0) {
 		free(nick);
 		return 1;
@@ -1266,7 +1280,8 @@ static int irc_join(struct link_server *server, struct line *line)
 	 * JOIN */
 	if (!channel)
 		return ERR_PROTOCOL;
-
+	if (!line->origin)
+		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
 
 	nick = calloc(sizeof(struct nick), 1);
@@ -1301,7 +1316,7 @@ static int irc_333(struct link_server *server, struct line *line)
 	struct channel *channel;
 	if (line->elemc != 5)
 		return ERR_PROTOCOL;
-	
+
 	channel = hash_get(&server->channels, line->elemv[2]);
 	/* we can get topic info reply for chans we're not on */
 	if (!channel)
@@ -1457,6 +1472,8 @@ static int irc_part(struct link_server *server, struct line *line)
 		return OK_COPY;
 	}
 
+	if (!line->origin)
+		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
 	nick = hash_get(&channel->nicks, s_nick);
 	if (!nick) {
@@ -1641,7 +1658,7 @@ static int irc_topic(struct link_server *server, struct line *line)
 
 	if (line->elemc != 3)
 		return ERR_PROTOCOL;
-	
+
 	channel = hash_get(&server->channels, line->elemv[1]);
 	/* we can't get topic message for chans we're not on */
 	if (!channel)
@@ -1696,7 +1713,7 @@ static int irc_kick(struct link_server *server, struct line *line)
 		channel_free(channel);
 		return OK_COPY;
 	}
-	
+
 	hash_remove(&channel->nicks, nick->name);
 	nick_free(nick);
 	log_kick(LINK(server)->log, line->origin, line->elemv[1],
@@ -1734,6 +1751,9 @@ static int irc_nick(struct link_server *server, struct line *line)
 	char *s_nick;
 
 	if (line->elemc != 2)
+		return ERR_PROTOCOL;
+
+	if (!line->origin)
 		return ERR_PROTOCOL;
 
 	s_nick = nick_from_ircmask(line->origin);
@@ -1786,7 +1806,10 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 	if (line->elemc != 2 && line->elemc != 1)
 		return ERR_PROTOCOL;
 
+	if (!line->origin)
+		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
+
 	for (hash_it_init(&server->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		channel = hash_it_item(&hi);
@@ -1795,7 +1818,7 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 			continue;
 		hash_remove(&channel->nicks, s_nick);
 		nick_free(nick);
-		
+
 		log_quit(LINK(server)->log, line->origin, channel->name,
 				line->elemc == 2 ?  line->elemv[1] : NULL);
 	}

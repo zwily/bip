@@ -568,7 +568,7 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	if (!FD_ISSET(cn->handle, fds))
 		return 0;
 
-	mylog(LOG_DEBUGVERB, "Read positif sur fd %d (state %d)", cn->handle,
+	mylog(LOG_DEBUGVERB, "Read positif on fd %d (state %d)", cn->handle,
 			cn->connected);
 
 	/* notify caller to make it check for a new client */
@@ -587,14 +587,14 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 				cn->handle);
  		return 1;
  	}
-	
+
 	if (!cn->incoming_lines)
 		cn->incoming_lines = list_new(NULL);
 	data_find_lines(cn);
 	if (list_is_empty(cn->incoming_lines))
 		return 0;
-	
-	mylog(LOG_DEBUGVERB, "newlines sur fd %d (state %d)", cn->handle,
+
+	mylog(LOG_DEBUGVERB, "newlines on fd %d (state %d)", cn->handle,
 			cn->connected);
 	return 1;
 }
@@ -617,7 +617,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 		return connection_timedout(cn);
 	}
 
-	mylog(LOG_DEBUGVERB, "Write positif sur fd %d (state %d)",
+	mylog(LOG_DEBUGVERB, "Write positif on fd %d (state %d)",
 			cn->handle, cn->connected);
 
 	if (cn_is_new(cn)) {
@@ -771,7 +771,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 		 */
 		if (cn_is_connected(cn)) {
 			FD_SET(cn->handle, &fds_read);
-			mylog(LOG_DEBUGVERB, "Test read sur fd %d %d:%d",
+			mylog(LOG_DEBUGVERB, "Test read on fd %d %d:%d",
 					cn->handle, cn->connected,
 					cn_is_connected(cn));
 		}
@@ -782,7 +782,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 
 		if (!cn_is_connected(cn) || cn_want_write(cn)) {
 			FD_SET(cn->handle, &fds_write);
-			mylog(LOG_DEBUGVERB, "Test write sur fd %d %d:%d",
+			mylog(LOG_DEBUGVERB, "Test write on fd %d %d:%d",
 					cn->handle, cn->connected,
 					cn_is_connected(cn));
 		}

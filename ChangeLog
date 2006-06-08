@@ -1,5 +1,10 @@
 2006-03-08  Arnaud Cornet <arnaud.cornet@gmail.com>
 
+	* samples/bip.conf: change default nick in sample file
+	* src/irc.c: fix nick desync between client and server
+
+2006-03-08  Arnaud Cornet <arnaud.cornet@gmail.com>
+
 	* bip: release 0.5.2
 
 2006-03-07  Arnaud Cornet <arnaud.cornet@gmail.com>
