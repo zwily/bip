@@ -63,7 +63,6 @@ static void irc_cli_make_join(struct link_client *ic);
 #define CONN_INTERVAL 60
 #define CONNECT_TIMEOUT 60
 
-
 struct channel *channel_new(const char *name)
 {
 	struct channel *chan;

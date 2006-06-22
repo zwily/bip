@@ -1083,15 +1083,15 @@ static SSL_CTX *SSL_init_context(void)
 	int fd, flags, ret, rng;
 	char buf[1025];
 	SSL_CTX *ctx;
-	
+
 	if (!ssl_initialized) {
 		SSL_library_init();
 		SSL_load_error_strings();
 		errbio = BIO_new_fp(stderr,BIO_NOCLOSE);
-		
+
 		ssl_cx_idx = SSL_get_ex_new_index(0, "bip connection_t",
 			NULL, NULL,NULL);
-	
+
 		flags = O_RDONLY;
 		flags |= O_NONBLOCK;
 		fd = open("/dev/random", flags);
