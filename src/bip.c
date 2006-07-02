@@ -902,7 +902,7 @@ int main(int argc, char **argv)
 	conf_global_log_file = stderr;
 	conf_pid_file = NULL;
 
-	while ((ch = getopt(argc, argv, "hnfs:")) != -1) {
+	while ((ch = getopt(argc, argv, "hnf:s:")) != -1) {
 		switch (ch) {
 		case 'f':
 			confpath = strdup(optarg);
