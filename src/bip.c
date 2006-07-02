@@ -981,21 +981,24 @@ void write_user_list(connection_t *c, char *dest)
 {
 	hash_iterator_t it;
 	list_iterator_t lit;
+	char buf[4096];
 	
 	WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest, "bip user list:");
 	for (hash_it_init(&conf_users, &it); hash_it_item(&it);
 			hash_it_next(&it)) {
 		struct c_user *u = hash_it_item(&it);
 
-		WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest, u->name);
+		snprintf(buf, 4095, "* %s:", u->name);
+		WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest, buf);
 		for (list_it_init(&u->connectionl, &lit); list_it_item(&lit);
 				list_it_next(&lit)) {
 			struct c_connection *con = list_it_item(&lit);
-			WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest, con->name);
+			snprintf(buf, 4095, "  - %s", con->name);
+			WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest, buf);
 		}
 	}
 	WRITE_LINE2(c, P_IRCMASK, "PRIVMSG", dest,
-			"end of bip user list");
+			"End of bip user list");
 }
 
 #ifdef HAVE_LIBSSL

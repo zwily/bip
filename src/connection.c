@@ -197,9 +197,7 @@ static int _write_socket_SSL(connection_t *cn, char* message)
 	ERR_print_errors(errbio);
 	if (count <= 0) {
 		int err = SSL_get_error(cn->ssl_h, count);
-		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE
-				|| err == SSL_ERROR_WANT_CONNECT
-				|| err == SSL_ERROR_WANT_ACCEPT)
+		if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
 			return WRITE_KEEP;
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUG, "fd %d: Connection error", cn->handle);
