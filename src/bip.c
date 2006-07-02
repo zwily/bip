@@ -902,13 +902,16 @@ int main(int argc, char **argv)
 	conf_global_log_file = stderr;
 	conf_pid_file = NULL;
 
-	while ((ch = getopt(argc, argv, "hnf:")) != -1) {
+	while ((ch = getopt(argc, argv, "hnfs:")) != -1) {
 		switch (ch) {
 		case 'f':
 			confpath = strdup(optarg);
 			break;
 		case 'n':
 			conf_daemonize = 0;
+			break;
+		case 's':
+			conf_biphome = strdup(optarg);
 			break;
 		default:
 			usage(argv[0]);
