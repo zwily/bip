@@ -703,16 +703,14 @@ int fireup(FILE *conf)
 #ifdef HAVE_LIBSSL
 	conf_ssl_certfile = NULL;	/* Make into a config option */
 	if (!conf_ssl_certfile) {
-		char *home = getenv("HOME");
-		char *ap = "/.bip/bip.pem";
-		if (!home)
-			fatal("no $HOME !, do you live in a trailer ?");
+		char *ap = "/bip.pem";
 		if (conf_ssl_certfile) {
 			free(conf_ssl_certfile);
 			conf_ssl_certfile = NULL;
 		}
-		conf_ssl_certfile = malloc(strlen(home) + strlen(ap) + 1);
-		strcpy(conf_ssl_certfile, home);
+		conf_ssl_certfile = malloc(strlen(conf_biphome) +
+				strlen(ap) + 1);
+		strcpy(conf_ssl_certfile, conf_biphome);
 		strcat(conf_ssl_certfile, ap);
 		mylog(LOG_INFO, "Default SSL certificate file: %s",
 				conf_ssl_certfile);
@@ -1048,7 +1046,7 @@ int ssl_check_trust(struct link_client *ic)
 			"This server SSL certificate was not "
 			"accepted because it is not in your store "
 			"of trusted certificates:");
-	
+
 	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", subject);
 	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", issuer);
 	WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", "TrustEm", fpstr);
