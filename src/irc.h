@@ -76,7 +76,7 @@ struct link {
 
 	struct log *log;
 
-	/* server related live stuff */ 
+	/* server related live stuff */
 	int s_state;
 	char *prev_nick;
 	char *prev_ircmask;

@@ -1154,6 +1154,48 @@ void adm_blreset(struct link_client *ic)
 	}
 }
 
+void adm_follow_nick(struct link_client *ic, char *val)
+{
+	struct link *link = LINK(ic);
+	if (strncasecmp(val, "TRUE", 4) == 0) {
+		link->follow_nick = 1;
+	} else {
+		link->follow_nick = 0;
+	}
+}
+
+void adm_ignore_first_nick(struct link_client *ic, char *val)
+{
+	struct link *link = LINK(ic);
+	if (strncasecmp(val, "TRUE", 4) == 0) {
+		link->ignore_first_nick = 1;
+	} else {
+		link->ignore_first_nick = 0;
+	}
+}
+
+void adm_on_connect_send(struct link_client *ic, char *val)
+{
+	struct link *link = LINK(ic);
+	if (link->on_connect_send) {
+		free(link->on_connect_send);
+		link->on_connect_send = NULL;
+	}
+	if (val != NULL)
+		link->on_connect_send = strdup(val);
+}
+
+void adm_away_nick(struct link_client *ic, char *val)
+{
+	struct link *link = LINK(ic);
+	if (link->away_nick) {
+		free(link->away_nick);
+		link->away_nick = NULL;
+	}
+	if (val != NULL)
+		link->away_nick = strdup(val);
+}
+
 int adm_bip(struct link_client *ic, struct line *line);
 int adm_bip(struct link_client *ic, struct line *line)
 {
@@ -1181,6 +1223,28 @@ int adm_bip(struct link_client *ic, struct line *line)
 	} else if (strcasecmp(line->elemv[1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
 			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP)");
+	} else if (strcasecmp(line->elemv[1], "FOLLOW_NICK") == 0) {
+		if (line->elemc != 3)
+			return OK_FORGET;
+		adm_follow_nick(ic, line->elemv[2]);
+	} else if (strcasecmp(line->elemv[1], "IGNORE_FIRST_NICK") == 0) {
+		if (line->elemc != 3)
+			return OK_FORGET;
+		adm_ignore_first_nick(ic, line->elemv[2]);
+	} else if (strcasecmp(line->elemv[1], "ON_CONNECT_SEND") == 0) {
+		if (line->elemc == 2)
+			adm_on_connect_send(ic, NULL);
+		else if (line->elemc == 3)
+			adm_on_connect_send(ic, line->elemv[2]);
+		else
+			return OK_FORGET;
+	} else if (strcasecmp(line->elemv[1], "AWAY_NICK") == 0) {
+		if (line->elemc == 2)
+			adm_away_nick(ic, NULL);
+		else if (line->elemc == 3)
+			adm_away_nick(ic, line->elemv[2]);
+		else
+			return OK_FORGET;
 #ifdef HAVE_LIBSSL
 	} else if (strcasecmp(line->elemv[1], "TRUST") == 0) {
 		return adm_trust(ic, line);
