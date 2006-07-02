@@ -1,3 +1,12 @@
+2006-07-02  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/irc.c: added /bip subcommands:
+	ON_CONNECT_SEND [:string]
+	AWAY_NICK [nick]
+	FOLLOW_NICK (true|false)
+	IGNORE_FIRST_NICK (true|false)
+	* bip: release 0.5.3
+
 2006-06-08  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* samples/bip.conf: change default nick in sample file
