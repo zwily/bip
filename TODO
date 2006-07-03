@@ -11,3 +11,17 @@
 11:23 < KiBi> Un /away truc chose automatique quand plus aucun client n'est
               attaché.
 - in english: automatic command when no more client is connected
+
+- this:
+Hi Arnaud,
+
+is it possible to implement a secondary nick option? If I'm connected
+directly to IRC, it would be great if BIP fallbacked to the secondary
+nickname.
+
+I saw that BIP uses the default nickname + a "`". Where could I change
+it to default nickname + "_"?
+
+Thanks a lot for your help.
+Best regards,
+Whoopie
