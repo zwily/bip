@@ -5,6 +5,7 @@
 	AWAY_NICK [nick]
 	FOLLOW_NICK (true|false)
 	IGNORE_FIRST_NICK (true|false)
+	* src/irc.c: fix null pointer deference on wierd irc server.
 	* bip: release 0.5.3
 
 2006-06-08  Arnaud Cornet <arnaud.cornet@gmail.com>
