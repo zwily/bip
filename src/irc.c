@@ -814,7 +814,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 			list_it_item(&it); list_it_next(&it))
 		write_init_string(CONN(ic), list_it_item(&it), init_nick);
 
-	/* we change nick on client */
+	/* we change nick on server */
 	if (LINK(ic)->l_server) {
 		struct link_server *server = LINK(ic)->l_server;
 		WRITE_LINE1(CONN(ic), initmask, "NICK", server->nick);
@@ -825,6 +825,12 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 				strcmp(LINK(ic)->away_nick, server->nick) == 0)
 			WRITE_LINE1(CONN(server), NULL, "NICK",
 					LINK(server)->connect_nick);
+
+		/* change away status */
+		if (LINK(ic)->l_clientc == 0) {
+			if (server && LINK(ic)->no_client_away_msg)
+				WRITE_LINE0(CONN(server), NULL, "AWAY");
+		}
 	}
 
 	free(initmask);
@@ -1921,6 +1927,9 @@ void irc_client_close(struct link_client *ic)
 			if (is && LINK(ic)->away_nick)
 				WRITE_LINE1(CONN(is), NULL, "NICK",
 						LINK(ic)->away_nick);
+			if (is && LINK(ic)->no_client_away_msg)
+				WRITE_LINE1(CONN(is), NULL, "AWAY",
+						LINK(ic)->no_client_away_msg);
 			log_client_none_connected(LINK(ic)->log);
 		}
 		irc_client_free(ic);
@@ -2391,6 +2400,7 @@ struct link *irc_link_new()
 
 	hash_init(&link->chan_infos, HASH_NOCASE);
 	list_init(&link->chan_infos_order, list_ptr_cmp);
+	list_init(&link->on_connect_send, list_ptr_cmp);
 	return link;
 }
 

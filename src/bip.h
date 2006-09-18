@@ -51,7 +51,8 @@ struct c_connection
 	int follow_nick;
 	int ignore_first_nick;
 	char *away_nick;
-	char *on_connect_send;
+	list_t on_connect_send;
+	char *no_client_away_msg;
 
 	struct client *client;
 };

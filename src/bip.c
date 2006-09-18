@@ -407,6 +407,7 @@ static int add_connection(list_t *connectionl, list_t *data,
 
 	c = calloc(sizeof(struct c_connection), 1);
 	list_init(&c->channell, NULL);
+	list_init(&c->on_connect_send, NULL);
 
 	while ((t = list_remove_first(data))) {
 		switch (t->type) {
@@ -455,7 +456,7 @@ static int add_connection(list_t *connectionl, list_t *data,
 			c->away_nick = t->pdata;
 			break;
 		case LEX_ON_CONNECT_SEND:
-			c->on_connect_send = t->pdata;
+			list_add(&c->on_connect_send, t->pdata);
 			break;
 		default:
 			conf_die("unknown keyword in connection statement");
@@ -790,6 +791,7 @@ void ircize(list_t *ll)
 		} \
 	} while(0);
 				MAYFREE(link->away_nick);
+				MAYFREE(link->no_client_away_msg);
 				MAYFREE(link->password);
 				MAYFREE(link->user);
 				MAYFREE(link->real_name);
@@ -811,8 +813,20 @@ void ircize(list_t *ll)
 
 			link->follow_nick = c->follow_nick;
 			link->ignore_first_nick = c->ignore_first_nick;
-			link->on_connect_send = strmaydup(c->on_connect_send);
+
+			/* XXX vider laliste on_connect_send */
+			list_iterator_t ocsit;
+			for (list_it_init(&c->channell, &ocsit);
+					list_it_item(&ocsit);
+					list_it_next(&ocsit)) {
+				free(list_it_item(&ocsit));
+			}
+			list_init(&link->on_connect_send);
+			list_append(&link->on_connect_send,
+					&c->on_connect_send);
 			link->away_nick = strmaydup(c->away_nick);
+			link->no_client_away_msg =
+				strmaydup(c->no_client_away_msg);
 
 			link->username = strmaydup(u->name);
 			link->password = malloc(20);

@@ -262,6 +262,11 @@ void *list_remove_last(list_t *list)
 	return ptr;
 }
 
+static void *__list_ptr_cpy(void *a)
+{
+	return a;
+}
+
 /*
 static void *list_remove_item(list_t *l, struct list_item *li)
 {
@@ -384,7 +389,7 @@ void list_free(list_t *t)
 void list_append(list_t *src, list_t *dest)
 {
 	list_iterator_t it;
-	
+
 	for (list_it_init(src, &it); list_it_item(&it); list_it_next(&it))
 		list_add_last(dest, list_it_item(&it));
 }

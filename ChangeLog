@@ -1,3 +1,8 @@
+2006-09-18  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/irc.c: added no_client_away_msg configuration directive and
+	code.
+
 2006-07-02  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src/irc.c: added /bip subcommands:

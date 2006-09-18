@@ -91,6 +91,7 @@ list_t *parse_conf(FILE *file)
 "ignore_first_nick"	{ return LEX_IGN_FIRST_NICK; }
 "away_nick"		{ return LEX_AWAY_NICK; }
 "on_connect_send"	{ return LEX_ON_CONNECT_SEND; }
+"no_client_away_msg"	{ return LEX_NO_CLIENT_AWAY_MSG; }
 "pid_file"		{ return LEX_PID_FILE; }
 "blreset_on_talk"	{ return LEX_BLRESET_ON_TALK; }
 \"[^"]*\" 		{
