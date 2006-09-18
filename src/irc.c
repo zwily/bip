@@ -316,10 +316,12 @@ static void irc_server_connected(struct link_server *server)
 	free(initmask);
 
 	/* basic helper for nickserv and co */
-        if (LINK(server)->on_connect_send) {
-                ssize_t len = strlen(LINK(server)->on_connect_send) + 2;
+	list_iterator_t itocs;
+	for (list_it_init(&LINK(server)->on_connect_send, &itocs);
+				list_it_item(&itocs); list_it_next(&itocs)) {
+                ssize_t len = strlen(list_it_item(&itocs)) + 2;
                 char *str = malloc(len + 1);
-                sprintf(str, "%s\r\n", LINK(server)->on_connect_send);
+                sprintf(str, "%s\r\n", list_it_item(&itocs));
                 write_line(CONN(server), str);
                 free(str);
         }

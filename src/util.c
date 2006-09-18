@@ -262,11 +262,6 @@ void *list_remove_last(list_t *list)
 	return ptr;
 }
 
-static void *__list_ptr_cpy(void *a)
-{
-	return a;
-}
-
 /*
 static void *list_remove_item(list_t *l, struct list_item *li)
 {

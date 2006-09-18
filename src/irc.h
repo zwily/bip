@@ -91,6 +91,7 @@ struct link {
 	int follow_nick;
 	int ignore_first_nick;
 	list_t on_connect_send;
+	char *no_client_away_msg;
 	char *away_nick;
 	hash_t chan_infos;		/* channels we want */
 	list_t chan_infos_order;	/* for order only */

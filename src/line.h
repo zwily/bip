@@ -16,6 +16,16 @@
 
 #include "connection.h"
 
+#define WRITE_LINE0(con, org, com) \
+	do  { \
+		struct line l; \
+		irc_line_init(&l); \
+		l.origin = org; \
+		_irc_line_append(&l, com); \
+		irc_line_write(&l, con); \
+		free(l.elemv); \
+	} while(0)
+
 #define WRITE_LINE1(con, org, com, a) \
 	do  { \
 		struct line l; \
