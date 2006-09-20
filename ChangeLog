@@ -1,5 +1,6 @@
 2006-09-18  Arnaud Cornet <arnaud.cornet@gmail.com>
 
+	* src/bip.c: umask for better permissions when using in system mode.
 	* src/irc.c: added no_client_away_msg configuration directive and
 	code.
 

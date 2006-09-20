@@ -458,6 +458,7 @@ static int add_connection(list_t *connectionl, list_t *data,
 			c->away_nick = t->pdata;
 			break;
 		case LEX_ON_CONNECT_SEND:
+			printf("lex: %s\n", t->pdata);
 			list_add_last(&c->on_connect_send, t->pdata);
 			break;
 		default:
@@ -819,11 +820,23 @@ void ircize(list_t *ll)
 			for (list_it_init(&c->on_connect_send, &ocsit);
 					list_it_item(&ocsit);
 					list_it_next(&ocsit)) {
-				free(list_it_item(&ocsit));
+				printf("yo:%s\n", list_it_item(&ocsit));
 			}
-			list_init(&link->on_connect_send, NULL);
-			list_append(&link->on_connect_send,
-					&c->on_connect_send);
+
+			char *s;
+			while ((s = list_remove_first(
+						&link->on_connect_send))) {
+				free(s);
+			}
+			list_append(&c->on_connect_send,
+					&link->on_connect_send);
+
+			for (list_it_init(&link->on_connect_send, &ocsit);
+					list_it_item(&ocsit);
+					list_it_next(&ocsit)) {
+				printf("fin:%s\n", (char *)list_it_item(&ocsit));
+			}
+
 			link->away_nick = strmaydup(c->away_nick);
 
 			link->no_client_away_msg =
@@ -932,6 +945,9 @@ int main(int argc, char **argv)
 			usage(argv[0]);
 		}
 	}
+
+	umask(0027);
+
 	if (confpath) {
 		conf = fopen(confpath, "r");
 		if (!conf)
