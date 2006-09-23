@@ -1,3 +1,7 @@
+2006-09-23  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/irc.c: Untested oidentd IPV6 support.
+
 2006-09-18  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src/bip.c: umask for better permissions when using in system mode.

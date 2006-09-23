@@ -1490,10 +1490,10 @@ int connection_remoteport(connection_t *cn)
 	struct sockaddr_in addr;
 	int err;
 	socklen_t addrlen;
-	
+
 	if (cn->handle <= 0)
 		return -1;
-	
+
 	addrlen = sizeof(addr);
 	err = getpeername(cn->handle, (struct sockaddr *)&addr, &addrlen);
 	if (err != 0) {
@@ -1505,65 +1505,98 @@ int connection_remoteport(connection_t *cn)
 	return ntohs(addr.sin_port);
 }
 
-char *connection_localip(connection_t *cn)
+static char *socket_ip(int fd, int remote)
 {
-	struct sockaddr_in addr;
+	struct sockaddr addr;
+	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
+	socklen_t addrlen;
+	socklen_t addrlen4;
+	socklen_t addrlen6;
 	int err;
 	char *ip;
 	const char *ret;
-	socklen_t addrlen;
-	
-	if (cn->handle <= 0)
+
+	if (fd <= 0)
 		return NULL;
-	
+
 	addrlen = sizeof(addr);
-	err = getsockname(cn->handle, (struct sockaddr *)&addr, &addrlen);
-	if (err != 0) {
-		mylog(LOG_ERROR, "in getsockname(%d): %s", cn->handle,
-				strerror(errno));
-		return NULL;
+
+	if (remote) {
+		err = getpeername(fd, (struct sockaddr *)&addr, &addrlen);
+		if (err != 0) {
+			mylog(LOG_ERROR, "in getpeername(%d): %s", fd,
+					strerror(errno));
+			return NULL;
+		}
+	} else {
+		err = getsockname(fd, (struct sockaddr *)&addr, &addrlen);
+		if (err != 0) {
+			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+					strerror(errno));
+			return NULL;
+		}
 	}
 
 	ip = malloc(65);
 	if (ip == NULL)
 		fatal("malloc");
 
-	ret = inet_ntop(AF_INET, &(addr.sin_addr.s_addr), ip, 64);
-	if (ret == NULL) {
-		mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
+	switch (addr.sa_family) {
+	case AF_INET:
+		addrlen4 = sizeof(addr4);
+		err = getsockname(fd, (struct sockaddr *)&addr4,
+				&addrlen4);
+		if (err != 0) {
+			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+					strerror(errno));
+			free(ip);
+			return NULL;
+		}
+		ret = inet_ntop(AF_INET, &(addr4.sin_addr.s_addr), ip, 64);
+		if (ret == NULL) {
+			mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
+			free(ip);
+			return NULL;
+		}
+		break;
+	case AF_INET6:
+		addrlen6 = sizeof(addr6);
+		err = getsockname(fd, (struct sockaddr *)&addr6,
+				&addrlen6);
+		if (err != 0) {
+			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+					strerror(errno));
+			free(ip);
+			return NULL;
+		}
+		ret = inet_ntop(AF_INET6, &(addr6.sin6_addr), ip, 64);
+		if (ret == NULL) {
+			mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
+			free(ip);
+			return NULL;
+		}
+		break;
+	default:
+		mylog(LOG_ERROR, "Unknown socket family, that's bad.");
+		free(ip);
 		return NULL;
 	}
 	return ip;
 }
 
-char *connection_remoteip(connection_t *cn)
+char *connection_localip(connection_t *cn)
 {
-	struct sockaddr_in addr;
-	int err;
-	char *ip;
-	const char *ret;
-	socklen_t addrlen;
-	
 	if (cn->handle <= 0)
 		return NULL;
-	
-	addrlen = sizeof(addr);
-	err = getpeername(cn->handle, (struct sockaddr *)&addr, &addrlen);
-	if (err != 0) {
-		mylog(LOG_ERROR, "in getpeername(%d): %s", cn->handle,
-				strerror(errno));
+
+	return socket_ip(cn->handle, 0);
+}
+
+char *connection_remoteip(connection_t *cn)
+{
+	if (cn->handle <= 0)
 		return NULL;
-	}
 
-
-	ip = malloc(65);
-	if (ip == NULL)
-		fatal("malloc");
-
-	ret = inet_ntop(AF_INET, &(addr.sin_addr.s_addr), ip, 64);
-	if (ret == NULL) {
-		mylog(LOG_ERROR, "in inet_ntop: %s", strerror(errno));
-		return NULL;
-	}
-	return ip;
+	return socket_ip(cn->handle, 1);
 }
