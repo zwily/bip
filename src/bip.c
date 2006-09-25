@@ -395,6 +395,8 @@ void c_connection_free(struct c_connection *c)
 	}
 
 	free(c->away_nick);
+	free(c->no_client_away_msg);
+
 	char *s;
 	while ((s = list_remove_first(&c->on_connect_send)))
 		free(s);
@@ -457,8 +459,10 @@ static int add_connection(list_t *connectionl, list_t *data,
 		case LEX_AWAY_NICK:
 			c->away_nick = t->pdata;
 			break;
+		case LEX_NO_CLIENT_AWAY_MSG:
+			c->no_client_away_msg = t->pdata;
+			break;
 		case LEX_ON_CONNECT_SEND:
-			printf("lex: %s\n", t->pdata);
 			list_add_last(&c->on_connect_send, t->pdata);
 			break;
 		default:
@@ -816,13 +820,6 @@ void ircize(list_t *ll)
 			link->follow_nick = c->follow_nick;
 			link->ignore_first_nick = c->ignore_first_nick;
 
-			list_iterator_t ocsit;
-			for (list_it_init(&c->on_connect_send, &ocsit);
-					list_it_item(&ocsit);
-					list_it_next(&ocsit)) {
-				printf("yo:%s\n", list_it_item(&ocsit));
-			}
-
 			char *s;
 			while ((s = list_remove_first(
 						&link->on_connect_send))) {
@@ -830,12 +827,6 @@ void ircize(list_t *ll)
 			}
 			list_append(&c->on_connect_send,
 					&link->on_connect_send);
-
-			for (list_it_init(&link->on_connect_send, &ocsit);
-					list_it_item(&ocsit);
-					list_it_next(&ocsit)) {
-				printf("fin:%s\n", (char *)list_it_item(&ocsit));
-			}
 
 			link->away_nick = strmaydup(c->away_nick);
 
@@ -1063,7 +1054,7 @@ int ssl_check_trust(struct link_client *ic)
 	if(!LINK(ic)->untrusted_certs ||
 			sk_X509_num(LINK(ic)->untrusted_certs) <= 0)
 		return 0;
-	
+
 	trustcert = sk_X509_value(LINK(ic)->untrusted_certs, 0);
 	strcpy(subject, "Subject: ");
 	strcpy(issuer, "Issuer:  ");

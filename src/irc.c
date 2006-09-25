@@ -321,10 +321,19 @@ static void irc_server_connected(struct link_server *server)
 				list_it_item(&itocs); list_it_next(&itocs)) {
                 ssize_t len = strlen(list_it_item(&itocs)) + 2;
                 char *str = malloc(len + 1);
-                sprintf(str, "%s\r\n", list_it_item(&itocs));
+                sprintf(str, "%s\r\n", (char *)list_it_item(&itocs));
                 write_line(CONN(server), str);
                 free(str);
         }
+
+	if (LINK(server)->l_clientc == 0) {
+		if (LINK(server)->away_nick)
+			WRITE_LINE1(CONN(server), NULL, "NICK",
+					LINK(server)->away_nick);
+		if (LINK(server)->no_client_away_msg)
+			WRITE_LINE1(CONN(server), NULL, "AWAY",
+					LINK(server)->no_client_away_msg);
+	}
 }
 
 static int who_arg_to_ovmask(char *str)
@@ -829,10 +838,8 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 					LINK(server)->connect_nick);
 
 		/* change away status */
-		if (LINK(ic)->l_clientc == 0) {
-			if (server && LINK(ic)->no_client_away_msg)
-				WRITE_LINE0(CONN(server), NULL, "AWAY");
-		}
+		if (server && LINK(ic)->no_client_away_msg)
+			WRITE_LINE0(CONN(server), NULL, "AWAY");
 	}
 
 	free(initmask);
