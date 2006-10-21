@@ -162,10 +162,21 @@ static pid_t daemonize(void)
 	case 0:
 		break;
 	default:
-		exit(0);
+		_exit(0);
 	}
+
 	if (setsid() < 0)
 		fatal("setsid() failed");
+
+	switch (fork()) {
+	case -1:
+		fatal("Fork failed");
+		break;
+	case 0:
+		break;
+	default:
+		_exit(0);
+	}
 
 	if (conf_log) {
 		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
