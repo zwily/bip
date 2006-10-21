@@ -55,6 +55,7 @@ int conf_backlog_lines = 10;
 int conf_always_backlog;
 int conf_log_sync_interval;
 int conf_blreset_on_talk = 0;
+int conf_bl_msg_only = 0;
 
 list_t *parse_conf(FILE *file);
 static void conf_die(char *fmt, ...);
@@ -613,6 +614,9 @@ int fireup(FILE *conf)
 			break;
 		case LEX_BACKLOG:
 			conf_backlog = t->ndata;
+			break;
+		case LEX_BL_MSG_ONLY:
+			conf_bl_msg_only = t->ndata;
 			break;
 		case LEX_LOG:
 			conf_log = t->ndata;

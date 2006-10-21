@@ -22,3 +22,19 @@ Thanks a lot for your help.
 Best regards,
 Whoopie
 --
+
+
+23:46 < nixternal> i have a question...when i log into my bip server with more
+                   than 1 client at a time...i get a mass "ban message" from
+                   the server..notice of all channel bans that i am in
+23:52 < nohar> one of you client is downloading the ban list
+23:52 < nohar> an both recieve the reply
+23:52 < nixternal> ahhh
+23:52 < nixternal> i am using konversation..so i need to figure how to shut
+                   that off
+23:53 < nixternal> the ban list for 50 channels sucks ;)
+23:53 < nohar> yeah i don't know if you can disable this in konversation. maybe
+               we should code a hack for the ban reply to go only to the client
+               that asked for it
+23:54 < nohar> there is such thing for /who already
+

@@ -84,6 +84,7 @@ list_t *parse_conf(FILE *file)
 "log_format"		{ return LEX_LOG_FORMAT; }
 "backlog_lines"		{ return LEX_BACKLOG_LINES; }
 "backlog"		{ return LEX_BACKLOG; }
+"bl_msg_only"		{ return LEX_BL_MSG_ONLY; }
 "log"			{ return LEX_LOG; }
 "always_backlog"	{ return LEX_ALWAYS_BACKLOG; }
 "log_sync_interval"	{ return LEX_LOG_SYNC_INTERVAL; }

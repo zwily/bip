@@ -28,6 +28,7 @@ int conf_memlog = 1;
 extern int conf_backlog;
 extern int conf_backlog_lines;
 extern int conf_always_backlog;
+extern int conf_bl_msg_only;
 
 int log_set_backlog_offset(log_t *logdata, char *dest);
 static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
@@ -66,7 +67,7 @@ int check_dir_r(char *dirname)
 	int pos, count = 0;
 	char *dir, *tmp;
 	int len = strlen(dirname);
-	
+
 	mylog(LOG_DEBUGVERB, "Recursive check of %s engaged", dirname);
 	tmp = dirname;
 	dir = (char *)malloc(sizeof(char) * (len + 1));
@@ -131,12 +132,12 @@ char *log_build_filename(log_t *logdata, char *destination)
 	time_t s;
 	char *dest = strdup(destination);
 	strtolower(dest);
-	
+
 	log_format_len = strlen(conf_log_format);
 	logfile = (char*)malloc((MAX_PATH_LEN + 1)*sizeof(char));
 	if (!logfile)
 		fatal("out of memory");
-	
+
 	time(&s);
 	now = localtime(&s);
 	snprintf(year, 5, "%04d", now->tm_year + 1900);
@@ -150,16 +151,16 @@ char *log_build_filename(log_t *logdata, char *destination)
 	replace_var(logfile, "%Y", year, MAX_PATH_LEN);
 	replace_var(logfile, "%d", day, MAX_PATH_LEN);
 	replace_var(logfile, "%m", month, MAX_PATH_LEN);
-	
+
 	logdir = strdup(logfile);
 	if (!logdir)
 		fatal("out of memory");
-	
+
 	/* strrchr works on bytes, not on char (if sizeof(char) != 1) */
 	tmp = strrchr(logdir, '/');
 	if (tmp)
 		*tmp = '\0';
-	
+
 	free(dest);
 	if (check_dir_r(logdir)) {
 		free(logfile);
@@ -611,7 +612,7 @@ void log_client_none_connected(log_t *logdata)
 	if (conf_always_backlog)
 		return;
 
-	
+
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		lfg = hash_it_item(&hi);
@@ -699,7 +700,6 @@ int log_has_backlog(log_t *logdata, char *destination)
  * 01-08-2005 10:46:11 < * jj!john@thebox.ofjj.net
  */
 
-/* must *not* return NULL */
 char *log_beautify(char *buf, char *dest)
 {
 	int action = 0;
@@ -727,8 +727,12 @@ char *log_beautify(char *buf, char *dest)
 		return _log_wrap(dest, buf);
 	lots = p - sots;
 	p++;
-	if (strncmp(p, "-!-", 3) == 0)
-		return _log_wrap(dest, buf);
+	if (strncmp(p, "-!-", 3) == 0) {
+		if (conf_bl_msg_only)
+			return NULL;
+		else
+			return _log_wrap(dest, buf);
+	}
 
 	if (*p == '>')
 		out = 1;
@@ -736,6 +740,7 @@ char *log_beautify(char *buf, char *dest)
 		out = 0;
 	else
 		return _log_wrap(dest, buf);
+
 	p++;
 	if (*p != ' ')
 		return _log_wrap(dest, buf);
@@ -746,7 +751,7 @@ char *log_beautify(char *buf, char *dest)
 			return _log_wrap(dest, buf);
 		p += 2;
 	}
-	
+
 	son = p;
 	while (*p && *p != '!' && *p != ' ' && *p != ':')
 		p++;
@@ -757,10 +762,10 @@ char *log_beautify(char *buf, char *dest)
 	p = strchr(p, ' ');
 	if (!p || !p[0])
 		return _log_wrap(dest, buf);
-	
+
 	done = ((p[-1] == ':') || (action && (p[1] != '(')));
 	p++;
-	
+
 	/*
 	 * TODO add a : before the action text in the log files
 	 * otherwise "/me (bla) blabla" on a chan is logged exactly as
@@ -774,7 +779,7 @@ char *log_beautify(char *buf, char *dest)
 		while (*p && *p != ')' && *p != ' ' && *p != '!')
 			p++;
 		lod = p - sod;
-		
+
 		if (*p == '!')
 			while (*p && *p != ')' && *p != ' ')
 				p++;
@@ -846,7 +851,7 @@ char *log_beautify(char *buf, char *dest)
 
 	if (action)
 		*p++ = 1;
-	
+
 	*p++ = '\r';
 	*p++ = '\n';
 	*p = 0;
@@ -951,6 +956,10 @@ next_file:
 				}
 				buf[pos] = 0;
 				ret = log_beautify(buf, destination);
+				if (ret == NULL) {
+					pos = 0;
+					continue;
+				}
 				free(buf);
 				return ret;
 			}
@@ -1000,6 +1009,10 @@ next_file:
 				lf->backlog_offset--;
 			buf[pos] = 0;
 			ret = log_beautify(buf, destination);
+			if (ret == NULL) {
+				pos = 0;
+				continue;
+			}
 			free(buf);
 			return ret;
 		}
@@ -1028,7 +1041,7 @@ static char *_log_wrap(char *dest, char *line)
 }
 
 static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
-		char *str) 
+		char *str)
 {
 	size_t nbwrite;
 	size_t len;
@@ -1037,11 +1050,13 @@ static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
 
 	if (lfg->memlog) {
 		char *r = log_beautify(str, destination);
-		list_add_last(lfg->memlog, r);
-		if (lfg->memc == conf_backlog_lines)
-			free(list_remove_first(lfg->memlog));
-		else
-			lfg->memc++;
+		if (r != NULL) {
+			list_add_last(lfg->memlog, r);
+			if (lfg->memc == conf_backlog_lines)
+				free(list_remove_first(lfg->memlog));
+			else
+				lfg->memc++;
+		}
 	}
 
 	if (!conf_log)

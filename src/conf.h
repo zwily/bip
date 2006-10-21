@@ -86,9 +86,10 @@
      LEX_DEFAULT_NICK = 302,
      LEX_DEFAULT_REALNAME = 303,
      LEX_NO_CLIENT_AWAY_MSG = 304,
-     LEX_BOOL = 305,
-     LEX_INT = 306,
-     LEX_STRING = 307
+     LEX_BL_MSG_ONLY = 305,
+     LEX_BOOL = 306,
+     LEX_INT = 307,
+     LEX_STRING = 308
    };
 #endif
 /* Tokens.  */
@@ -139,9 +140,10 @@
 #define LEX_DEFAULT_NICK 302
 #define LEX_DEFAULT_REALNAME 303
 #define LEX_NO_CLIENT_AWAY_MSG 304
-#define LEX_BOOL 305
-#define LEX_INT 306
-#define LEX_STRING 307
+#define LEX_BL_MSG_ONLY 305
+#define LEX_BOOL 306
+#define LEX_INT 307
+#define LEX_STRING 308
 
 
 
@@ -156,7 +158,7 @@ typedef union YYSTYPE
 	struct tuple *tuple;
 }
 /* Line 1529 of yacc.c.  */
-#line 160 "conf.h"
+#line 162 "conf.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
