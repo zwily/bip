@@ -71,7 +71,7 @@ struct link {
 	struct link_client **l_clientv;
 
 	/* we honnor the /who from clients one client at a time, this is the 
-	 * client that is /who-ing */
+	 * client that is /who-ing. Now for bans too */
 	struct link_client *who_client;
 
 	struct log *log;

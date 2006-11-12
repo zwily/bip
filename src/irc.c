@@ -40,6 +40,8 @@ static int irc_332(struct link_server *server, struct line *line);
 static int irc_333(struct link_server *server, struct line *line);
 static int irc_353(struct link_server *server, struct line *line);
 static int irc_366(struct link_server *server, struct line *line);
+static int irc_367(struct link_server *server, struct line *l);
+static int irc_368(struct link_server *server, struct line *l);
 void irc_server_shutdown(struct link_server *s);
 
 void irc_client_free(struct link_client *cli);
@@ -351,7 +353,7 @@ static int who_arg_to_ovmask(char *str)
  * about this damn ircmask...
 :irc.iiens.net 352 pwet * ~a je.suis.t1r.net irc.iiens.net pwet H :0 d
 */
-static int parse_352(struct link_server *server, struct line *line)
+static int irc_352(struct link_server *server, struct line *line)
 {
 	char *im;
 
@@ -495,13 +497,17 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 	} else if (strcmp(line->elemv[0], "333") == 0) {
 		ret = irc_333(server, line);
 	} else if (strcmp(line->elemv[0], "352") == 0) {
-		ret = parse_352(server, line);
+		ret = irc_352(server, line);
 	} else if (strcmp(line->elemv[0], "315") == 0) {
 		ret = irc_315(server, line);
 	} else if (strcmp(line->elemv[0], "353") == 0) {
 		ret = irc_353(server, line);
 	} else if (strcmp(line->elemv[0], "366") == 0) {
 		ret = irc_366(server, line);
+	} else if (strcmp(line->elemv[0], "367") == 0) {
+		ret = irc_367(server, line);
+	} else if (strcmp(line->elemv[0], "368") == 0) {
+		ret = irc_368(server, line);
 	} else if (strcmp(line->elemv[0], "PART") == 0) {
 		ret = irc_part(server, line);
 	} else if (strcmp(line->elemv[0], "MODE") == 0) {
@@ -955,6 +961,31 @@ static int irc_cli_who(struct link_client *ic, struct line *line)
 	return OK_COPY;
 }
 
+static int irc_cli_mode(struct link_client *ic, struct line *line)
+{
+	struct link *l = LINK(ic);
+
+	if (line->elemc != 3)
+		return OK_COPY;
+
+	/* This is a wild guess and that sucks. */
+	if (strcmp(line->elemv[0], "MODE") != 0 ||
+			strchr(line->elemv[2], 'b') == NULL)
+		return OK_COPY;
+
+	if (l->who_client && l->who_client != ic) {
+		list_add_first(&ic->who_queue, irc_line_to_string(line));
+		return OK_FORGET;
+	}
+
+	if (!l->who_client)
+		l->who_client = ic;
+
+	++ic->who_count;
+
+	return OK_COPY;
+}
+
 #if 0
 static void unbind_to_server(struct link_client *ic)
 {
@@ -1147,6 +1178,8 @@ static int irc_dispatch_client(struct link_client *ic, struct line *line)
 		r = irc_cli_notice(ic, line);
 	} else if (strcmp(line->elemv[0], "WHO") == 0) {
 		r = irc_cli_who(ic, line);
+	} else if (strcmp(line->elemv[0], "MODE") == 0) {
+		r = irc_cli_mode(ic, line);
 	}
 
 	if (r == OK_COPY || r == OK_COPY_CLI) {
@@ -1439,6 +1472,26 @@ static int irc_366(struct link_server *server, struct line *line)
 	if (channel && channel->running_names)
 		channel->running_names = 0;
 	return OK_COPY;
+}
+
+static int irc_367(struct link_server *server, struct line *l)
+{
+	return OK_COPY_WHO;
+}
+
+/* same as irc_315 */
+static int irc_368(struct link_server *server, struct line *l)
+{
+	struct link *link = LINK(server);
+	if (link->who_client) {
+		--link->who_client->who_count;
+
+		if (link->who_client->who_count < 0)
+			fatal("negative who count");
+	}
+	l = NULL; /* keep gcc happy */
+
+	return OK_COPY_WHO;
 }
 
 static void channel_free(struct channel *c)
