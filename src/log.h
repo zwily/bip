@@ -88,7 +88,7 @@ void log_disconnected(log_t *logdata);
 void log_ping_timeout(log_t *logdata);
 void log_client_disconnected(log_t *logdata);
 void log_client_connected(log_t *logdata);
-char *log_backread(log_t *logdata, char *destination);
+char *log_backread(log_t *logdata, char *destination, int *skip);
 int log_has_backlog(log_t *logdata, char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);

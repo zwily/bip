@@ -858,7 +858,7 @@ char *log_beautify(char *buf, char *dest)
 	return ret;
 }
 
-char *log_backread(log_t *logdata, char *destination)
+char *log_backread(log_t *logdata, char *destination, int *skip)
 {
 	char *buf;
 	size_t pos = 0;
@@ -866,6 +866,8 @@ char *log_backread(log_t *logdata, char *destination)
 	logfilegroup_t *lfg;
 	int c;
 	char *ret;
+
+	*skip = 0;
 
 	if (!conf_always_backlog && logdata->connected)
 		return NULL;
@@ -955,6 +957,10 @@ next_file:
 					goto next_file;
 				}
 				buf[pos] = 0;
+				if (pos == 0) {
+					*skip = 1;
+					return buf;
+				}
 				ret = log_beautify(buf, destination);
 				if (ret == NULL) {
 					pos = 0;
@@ -1008,6 +1014,10 @@ next_file:
 			if (conf_always_backlog && c == EOF)
 				lf->backlog_offset--;
 			buf[pos] = 0;
+			if (pos == 0) {
+				*skip = 1;
+				return buf;
+			}
 			ret = log_beautify(buf, destination);
 			if (ret == NULL) {
 				pos = 0;

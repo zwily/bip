@@ -578,8 +578,11 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	/* XXX: could be more efficient */
 	if (conf_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
-		while ((line = log_backread(LINK(ic)->log, chan->name))) {
-			write_line(CONN(ic), line);
+		int skip = 0;
+		while ((line =
+		    log_backread(LINK(ic)->log, chan->name, &skip))) {
+			if (!skip)
+				write_line(CONN(ic), line);
 			free(line);
 		}
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
@@ -723,8 +726,10 @@ static void irc_cli_make_join(struct link_client *ic)
 
 		/* backlog privates */
 		char *str;
-		while ((str = log_backread(LINK(ic)->log, S_PRIVATES))) {
-			write_line(CONN(ic), str);
+		int skip = 0;
+		while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &skip))) {
+			if (!skip)
+				write_line(CONN(ic), str);
 			free(str);
 		}
 	}
