@@ -1,0 +1,17 @@
+HOME			= .
+
+[ req ]
+distinguished_name	= dn
+x509_extensions		= v3_bip
+default_md		= sha1
+prompt			= no
+
+[ dn ]
+C=FR
+O=Sexy boys
+OU=Bip
+CN=Bip
+
+[ v3_bip ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always
