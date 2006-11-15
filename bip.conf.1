@@ -89,6 +89,11 @@ your bip session the backlogging will start at the time right after your last
 words on irc.
 
 .TP
+\fBbl_msg_only\fP (default: \fBfalse\fP)
+When true, bip will backlog only channel/private messages/notices. No topic
+change, nick change, user quit/part/join will be backlogged upon connection.
+
+.TP
 \fBclient_side_ssl\fP (default: \fBfalse\fP)
 When true, clients will need to connect to BIP using SSL.
 
@@ -219,6 +224,11 @@ once.
 \fBaway_nick\fP (default: \fBnot set\fP)
 If true, and if there are no more client attached, BIP will change nickname to
 this \fBaway_nick\fP. Your nickname will be restored upon client connect.
+
+.TP
+\fBno_client_away_msg\fP (default: \fBnot set\fP)
+This options allows you to set an away message. This away message will be set
+when the last client disconnects, and removed when a client connects.
 
 .TP
 \fBfollow_nick\fP (default: \fBfalse\fP)

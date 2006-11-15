@@ -53,7 +53,7 @@ syn region	bipMain		start=/\%^/ end=/\%$/
 
 " Top level elements
 syn keyword	bipKeyword	contained nextgroup=bipBoolV client_side_ssl
-	\ no_backlog always_backlog
+	\ no_backlog always_backlog bl_msg_only blreset_on_talk
 syn keyword	bipKeyword	contained nextgroup=bipStringV log_root
 	\ log_format pid_file
 syn keyword	bipKeyword	contained nextgroup=bipNumericV port log_level
@@ -72,6 +72,8 @@ syn region	bipUser		contained matchgroup=Macro start=/user\s*{\s*/
 	\ end=/};/
 	\ contains=bipUKeyword,bipConnection,bipComment,bipEndError,bipWhite
 syn keyword	bipUKeyword	contained nextgroup=bipStringV password name
+	\ default_nick default_user default_realname ssl_check_store
+	\ ssl_check_mode
 
 " Connection block (level 2)
 syn region	bipConnection	contained matchgroup=Macro
@@ -80,8 +82,10 @@ syn region	bipConnection	contained matchgroup=Macro
 syn keyword	bipCoKeyword	contained nextgroup=bipBoolV ssl follow_nick
 	\ ignore_first_nick
 syn keyword	bipCoKeyword	contained nextgroup=bipStringV name user nick
-	\ network password vhost away_nick on_connect_send login realname
+	\ network password vhost away_nick on_connect_send realname
+	\ no_client_away_msg
 syn keyword	bipCoKeyword	contained nextgroup=bipNumericV source_port
+no_client_away_msg
 
 " Channel elements (lvl 2)
 syn region	bipChannel	contained matchgroup=Macro

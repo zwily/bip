@@ -62,9 +62,7 @@ list_t *parse_conf(FILE *file)
 "network"		{ return LEX_NETWORK; }
 "host"			{ return LEX_HOST; }
 "name"			{ return LEX_NAME; }
-"username"		{ return LEX_USERNAME; }
 "user"			{ return LEX_USER; }
-"login"			{ return LEX_LOGIN; }
 "connection"		{ return LEX_CONNECTION; }
 "nick"			{ return LEX_NICK; }
 "realname"		{ return LEX_REALNAME; }
