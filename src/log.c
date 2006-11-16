@@ -1011,7 +1011,7 @@ next_file:
 				return NULL;
 			}
 
-			if (conf_always_backlog && c == EOF)
+			if (!conf_always_backlog && c == EOF)
 				lf->backlog_offset--;
 			buf[pos] = 0;
 			if (pos == 0) {

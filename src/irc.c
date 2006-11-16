@@ -1476,6 +1476,8 @@ static int irc_366(struct link_server *server, struct line *line)
 
 static int irc_367(struct link_server *server, struct line *l)
 {
+	(void)server;
+	(void)l;
 	return OK_COPY_WHO;
 }
 
