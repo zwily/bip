@@ -1,0 +1,53 @@
+Bip can be used in two different way:
+- Old school bnc user style: easy and straightforward.
+- Unix service style with and init.d scripts and the logs in /var/log
+
+This small README file explains the usage "Old school" with which : 
+ - you do not need the root privileges.
+ - gives easy access to the logs of the users of this bip to the one owning the
+   shell.
+
+Install bip on the machine that will be running bip (which is likely to be your
+personnal or shared server) either compiling the package or using your distro's
+package. Then create a configuration file:
+
+If you are using a distribution package, the bip.conf sample configuration file
+is likely to be shipped in /usr/share/doc/bip/examples/bip.conf.gz or something
+similar.
+
+Create your bip configuration an log directory:
+
+# mkdir -p ~/.bip/logs
+
+Put the uncompressed configuration file in your ~/.bip directory (it's path
+should be ~/.bip/bip.conf), and edit it, most importantly the "user" section
+that contains information about you and the servers you will want to connect
+to. The "name" field in the "user" section is your login to connect to bip.
+The "password" field is a hash of the password you will use to connect to bip.
+To generate a hash value from a password, use bipmkpw, program which comes in
+the bip package and source.
+The "name" field of the "connection" subsections are the server identifier for
+when you connect to bip.
+
+Once all this is configured, start bip as you regular user:
+
+# bip
+
+Once bip starts, it connects to the different servers your defined in
+"connection". Then you want to use your regular irc client and connect to bip.
+Point your client to the machine bip is running and set the proper port number
+(defined in your bip.conf). You should then configure the client to use a
+specific irc server password constructed this way:
+
+user:password:network
+
+The user is the name field of the "user" section, the password is the *hash* of
+the password you entered in the "password" field of the same user section (the
+hash is generated with bipmkpw) and the network is the "name" field of the
+"connection" subsection. This is how bip authenticates you and puts your client
+to the correct network.
+
+Using the default (or sample file) configuration, logs are in ~/.bip/logs/
+
+Happy ircing!
+
