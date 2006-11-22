@@ -924,8 +924,8 @@ next_file:
 			if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 				log_reinit(lfg);
 				free(buf);
-				return _log_wrap("Error reading in logfile",
-						destination);
+				return _log_wrap(destination,
+						"Error reading in logfile");
 			}
 		}
 		for(;;) {
@@ -977,8 +977,8 @@ next_file:
 	if (!logdata->lastfile_seeked) {
 		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 			log_reinit(lfg);
-			return _log_wrap("Error reading in logfile",
-					destination);
+			return _log_wrap(destination,
+					"Error reading in logfile");
 		}
 		logdata->lastfile_seeked = 1;
 		mylog(LOG_DEBUG, "last file seedked!");
