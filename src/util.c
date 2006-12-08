@@ -396,7 +396,7 @@ void list_append(list_t *src, list_t *dest)
 struct hash_item {
 	char *key;
 	void *item;
-}; 
+};
 
 static int hash_item_nocase_cmp(struct hash_item *a, char *b)
 {
@@ -453,12 +453,15 @@ hash_t *hash_new(int options)
 	return h;
 }
 
+/* Now we have a real hash, but we use only the last byte of it :p */
 static unsigned char hash_func(char *pkey)
 {
-	unsigned char i = 0;
-	while (*pkey)
-		i += (unsigned char)toupper(*pkey++);
-	return i;
+	char c;
+	unsigned long hash = 5381; /* 5381 & 0xff makes more sense */
+
+	while (c = *pkey++)
+		hash = ((hash << 5) + hash) ^ c;
+	return (unsigned char)hash;
 }
 
 void hash_insert(hash_t *hash, char *key, void *ptr)
@@ -467,7 +470,7 @@ void hash_insert(hash_t *hash, char *key, void *ptr)
 
 	if (hash_get(hash, key))
 		fatal("Element with key %s already in hash %x\n", key, hash);
-	
+
 	it = malloc(sizeof(struct hash_item));
 	if (!it)
 		fatal("malloc");
