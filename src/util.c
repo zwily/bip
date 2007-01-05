@@ -460,7 +460,7 @@ static unsigned char hash_func(char *pkey)
 	unsigned long hash = 5381; /* 5381 & 0xff makes more sense */
 
 	while ((c = *pkey++))
-		hash = ((hash << 5) + hash) ^ c;
+		hash = ((hash << 5) + hash) ^ toupper(c);
 	return (unsigned char)hash;
 }
 
