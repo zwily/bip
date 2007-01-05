@@ -155,6 +155,7 @@ struct link_client {
 
 	list_t who_queue;
 	int who_count;
+	time_t whoc_tstamp;
 
 #ifdef HAVE_LIBSSL
 	int allow_trust;

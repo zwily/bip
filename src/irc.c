@@ -396,14 +396,42 @@ static int irc_315(struct link_server *server, struct line *l)
 {
 	struct link *link = LINK(server);
 	if (link->who_client) {
-		--link->who_client->who_count;
-
-		if (link->who_client->who_count < 0)
-			fatal("negative who count");
+		if (link->who_client->who_count == 0) {
+			mylog(LOG_DEBUG, "Spurious irc_315");
+			return OK_COPY_WHO;
+		}
+		link->who_client->whoc_tstamp = time(NULL);
+		if (link->who_client->who_count > 0) {
+			--link->who_client->who_count;
+			mylog(LOG_INFO,
+				"RPL_ENDOFWHO: "
+				"Decrementing who count for %p: %d",
+				link->who_client, link->who_client->who_count);
+		}
 	}
 	l = NULL; /* keep gcc happy */
 
 	return OK_COPY_WHO;
+}
+
+void rotate_who_client(struct link *link)
+{
+	int i;
+	mylog(LOG_INFO, "rotate_who_client %p", link->who_client);
+	/* find a client with non-null who_count */
+	link->who_client = NULL;
+	for (i = 0; i < link->l_clientc; i++) {
+		struct link_client *ic = link->l_clientv[i];
+		if (!list_is_empty(&ic->who_queue)) {
+			char *l;
+			while ((l = list_remove_first(&ic->who_queue))) {
+				write_line(CONN(link->l_server), l);
+				free(l);
+			}
+			link->who_client = ic;
+			break;
+		}
+	}
 }
 
 /*
@@ -540,32 +568,12 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		s = irc_line_to_string(line);
 		write_line(CONN(LINK(server)->who_client), s);
 		free(s);
-
-		if (LINK(server)->who_client->who_count == 0) {
-			int i;
-			for (i = 0; i < LINK(server)->l_clientc; i++) {
-				struct link_client *ic =
-						LINK(server)->l_clientv[i];
-				if (ic == LINK(server)->who_client) {
-					if (!list_is_empty(&ic->who_queue))
-						fatal("who active and queued?");
-					continue;
-				}
-
-				if (!list_is_empty(&ic->who_queue)) {
-					char *l;
-					while ((l = list_remove_first(
-							&ic->who_queue))) {
-						write_line(CONN(server), l);
-						free(l);
-					}
-					LINK(server)->who_client = ic;
-					break;
-				}
-			}
-			if (i == LINK(server)->l_clientc)
-				LINK(server)->who_client = NULL;
-		}
+	}
+	if (LINK(server)->who_client &&
+			LINK(server)->who_client->who_count == 0) {
+		mylog(LOG_INFO, "OK_COPY_WHO: who_count for %p is nul",
+			LINK(server)->who_client);
+		rotate_who_client(LINK(server));
 	}
 	return ret;
 }
@@ -649,8 +657,16 @@ void unbind_from_link(struct link_client *ic)
 	if (i == l->l_clientc)
 		fatal("unbind_from_link");
 
-	if (l->who_client == ic)
+	if (l->who_client == ic) {
+		mylog(LOG_INFO, "unbind_from_link:  %p: %d",
+				l->who_client, ic->who_count);
 		l->who_client = NULL;
+	} else {
+		mylog(LOG_INFO,
+			"unbind_from_link: nothing to do %p != %p: %d",
+				ic, l->who_client,
+				ic->who_count);
+	}
 
 	for (i = i + 1; i < l->l_clientc; i++)
 		l->l_clientv[i - 1] = l->l_clientv[i];
@@ -948,6 +964,12 @@ static int irc_cli_who(struct link_client *ic, struct line *line)
 {
 	struct link *l = LINK(ic);
 
+	++ic->who_count;
+	if (ic->who_count == 1)
+		ic->whoc_tstamp = time(NULL);
+	mylog(LOG_INFO, "cli_who: Incrementing who count for %p: %d",
+				ic, ic->who_count);
+
 	if (l->who_client && l->who_client != ic) {
 		list_add_first(&ic->who_queue, irc_line_to_string(line));
 		return OK_FORGET;
@@ -955,8 +977,6 @@ static int irc_cli_who(struct link_client *ic, struct line *line)
 
 	if (!l->who_client)
 		l->who_client = ic;
-
-	++ic->who_count;
 
 	return OK_COPY;
 }
@@ -973,6 +993,12 @@ static int irc_cli_mode(struct link_client *ic, struct line *line)
 			strchr(line->elemv[2], 'b') == NULL)
 		return OK_COPY;
 
+	++ic->who_count;
+	if (ic->who_count == 1)
+		ic->whoc_tstamp = time(NULL);
+	mylog(LOG_INFO, "cli_mode: Incrementing who count for %p: %d",
+				l->who_client, ic->who_count);
+
 	if (l->who_client && l->who_client != ic) {
 		list_add_first(&ic->who_queue, irc_line_to_string(line));
 		return OK_FORGET;
@@ -980,8 +1006,6 @@ static int irc_cli_mode(struct link_client *ic, struct line *line)
 
 	if (!l->who_client)
 		l->who_client = ic;
-
-	++ic->who_count;
 
 	return OK_COPY;
 }
@@ -1486,10 +1510,19 @@ static int irc_368(struct link_server *server, struct line *l)
 {
 	struct link *link = LINK(server);
 	if (link->who_client) {
-		--link->who_client->who_count;
+		if (link->who_client->who_count == 0) {
+			mylog(LOG_DEBUG, "Spurious irc_368");
+			return OK_COPY_WHO;
+		}
+		link->who_client->whoc_tstamp = time(NULL);
 
-		if (link->who_client->who_count < 0)
-			fatal("negative who count");
+		if (link->who_client->who_count > 0) {
+			--link->who_client->who_count;
+			mylog(LOG_INFO,
+				"RPL_ENDOFBANLIST: "
+				"Decrementing who count for %p: %d",
+				link->who_client, link->who_client->who_count);
+		}
 	}
 	l = NULL; /* keep gcc happy */
 
@@ -2202,6 +2235,29 @@ void oidentd_dump(list_t *connl)
 /* do not use */
 list_t *_connections = NULL;
 
+void timeout_clean_who_counts(list_t *conns)
+{
+	list_iterator_t it;
+	for (list_it_init(conns, &it); list_it_item(&it); list_it_next(&it)) {
+		struct link *l = list_it_item(&it);
+		struct link_client *client = l->who_client;
+
+		if (client && client->whoc_tstamp) {
+			time_t now;
+			now = time(NULL);
+			if (now - client->whoc_tstamp > 10) {
+				mylog(LOG_DEBUG, "Yawn, "
+						"forgetting one who reply");
+				if (client->who_count > 0)
+					--client->who_count;
+				client->whoc_tstamp = time(NULL);
+				if (client->who_count == 0)
+					rotate_who_client(l);
+			}
+		}
+	}
+}
+
 struct link_client *reloading_client;
 /*
  * The main loop
@@ -2268,8 +2324,10 @@ void irc_main(connection_t *inc, list_t *ll)
 		struct link *link;
 		connection_t *conn;
 
-		/* Compute timeouts for next reconnections and lagouts */
 		if (timeleft == 0) {
+			/*
+			 * Compute timeouts for next reconnections and lagouts
+			 */
 			static int throttle_prot = S_CONN_DELAY - 1;
 
 			timeleft = 1000;
@@ -2328,6 +2386,11 @@ void irc_main(connection_t *inc, list_t *ll)
 					list_it_remove(&li);
 				}
 			}
+
+			/*
+			 * Cleanup lagging or dangling who_count buffers
+			 */
+			timeout_clean_who_counts(ll);
 		}
 
 		int nc;
