@@ -1,3 +1,10 @@
+2006-01-07  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* *: Backlog fixes.
+	* src/irc.c: WHO reply / banlist redirection to the asking client now
+	more robust.
+	* src/log.c: backlogging display bug.
+
 2006-09-25  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* *: Debug no_client_away_msg.
