@@ -29,6 +29,7 @@ extern int conf_backlog;
 extern int conf_backlog_lines;
 extern int conf_always_backlog;
 extern int conf_bl_msg_only;
+extern int conf_backlog_no_timestamp;
 
 int log_set_backlog_offset(log_t *logdata, char *dest);
 static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
@@ -813,7 +814,7 @@ char *log_beautify(char *buf, char *dest)
 		return _log_wrap(dest, buf);
 
 	p = ret = (char *)malloc(
-		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	1 + lom + 3
+		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	2 + lom + 3
 		+ action * (2 + strlen("ACTION ")) + out * strlen(" -> "));
 	if (!p)
 		fatal("out of memory");
@@ -841,10 +842,12 @@ char *log_beautify(char *buf, char *dest)
 		strcpy(p, " -> ");
 		p += strlen(" -> ");
 	}
-	memcpy(p, sots, lots);
-	p += lots;
-
-	*p++ = ' ';
+	if (conf_backlog_no_timestamp == 0) {
+		memcpy(p, sots, lots);
+		p += lots;
+		*p++ = '>';
+		*p++ = ' ';
+	}
 
 	memcpy(p, som, lom);
 	p += lom;

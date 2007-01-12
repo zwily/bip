@@ -51,6 +51,7 @@ int conf_memlog;
 int conf_log;
 /* number of lines in backlog */
 int conf_backlog_lines = 10;
+int conf_backlog_no_timestamp;
 /* backlog even lines already backlogged */
 int conf_always_backlog;
 int conf_log_sync_interval;
@@ -623,6 +624,9 @@ int fireup(FILE *conf)
 			break;
 		case LEX_BACKLOG_LINES:
 			conf_backlog_lines = t->ndata;
+			break;
+		case LEX_BACKLOG_NO_TIMESTAMP:
+			conf_backlog_no_timestamp = t->ndata;
 			break;
 		case LEX_LOG_ROOT:
 			if (conf_log_root)
