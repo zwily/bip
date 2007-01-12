@@ -684,7 +684,7 @@ void unbind_from_link(struct link_client *ic)
 
 int irc_cli_bip(struct link_client *ic, struct line *line)
 {
-	return adm_bip(ic, line);
+	return adm_bip(ic, line, 0);
 }
 
 #define PASS_SEP ':'
@@ -946,8 +946,12 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 
 static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 {
-	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
+	if (line->elemc >= 3)
+		log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
+	if (strcmp(line->elemv[1], "-bip") == 0)
+		return adm_bip(ic, line, 1);
+
 	if (conf_blreset_on_talk)
 		adm_blreset(ic);
 	return OK_COPY_CLI;

@@ -1242,57 +1242,59 @@ void adm_away_nick(struct link_client *ic, char *val)
 		link->away_nick = strdup(val);
 }
 
-int adm_bip(struct link_client *ic, struct line *line);
-int adm_bip(struct link_client *ic, struct line *line)
+int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 {
 	char *nick;
+
 	if (LINK(ic)->l_server)
 		nick = LINK(ic)->l_server->nick;
 	else
 		nick = LINK(ic)->prev_nick;
-	if (line->elemc < 2)
+	if (line->elemc < privmsg + 2)
 		return OK_FORGET;
 
-	if (strcasecmp(line->elemv[1], "RELOAD") == 0) {
+	if (strcasecmp(line->elemv[privmsg + 1], "RELOAD") == 0) {
 		reloading_client = ic;
 		sighup = 1;
-	} else if (strcasecmp(line->elemv[1], "LIST") == 0) {
+	} else if (strcasecmp(line->elemv[privmsg + 1], "LIST") == 0) {
 		write_user_list(CONN(ic), nick);
-	} else if (strcasecmp(line->elemv[1], "JUMP") == 0) {
+	} else if (strcasecmp(line->elemv[privmsg + 1], "JUMP") == 0) {
 		if (LINK(ic)->l_server) {
 			WRITE_LINE1(CONN(LINK(ic)->l_server), NULL, "QUIT",
 					"jumpin' jumpin'");
 			connection_close(CONN(LINK(ic)->l_server));
 		}
-	} else if (strcasecmp(line->elemv[1], "BLRESET") == 0) {
+	} else if (strcasecmp(line->elemv[privmsg + 1], "BLRESET") == 0) {
 		adm_blreset(ic);
-	} else if (strcasecmp(line->elemv[1], "HELP") == 0) {
+	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
 			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP)");
-	} else if (strcasecmp(line->elemv[1], "FOLLOW_NICK") == 0) {
-		if (line->elemc != 3)
+	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
+		if (line->elemc != privmsg + 3)
 			return OK_FORGET;
-		adm_follow_nick(ic, line->elemv[2]);
-	} else if (strcasecmp(line->elemv[1], "IGNORE_FIRST_NICK") == 0) {
-		if (line->elemc != 3)
+		adm_follow_nick(ic, line->elemv[privmsg + 2]);
+	} else if (strcasecmp(line->elemv[privmsg + 1],
+				"IGNORE_FIRST_NICK") == 0) {
+		if (line->elemc != privmsg + 3)
 			return OK_FORGET;
-		adm_ignore_first_nick(ic, line->elemv[2]);
-	} else if (strcasecmp(line->elemv[1], "ON_CONNECT_SEND") == 0) {
-		if (line->elemc == 2)
+		adm_ignore_first_nick(ic, line->elemv[privmsg + 2]);
+	} else if (strcasecmp(line->elemv[privmsg + 1],
+				"ON_CONNECT_SEND") == 0) {
+		if (line->elemc == privmsg + 2)
 			adm_on_connect_send(ic, NULL);
-		else if (line->elemc == 3)
-			adm_on_connect_send(ic, line->elemv[2]);
+		else if (line->elemc == privmsg + 3)
+			adm_on_connect_send(ic, line->elemv[privmsg + 2]);
 		else
 			return OK_FORGET;
-	} else if (strcasecmp(line->elemv[1], "AWAY_NICK") == 0) {
-		if (line->elemc == 2)
+	} else if (strcasecmp(line->elemv[privmsg + 1], "AWAY_NICK") == 0) {
+		if (line->elemc == privmsg + 2)
 			adm_away_nick(ic, NULL);
-		else if (line->elemc == 3)
-			adm_away_nick(ic, line->elemv[2]);
+		else if (line->elemc == privmsg + 3)
+			adm_away_nick(ic, line->elemv[privmsg + 2]);
 		else
 			return OK_FORGET;
 #ifdef HAVE_LIBSSL
-	} else if (strcasecmp(line->elemv[1], "TRUST") == 0) {
+	} else if (strcasecmp(line->elemv[privmsg + 1], "TRUST") == 0) {
 		return adm_trust(ic, line);
 #endif
 	}

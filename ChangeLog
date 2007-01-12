@@ -1,3 +1,7 @@
+2006-01-12  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/irc.c: /msg to -bip is now equivalent to /quote bip.
+
 2006-01-07  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* *: Backlog fixes.
