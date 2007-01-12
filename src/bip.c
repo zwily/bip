@@ -46,15 +46,15 @@ hash_t adm_users;
 
 /* log options, for sure the trickiest :) */
 /* no backlog at all */
-int conf_backlog;
-int conf_memlog;
-int conf_log;
+int conf_backlog = 0;
+extern int conf_memlog;
+int conf_log = 0;
 /* number of lines in backlog */
 int conf_backlog_lines = 10;
-int conf_backlog_no_timestamp;
+int conf_backlog_no_timestamp = 0;
 /* backlog even lines already backlogged */
-int conf_always_backlog;
-int conf_log_sync_interval;
+int conf_always_backlog = 0;
+int conf_log_sync_interval = 0;
 int conf_blreset_on_talk = 0;
 int conf_bl_msg_only = 0;
 
