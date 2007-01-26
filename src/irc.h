@@ -78,8 +78,8 @@ struct link {
 
 	/* server related live stuff */
 	int s_state;
-	char *prev_nick;
-	char *prev_ircmask;
+	char *prev_nick; /* XXX del me */
+	char *cli_nick;
 	list_t init_strings;
 
 	/* connection state (reconnecting, was_connected ...) */
@@ -181,8 +181,6 @@ struct link_server {
 	struct link_connection _link_c;
 
 	char *nick;
-
-	char *irc_mask;
 
 	/* channels we are in */
 	hash_t channels;

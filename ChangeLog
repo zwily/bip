@@ -1,3 +1,8 @@
+2006-01-26  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* Infamous nick bug: This changes pretty much everything and might fix
+	the damn thing. Needs testing.
+
 2006-01-12  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src/irc.c: /msg to -bip is now equivalent to /quote bip.
