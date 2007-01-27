@@ -54,6 +54,7 @@ syn region	bipMain		start=/\%^/ end=/\%$/
 " Top level elements
 syn keyword	bipKeyword	contained nextgroup=bipBoolV client_side_ssl
 	\ no_backlog always_backlog bl_msg_only blreset_on_talk
+	\ backlog_no_timestamp backlog
 syn keyword	bipKeyword	contained nextgroup=bipStringV log_root
 	\ log_format pid_file
 syn keyword	bipKeyword	contained nextgroup=bipNumericV port log_level
