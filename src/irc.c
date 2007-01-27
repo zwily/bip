@@ -341,8 +341,6 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 	if (line->elemc == 0)
 		return ERR_PROTOCOL;
 
-	printf("coucou23: %s\n", line->elemv[0]);
-
 	if (strcmp(line->elemv[0], "PING") == 0) {
 		if (line->elemc < 2)
 			return ERR_PROTOCOL;
