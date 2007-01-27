@@ -1712,6 +1712,7 @@ static int irc_nick(struct link_server *server, struct line *line)
 	struct channel *channel;
 	struct nick *nick;
 	hash_iterator_t hi;
+	char *org_nick;
 
 	if (line->elemc != 2)
 		return ERR_PROTOCOL;
@@ -1719,17 +1720,19 @@ static int irc_nick(struct link_server *server, struct line *line)
 	if (!line->origin)
 		return ERR_PROTOCOL;
 
+	org_nick = nick_from_ircmask(line->origin);
+
 	for (hash_it_init(&server->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		channel = hash_it_item(&hi);
-		nick = hash_get(&channel->nicks, server->nick);
+		nick = hash_get(&channel->nicks, org_nick);
 		if (!nick)
 			continue;
-		hash_remove(&channel->nicks, server->nick);
+		hash_remove(&channel->nicks, org_nick);
 		free(nick->name);
 		nick->name = strdup(line->elemv[1]);
 		hash_insert(&channel->nicks, nick->name, nick);
-		log_nick(LINK(server)->log, server->nick, channel->name,
+		log_nick(LINK(server)->log, org_nick, channel->name,
 				line->elemv[1]);
 	}
 
@@ -1745,6 +1748,7 @@ static int irc_nick(struct link_server *server, struct line *line)
 		}
 	}
 
+	free(org_nick);
 	return OK_COPY;
 }
 
