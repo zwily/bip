@@ -60,8 +60,7 @@ static void irc_cli_make_join(struct link_client *ic);
 
 #define LAGOUT_TIME (360)
 #define LAGCHECK_TIME (90)
-/* XXX 10 => 120 */
-#define RECONN_TIMER (10)
+#define RECONN_TIMER (120)
 #define LOGGING_TIMEOUT (360)
 #define CONN_INTERVAL 60
 #define CONNECT_TIMEOUT 60
