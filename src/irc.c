@@ -355,7 +355,9 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 		free(resps);
 		ret = OK_FORGET;
 	} else if (strcmp(line->elemv[0], "PONG") == 0) {
-		if (line->elemc == 3  && strcmp(line->elemv[2], S_PING) == 0) {
+		/* not all server reply with PONG <servername> <our string>
+		 * so we blindly assume the PONG is ours. */
+		if (line->elemc == 3) {
 			if (server->laginit_ts != -1) {
 				irc_compute_lag(server);
 				irc_lag_init(server);
