@@ -556,10 +556,8 @@ char *hash_it_key(hash_iterator_t *h)
 void hash_dump(hash_t *h)
 {
 	hash_iterator_t it;
-	for (hash_it_init(h, &it); hash_it_item(&it) ;hash_it_next(&it)) {
-		void *p = hash_it_item(&it);
+	for (hash_it_init(h, &it); hash_it_item(&it) ;hash_it_next(&it))
 		printf("%s => %p\n", hash_it_key(&it), hash_it_item(&it));
-	}
 }
 
 char *strmaydup(char *s)
