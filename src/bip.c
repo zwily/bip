@@ -1272,7 +1272,18 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		adm_blreset(ic);
 	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
-			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP)");
+			"/BIP (RELOAD|LIST|JUMP|BLRESET|HELP|TRUST)");
+		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
+			"/BIP FOLLOW_NICK|IGNORE_FIRST_NICK TRUE|FALSE");
+		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
+			"/BIP ON_CONNECT_SEND <str> # Adds a string to "
+			"send on connect");
+		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
+			"/BIP ON_CONNECT_SEND # Clears on_connect_send");
+		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
+			"/BIP AWAY_NICK <nick> # Set away nick");
+		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick,
+			"/BIP AWAY_NICK # clear away nick");
 	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
 		if (line->elemc != privmsg + 3)
 			return OK_FORGET;
