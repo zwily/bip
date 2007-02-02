@@ -3,7 +3,6 @@
 use strict;
 #use serialize;
 use IO::File;
-use POSIX;
 use Data::Dumper;
 
 my $CFILE = $ENV{'HOME'} . '/.bip/bip.conf.autogen';
@@ -452,9 +451,9 @@ authorityKeyIdentifier=keyid:always";
 
 sub writeConfig {
 	my ($f) = @_;
-	my ($fh, $ts);
+	my ($fh, $ts, @t);
 
-	$ts = POSIX::strftime('%a, %d %b %Y %H:%M:%S %z', localtime(time));
+	$ts = localtime(time));
 	$fh = new IO::File;
 	$fh->open('> ' . $f) || return "Unable to open $f for writing";
 	print $fh "# vim:ft=bip:ts=2\n";
