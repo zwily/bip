@@ -1,0 +1,688 @@
+#!/usr/bin/env perl
+
+use strict;
+#use serialize;
+use IO::File;
+use POSIX;
+use Data::Dumper;
+
+my $CFILE = $ENV{'HOME'} . '/.bip/bip.conf.autogen';
+my $CONFIG = ".config";
+my %cf;
+my $global_done = 0;
+my $cert_done = 0;
+my $mode = 'normal';
+# maximum level of blocks { { { } } }
+my $maxlevel = 5;
+my $bipmkpw;
+my $tmpcrt = "/tmp/bip-cert.cnf";
+my $certout = $ENV{'HOME'} . '/.bip/bip.pem.autogen';
+my %optdesc = (
+	'global' => {
+		'ip' => { 'type' => 's', 'adv' => 1, 'default' => '0.0.0.0',
+			'optional' => 1,
+			'desc' => 'What IP address/hostname do you want bip to listen on ?' },
+		'port' => { 'type' => 'i', 'adv' => 1, 'default' => '7778',
+			'optional' => 1,
+			'desc' => 'What port do you want bip to listen on ?' },
+		'client_side_ssl' => { 'type' => 'b', 'adv' => 1, 'default' => 'true',
+			'optional' => 1,
+			'desc' => 'Do you want to enable client side SSL ?' },
+		'pid_file' => { 'type' => 's', 'adv' => 1, 'optional' => 1,
+			'default' => $ENV{'HOME'} . '/.bip/bip.pid',
+			'desc' => 'Where do you want the pidfile to be stored ?' },
+		'log' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1,
+			'desc' => 'Do you want to enable the logging system ?' },
+		'log_sync_interval' => { 'type' => 'i', 'adv' => 1,
+			'optional' => 1,
+			'default' => '5', 'depends' => 'log', 'depval' => 'true',
+			'desc' => 'At which interval do you want bip to force logs to be written {seconds} ?' },
+		'log_level' => { 'type' => 'i', 'adv' => 1, 'default' => '3',
+			'optional' => 1,
+			'depends' => 'log', 'depval' => 'true',
+			'desc' => 'Define bip\'s system logs verbosity level {less 0 - 7 tremendous}:' },
+		'log_root' => { 'type' => 's', 'adv' => 0,
+			'optional' => 1,
+			'default' => $ENV{'HOME'} . '/.bip/logs',
+			'depends' => 'log', 'depval' => 'true',
+			'desc' => 'In which directory do you want logs to be stored ?' },
+		'log_format' => { 'type' => 's', 'adv' => 1, 'default' => '%n/%Y-%m/%c.%d.log', 
+			'optional' => 1,
+			'depends' => 'log', 'depval' => 'true',
+			'desc' => 'Define the channel/private log format {see strftime, limited}:' },
+		'backlog' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1,
+			'depends' => 'log', 'depval' => 'true',
+			'desc' => 'Do you want to activate backlog {play back logs} system ?' },
+		'backlog_lines' => { 'type' => 'i', 'adv' => 0, 'default' => '10',
+			'optional' => 1,
+			'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'How much line do you want bip to play back upon client connect' .
+				"\n {0 => replay everything since backlog's last reset} ?" },
+		'backlog_no_timestamp' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Disable timestamp in backlog ?' },
+		'bl_msg_only' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Only playback users messages {chan/priv}, no nick/join/... ?' },
+		'always_backlog' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Always backlog {false means backlog pointers are reset after each backlog} ?' },
+		'blreset_on_talk' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Reset backlog when an attached client sends is talking ?' },
+	},
+
+	'network' => {
+		'name' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'Network\'s name' },
+		'ssl' => { 'type' => 'b', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Enable SSL for this network ?' },
+		'server' => { 'type' => 'e' },
+	},
+
+	'user' => {
+		'name' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'User\'s internal name ?' },
+		'password' => { 'type' => 'p', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'Set a password for his bip account:' },
+		'ssl_check_mode' => { 'type' => 's', 'adv' => 1,
+			'optional' => 1, 'default' => 'none',
+			'desc' => 'Type of SSL servers certificate\'s checks' },
+		'ssl_check_store' => { 'type' => 's', 'adv' => 1,
+			'optional' => 1, 'default' => '',
+			'desc' => 'Path to SSL servers\'s data storage' },
+		'default_nick' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'User\'s default IRC nickname' },
+		'default_user' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'User\'s default IRC username' },
+		'default_realname' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'User\'s default IRC realname' },
+		'connection' => { 'type' => 'e' },
+	},
+
+	'connection' => {
+		'name' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'Connection name (used by bip only)' },
+		'network' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0, 'postdepends' => 'networks.$value',
+			'desc' => 'Network to connect to' },
+		'nick' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'IRC nickname on this connection ?' },
+		'user' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'IRC username on this connection ?' },
+		'realname' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'IRC realname on this connection ?' },
+		'password' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'IRC server\'s password ?' },
+		'vhost' => { 'type' => 's', 'adv' => 1, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Connect to IRC server from this specific IP address:' },
+		'source_port' => { 'type' => 'i', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Connect to IRC server from this specific port:' },
+		'follow_nick' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1,
+			'desc' => 'Follow (and store) nicknames changes from clients to use upon reconnection (if false, bip\'ll use config nickname)' },
+		'ignore_first_nick' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1,
+			'desc' => 'Ignore nickname change sent by a client (first one only, upon client attach)' },
+		'away_nick' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Set nickname to this value when there\'s no more client attached:' },
+		'no_client_away_msg' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Set this away message when there\'s no more client attached:' },
+		'on_connect_send' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Send this raw message upon connection to IRC server' },
+		'channel' => { 'type' => 'e' },
+	},
+
+	'channel' => {
+		'name' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'Channel name' },
+		'key' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 1,
+			'desc' => 'Channel key (optional)' },
+	},
+
+	'server' => {
+		'host' => { 'type' => 's', 'adv' => 0, 'default' => '',
+			'optional' => 0,
+			'desc' => 'IRC server\'s IP address/hostname' },
+		'port' => { 'type' => 'i', 'adv' => 0, 'default' => '6667',
+			'optional' => 0,
+			'desc' => 'IRC server\'s port' },
+	}
+);
+my %optorder = (
+	'global' => [
+		'ip' ,
+		'port' ,
+		'client_side_ssl' ,
+		'pid_file' ,
+		'log' ,
+		'log_sync_interval' ,
+		'log_level' ,
+		'log_root' ,
+		'log_format' ,
+		'backlog' ,
+		'backlog_lines' ,
+		'backlog_no_timestamp' ,
+		'bl_msg_only' ,
+		'always_backlog' ,
+		'blreset_on_talk' ,
+	],
+
+	'network' => [
+		'name' ,
+		'ssl' ,
+		'server' ,
+	],
+
+	'user' => [
+		'name' ,
+		'password' ,
+		'ssl_check_mode' ,
+		'ssl_check_store' ,
+		'default_nick' ,
+		'default_user' ,
+		'default_realname' ,
+		'connection' ,
+	],
+
+	'connection' => [
+		'name' ,
+		'network' ,
+		'nick' ,
+		'user' ,
+		'realname' ,
+		'password' ,
+		'vhost' ,
+		'source_port' ,
+		'follow_nick' ,
+		'ignore_first_nick' ,
+		'away_nick' ,
+		'no_client_away_msg' ,
+		'on_connect_send' ,
+		'channel' ,
+	],
+
+	'channel' => [
+		'name' ,
+		'key' ,
+	],
+
+	'server' => [
+		'host' ,
+		'port' ,
+	]
+);
+
+my $clear_string = `clear`;
+
+sub myexit {
+	warn("Error: $1");
+	warn("Saving configuration...");
+	save_config();
+	warn("Don't worry, your configuration has been saved ;)");
+	exit(1);
+}
+
+sub askOpt {
+	my ($e, $curval) = @_;
+	my ($o, $sel);
+
+	$sel = (($curval ne undef) ? $curval : $e->{'default'});
+	return $sel if ($mode eq 'normal' && $e->{'adv'} eq 1);
+
+	while (1) {
+		if ($e->{'type'} eq 'b') {
+			$o = askbool($e->{'desc'}, $sel);
+		} else {
+			$o = askval($e->{'desc'}, $sel);
+		}
+		if ($o eq undef && $e->{'optional'} eq 0) {
+			print("This value is mandatory, please enter a value\n");
+			next;
+		}
+		if ($e->{'type'} eq 'i' && $o !~ /^\d*$/) {
+			print("We want a number here, please enter one\n");
+			next;
+		}
+		last;
+	}
+	return $o;
+}
+
+sub askbool {
+	my ($text, $default) = @_;
+	
+	if ($default eq "true") {
+		print "$text [Y/n] ";
+	} else {
+		$default = "false";
+		print "$text [y/N] ";
+	}
+	
+	while (my $l = <STDIN>) {
+		chomp($l);
+		if ($default eq "true" && $l =~ /^n$/i) {
+			return "false";
+		} elsif ($default eq "false" && $l =~ /^y$/i) {
+			return "true";
+		} elsif (!$default && $l eq '') {
+			return undef;
+		} else {
+			return $default;
+		}
+	}
+}
+
+sub askPass {
+	my ($text) = @_;
+	
+	while (!$bipmkpw && ! -x $bipmkpw) {
+		if ($bipmkpw ne '' && ! -x $bipmkpw) {
+			print("No exec permission: $bipmkpw\n");
+		}
+		$bipmkpw = askval("Please enter the full path to bipmkpw binary :");
+	}
+	print("$text ? ");
+	my $pass = `$bipmkpw`;
+	chomp($pass);
+	$pass =~ s/^Password:\s*\n?//si;
+	chomp($pass);
+	return $pass;
+}
+
+sub askval {
+	my ($text, $default, $skipblank) = @_;
+	
+	$text .= " ";
+	$text .= "[$default] " if ($default ne undef);
+	print($text);
+	while (my $l = <STDIN>) {
+		chomp($l);
+		if ($default eq undef && !$skipblank && $l eq '') {
+			my $q = askbool("You've entered a blank value, do you want this field to be unset\n (if not, it'll be set to the empty string) ?", "true");
+			return undef if ($q eq 'true');
+		}
+		return ($l ne '' ? $l : $default);
+	}
+}
+
+sub checkDepends {
+	my ($n, $v) = @_;
+	return if (!exists($v->{'depends'}));
+
+	my $d = $v->{'depends'};
+	if (!exists($cf{'global'}->{$d})) {
+		return "You cannot define `$n' since `$d' isn't defined";
+	}
+	if (exists($v->{'depval'}) &&
+			$cf{'global'}->{$d} ne $v->{'depval'}) {
+		return "You cannot define `$n' since `$d' isn't set to " .
+				$v->{'depval'};
+	}
+}
+
+sub loadConfig {
+	-e "$CONFIG" || return "There's no saved configuration at the moment";
+	my $data;
+	my $fh = new IO::File;
+	$fh->open($CONFIG) || return "Unable to open $CONFIG";
+	while ($data .= <$fh>) {};
+	%cf = unserialize($data) || return "Invalid format in $CONFIG";
+	return "Config loaded from $CONFIG";
+}
+
+sub resetConfig {
+	my $r = askbool("Do you want to reset current loaded configuration options, networks, users... ?", 'false');
+	$r eq 'false' && return "Reset config aborted";
+
+	%cf = ();
+	-e "$CONFIG" || return "Configuration cleared";
+	my $r = askbool("Do you want to delete saved configuration file $CONFIG too ?", 'false');
+	if ($r eq 'true') {
+		unlink($CONFIG) || return "Unable to remove file $CONFIG, current config has been cleared";
+		return "Configuration cleared, saved-configuration file removed";
+	}
+	return "Configuration cleared";
+}
+
+sub setOptions {
+	foreach my $n (@{$optorder{'global'}}) {
+		my $e = $optdesc{'global'}->{$n};
+		my $r = checkDepends($n, $e);
+		if ($r) {
+			print("$r\n");
+			$cf{'global'}->{$n} = undef;
+			next;
+		}
+		$cf{'global'}->{$n} = askOpt($e, $cf{'global'}->{$n});
+	}
+	$global_done = 1;
+	pause();
+	return "Options have been set";
+}
+
+sub printOptions {
+	my $cnt = 1;
+	foreach my $n (@{$optorder{'global'}}) {
+		my $e = $optdesc{'global'}->{$n};
+		my $r = checkDepends($n, $e);
+		if ($r) {
+			printf('%02d.(%s - unset, missing dependency)'."\n", $cnt, $n);
+		} elsif (exists($cf{'global'}->{$n})) {
+			printf('%02d. %s = %s'."\n", $cnt, $n, $cf{'global'}->{$n}); 
+		} else {
+			printf('%02d. %s - unset'."\n", $cnt, $n);
+		}
+		$cnt++;
+	}
+	pause();
+	return;
+}
+
+sub makeCert {
+	my ($fh, $c, $o, $ou, $cn);
+	$fh = new IO::File;
+	$c = askval("SSL cert country :");
+	$o = askval("SSL cert organisation :", "Sexy boys");
+	$ou = askval("SSL cert organisational unit :", "Bip");
+	$cn = askval("SSL cert common name :", "Bip");
+
+	$fh->open("> $tmpcrt");
+	return "Unable to write to $tmpcrt\n" if (!$fh);
+	print $fh "HOME                    = .
+
+[ req ]
+distinguished_name      = dn
+x509_extensions         = v3_bip
+default_md              = sha1
+prompt                  = no
+
+[ dn ]
+C=$c
+O=$o
+OU=$ou
+CN=$cn
+
+[ v3_bip ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always";
+
+#	if (-e $certout) {
+#		my @t = localtime(time);
+#		my $ts = sprintf("%04d-%02d-%02d.%02d:%02d:%02d", 1900+$t[5], 1+$t[4], $t[3], $t[2], $t[1], $t[0]);
+#		rename($certout, "$certout.$ts");
+#		print "Existing $certout found, renamed to $certout.$ts\n";
+#	}
+
+	`openssl req -new -x509 -days 365 -nodes -config "$tmpcrt" -out "$certout" -keyout "$certout"`;
+	# TODO check command status
+	`openssl x509 -subject -dates -fingerprint -noout -in "$certout"`;
+	# TODO check command status
+	$cert_done = 1;
+	print "Certificate/key pair has been generated in $certout\n";
+	unlink("$tmpcrt");
+	pause();
+	return "Certificate/key pair has been generated in $certout";
+}
+
+sub writeConfig {
+	my ($f) = @_;
+	my ($fh, $ts);
+
+	$ts = POSIX::strftime('%a, %d %b %Y %H:%M:%S %z', localtime(time));
+	$fh = new IO::File;
+	$fh->open('> ' . $f) || return "Unable to open $f for writing";
+	print $fh "# vim:ft=bip:ts=2\n";
+	print $fh "# Auto-generated BIP IRC Proxy configuration $ts \n";
+	print $fh "#\n";
+	print $fh "### Global options\n";
+	foreach my $k (keys(%{$cf{'global'}})) {
+		next if ($cf{'global'}->{$k} eq undef);
+		my $t = $optdesc{'global'}->{$k}->{'type'};
+		if ($t eq 's' || $t eq 'b') {
+			print $fh "$k = \"" . $cf{'global'}->{$k} . "\";\n";
+		} else {
+			print $fh "$k = " . $cf{'global'}->{$k} . ";\n";
+		}
+	}
+	print $fh "\n";
+	print $fh "### Networks\n";
+	foreach my $e (@{$cf{'networks'}}) {
+		my $out = printBlock("", 'network', $e, 1);
+		print $fh $out;
+	}
+	print $fh "\n";
+	print $fh "### Users\n";
+	foreach my $e (@{$cf{'users'}}) {
+		my $out = printBlock("", 'user', $e, 1);
+		print $fh $out;
+	}
+	print $fh "\n";
+	$fh->close;
+	print("Configuration saved in $f\n");
+	return;
+}
+
+sub printBlock {
+	my ($prefix, $name, $e, $level) = @_;
+	my $out = '';
+
+	fatal("Too much recursion levels ($level)") if ($level ge $maxlevel);
+		
+	$out .= $prefix . $name . " {\n";
+	foreach my $k (keys(%{$e})) {
+		next if ($e->{$k} eq undef);
+		my $t = $optdesc{$k}->{'type'};
+		if ($t eq 's' || $t eq 'b') {
+			$out .= $prefix . "\t$k = \"" . $e->{$k} . "\";\n";
+		} elsif (ref($e->{$k}) eq 'ARRAY') {
+			foreach my $e2 (@{$e->{$k}}) {
+				$out .= printBlock($prefix . "\t", $k, $e2, $level+1);
+			}
+		} else {
+			$out .= $prefix .  "\t$k = " . $e->{$k} . ";\n";
+		}
+	}
+	$out .= $prefix . "}\n\n";
+	return $out;
+}
+
+sub addEntry {
+	my ($section, $nopause) = @_;
+	my ($e, $opts);
+
+	$opts = $optdesc{$section};
+
+	foreach my $n (@{$optorder{$section}}) {
+		my $v = $optdesc{$section}->{$n};
+		my $r = checkDepends($n, $v);
+		if ($r) {
+			$e->{$n} = undef;
+			print("$r\n");
+			next;
+		}
+		if ($v->{'type'} eq 'e') {
+			my $first = 1;
+			do {
+				if ($v->{'optional'} eq 1 || !$first) {
+					my $a = askbool("Do you want to add a new $n ?", 'true');
+					last if ($a eq 'false');
+				}
+				print("\nAdding a new $n :\n");
+				my $e2 = addEntry($n, 1);
+				if (ref($e->{$n}) eq 'ARRAY') {
+					push(@{$e->{$n}}, $e2);
+				} else {
+					$e->{$n} = [ $e2 ];
+				}
+				$first = 0;
+			} while (1);
+		} elsif ($v->{'type'} eq 'p') {
+			$e->{$n} = askPass($v->{'desc'});
+		} else {
+			$e->{$n} = askOpt($v);
+		}
+	}
+	pause() if (!$nopause);
+	return $e;
+}
+
+sub pause {
+	my ($txt) = @_;
+
+	$txt = "Press any key to continue" if (!$txt);
+	print("\n" . $txt . "\n");
+	<STDIN>;
+}
+
+sub printMenu {
+	my ($mhead, $mopts, $mfoot, $mask) = @_;
+
+	print($clear_string);
+	print(join("\n", @{$mhead}));
+	print("\n");
+	print("\n");
+	foreach my $n (sort {$a <=> $b} keys(%{$mopts})) {
+		if ($mopts->{$n} eq undef) {
+			print("\n");
+			next;
+		}
+		printf('  %2d. %s%s', $n, $mopts->{$n}, "\n");
+	}
+	print("\n");
+	print(join("\n", @{$mfoot}));
+	print("\n");
+	print("\n");
+	return askval($mask, undef, 1);
+}
+
+sub main_menu {
+	my ($txt) = @_;
+	my ($act, $out, $warn, $mopts, $mhead, $mfoot);
+	my ($mhead, $mask);
+
+	$mopts = {
+		1	=> 'Set global options',
+		2	=> 'Add a new network',
+		3	=> 'Add a new user',
+		4	=> 'View/Edit/Unset global options',
+		5	=> 'View/Edit/Delete networks (todo)',
+		6	=> 'View/Edit/Delete users (todo)',
+		7	=> 'Generate a server certificate/key pair',
+		8	=> 'Load saved config (todo)',
+		9	=> 'Parse and load current config (todo)',
+		10	=> 'Reset config options',
+		11	=> 'Switch to ' . invMode($mode) . ' mode',
+		12	=> undef,
+		90	=> 'Save and exit',
+		91	=> 'Debug (will be exit)',
+	};
+	if ($mode eq 'normal') {
+		$warn = "# WARNING: non-advanced mode, some 'expert' options'll be hidden !";
+	} else {
+		$warn = "# ";
+	}
+	$mhead = [
+		"########################################################################",
+		"# Welcome to bip configuration program.",
+		"# This script will help you build a configuration file",
+		"# ",
+		$warn,
+		"# Please note this script not finalized, and that you'll only be able to",
+		"# generate a config at once, no modifications will be possible without",
+		"# resetting all config options. Feature is coming soon !",
+		"# ",
+	];
+	$mfoot = [ $txt ];
+	$mask = "What do you want to do ?";
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 8) {
+		$out = loadConfig();
+	} elsif ($act eq 10) {
+		$out = resetConfig();
+	} elsif ($act eq 4) {
+		$out = printOptions();
+	} elsif ($act eq 1) {
+		$out = setOptions();
+	} elsif ($act eq 6) {
+#		$out = printUsers();
+	} elsif ($act eq 3) {
+		$out = addEntry('user');
+		if ($out) {
+			push(@{$cf{'users'}}, $out);
+			$out = "New user added";
+		} else {
+			$out = "User add failed";
+		}
+	} elsif ($act eq 5) {
+#		$out = printNetworks();
+	} elsif ($act eq 2) {
+		$out = addEntry('network');
+		if ($out) {
+			push(@{$cf{'networks'}}, $out);
+			$out = "New network added";
+		} else {
+			$out = "Network add failed";
+		}
+	} elsif ($act eq 7) {
+		$out = makeCert();
+	} elsif ($act eq 11) {
+		$mode = invMode();
+		$out = "Ok, configuration mode set to $mode";
+	} elsif ($act eq 90) {
+		$out = writeConfig($CFILE);
+		if (!$out) {
+			my $u = (exists($cf{'users'}) ? scalar @{$cf{'users'}}
+					: 0);
+			my $n = (exists($cf{'networks'}) ? scalar @{$cf{'networks'}}
+					: 0);
+			print "You haven't set global options\n" if (!$global_done);
+			print "$u users defined, $n networks defined\n";
+			print "The certificate/key pair is in $certout\n"
+				if ($cert_done eq 1);
+			print "Configuration has been generated in $CFILE\n";
+			print "You have to rename all generated files to use them\n";
+			exit(0);
+		}
+	} elsif ($act eq 91) {
+		print Dumper(\%cf);
+		pause();
+#		exit(0);
+	}
+	main_menu($out);
+}
+
+sub invMode {
+	return ($mode eq 'advanced' ? 'normal' : 'advanced');
+}
+
+main_menu();
+#sets config backlog
+#different user/nick/real ?
