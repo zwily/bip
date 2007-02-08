@@ -1522,20 +1522,12 @@ static char *socket_ip(int fd, int remote)
 
 	addrlen = sizeof(addr);
 
-	if (remote) {
-		err = getpeername(fd, (struct sockaddr *)&addr, &addrlen);
-		if (err != 0) {
-			mylog(LOG_ERROR, "in getpeername(%d): %s", fd,
-					strerror(errno));
-			return NULL;
-		}
-	} else {
-		err = getsockname(fd, (struct sockaddr *)&addr, &addrlen);
-		if (err != 0) {
-			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
-					strerror(errno));
-			return NULL;
-		}
+	/* getsockname every time to get IP version */
+	err = getsockname(fd, (struct sockaddr *)&addr, &addrlen);
+	if (err != 0) {
+		mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+				strerror(errno));
+		return NULL;
 	}
 
 	ip = malloc(65);
@@ -1545,13 +1537,25 @@ static char *socket_ip(int fd, int remote)
 	switch (addr.sa_family) {
 	case AF_INET:
 		addrlen4 = sizeof(addr4);
-		err = getsockname(fd, (struct sockaddr *)&addr4,
-				&addrlen4);
-		if (err != 0) {
-			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
-					strerror(errno));
-			free(ip);
-			return NULL;
+
+		if (remote) {
+			err = getpeername(fd, (struct sockaddr *)&addr4,
+					&addrlen4);
+			if (err != 0) {
+				mylog(LOG_ERROR, "in getpeername(%d): %s", fd,
+						strerror(errno));
+				free(ip);
+				return NULL;
+			}
+		} else {
+			err = getsockname(fd, (struct sockaddr *)&addr4,
+					&addrlen4);
+			if (err != 0) {
+				mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+						strerror(errno));
+				free(ip);
+				return NULL;
+			}
 		}
 		ret = inet_ntop(AF_INET, &(addr4.sin_addr.s_addr), ip, 64);
 		if (ret == NULL) {
@@ -1562,13 +1566,25 @@ static char *socket_ip(int fd, int remote)
 		break;
 	case AF_INET6:
 		addrlen6 = sizeof(addr6);
-		err = getsockname(fd, (struct sockaddr *)&addr6,
-				&addrlen6);
-		if (err != 0) {
-			mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
-					strerror(errno));
-			free(ip);
-			return NULL;
+		
+		if (remote) {
+			err = getpeername(fd, (struct sockaddr *)&addr6,
+					&addrlen6);
+			if (err != 0) {
+				mylog(LOG_ERROR, "in getpeername(%d): %s", fd,
+						strerror(errno));
+				free(ip);
+				return NULL;
+			}
+		} else {
+			err = getsockname(fd, (struct sockaddr *)&addr6,
+					&addrlen6);
+			if (err != 0) {
+				mylog(LOG_ERROR, "in getsockname(%d): %s", fd,
+						strerror(errno));
+				free(ip);
+				return NULL;
+			}
 		}
 		ret = inet_ntop(AF_INET6, &(addr6.sin6_addr), ip, 64);
 		if (ret == NULL) {
