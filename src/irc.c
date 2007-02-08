@@ -298,7 +298,7 @@ static int irc_315(struct link_server *server, struct line *l)
 		link->who_client->whoc_tstamp = time(NULL);
 		if (link->who_client->who_count > 0) {
 			--link->who_client->who_count;
-			mylog(LOG_INFO,
+			mylog(LOG_DEBUG,
 				"RPL_ENDOFWHO: "
 				"Decrementing who count for %p: %d",
 				link->who_client, link->who_client->who_count);
@@ -312,7 +312,7 @@ static int irc_315(struct link_server *server, struct line *l)
 void rotate_who_client(struct link *link)
 {
 	int i;
-	mylog(LOG_INFO, "rotate_who_client %p", link->who_client);
+	mylog(LOG_DEBUG, "rotate_who_client %p", link->who_client);
 	/* find a client with non-null who_count */
 	link->who_client = NULL;
 	for (i = 0; i < link->l_clientc; i++) {
@@ -469,7 +469,7 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 	}
 	if (LINK(server)->who_client &&
 			LINK(server)->who_client->who_count == 0) {
-		mylog(LOG_INFO, "OK_COPY_WHO: who_count for %p is nul",
+		mylog(LOG_DEBUG, "OK_COPY_WHO: who_count for %p is nul",
 			LINK(server)->who_client);
 		rotate_who_client(LINK(server));
 	}
@@ -556,11 +556,11 @@ void unbind_from_link(struct link_client *ic)
 		fatal("unbind_from_link");
 
 	if (l->who_client == ic) {
-		mylog(LOG_INFO, "unbind_from_link:  %p: %d",
+		mylog(LOG_DEBUG, "unbind_from_link:  %p: %d",
 				l->who_client, ic->who_count);
 		l->who_client = NULL;
 	} else {
-		mylog(LOG_INFO,
+		mylog(LOG_DEBUG,
 			"unbind_from_link: nothing to do %p != %p: %d",
 				ic, l->who_client,
 				ic->who_count);
@@ -855,7 +855,7 @@ static int irc_cli_who(struct link_client *ic, struct line *line)
 	++ic->who_count;
 	if (ic->who_count == 1)
 		ic->whoc_tstamp = time(NULL);
-	mylog(LOG_INFO, "cli_who: Incrementing who count for %p: %d",
+	mylog(LOG_DEBUG, "cli_who: Incrementing who count for %p: %d",
 				ic, ic->who_count);
 
 	if (l->who_client && l->who_client != ic) {
@@ -884,7 +884,7 @@ static int irc_cli_mode(struct link_client *ic, struct line *line)
 	++ic->who_count;
 	if (ic->who_count == 1)
 		ic->whoc_tstamp = time(NULL);
-	mylog(LOG_INFO, "cli_mode: Incrementing who count for %p: %d",
+	mylog(LOG_DEBUG, "cli_mode: Incrementing who count for %p: %d",
 				l->who_client, ic->who_count);
 
 	if (l->who_client && l->who_client != ic) {
@@ -1372,7 +1372,7 @@ static int irc_368(struct link_server *server, struct line *l)
 
 		if (link->who_client->who_count > 0) {
 			--link->who_client->who_count;
-			mylog(LOG_INFO,
+			mylog(LOG_DEBUG,
 				"RPL_ENDOFBANLIST: "
 				"Decrementing who count for %p: %d",
 				link->who_client, link->who_client->who_count);
@@ -2033,11 +2033,8 @@ void oidentd_dump(list_t *connl)
 	}
 
 	filename = (char *)malloc(strlen(home) + strlen("/.oidentd.conf"));
-
-	if(filename == NULL){
-		mylog(LOG_WARN, "oidentd_dump : malloc failed, returning");
-		return;
-	}
+	if(filename == NULL)
+		fatal("Out of memory.");
 
 	sprintf(filename, "%s/.oidentd.conf", home);
 
@@ -2084,7 +2081,7 @@ void oidentd_dump(list_t *connl)
 			 * completely */
 			fseek(f, SEEK_SET, 0);
 			if (ftruncate(fileno(f), 0) == -1) {
-				mylog(LOG_WARN, "Can't reset %s size",
+				mylog(LOG_DEBUG, "Can't reset %s size",
 						filename);
 				goto clean_oidentd;
 			}

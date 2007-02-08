@@ -716,7 +716,7 @@ char *log_beautify(char *buf, char *dest)
 	int done;
 
 	if (!buf)
-		mylog(LOG_DEBUG, "BUG!");
+		fatal("BUG log_beautify not called correctly!");
 
 	p = strchr(buf, ' ');
 	if (!p || !p[0] || !p[1])
@@ -908,12 +908,12 @@ next_file:
 	/* check the files containing data to backlog */
 	lf = list_it_item(&logdata->file_it);
 	if (lf != list_get_last(&lfg->file_group)) {
-		mylog(LOG_DEBUG, "%s not last file!", lf->filename);
+		mylog(LOG_DEBUGVERB, "%s not last file!", lf->filename);
 		/* if the file is not the current open for logging
 		 * (it is an old file that has been rotated)
 		 * open if necessary, backlog line per line, and close */
 		if (!lf->file) {
-			mylog(LOG_DEBUG, "opening: %s!", lf->filename);
+			mylog(LOG_DEBUGVERB, "opening: %s!", lf->filename);
 			lf->file = fopen(lf->filename, "r");
 			if (!lf->file) {
 				mylog(LOG_ERROR, "Can't open %s for reading",
@@ -923,7 +923,8 @@ next_file:
 				return _log_wrap("Error reading logfile",
 						destination);
 			}
-			mylog(LOG_DEBUG, "seeking: %d!", lf->backlog_offset);
+			mylog(LOG_DEBUGVERB, "seeking: %d!",
+					lf->backlog_offset);
 			if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 				log_reinit(lfg);
 				free(buf);
@@ -942,7 +943,7 @@ next_file:
 				if (pos == LOGLINE_MAXLEN)
 					mylog(LOG_DEBUG, "logline too long");
 				if (c == EOF || pos == LOGLINE_MAXLEN) {
-					mylog(LOG_DEBUG, "EOF: %s (%d)!",
+					mylog(LOG_DEBUGVERB, "EOF: %s (%d)!",
 							lf->filename,
 							conf_always_backlog);
 

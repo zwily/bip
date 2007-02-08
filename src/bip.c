@@ -785,7 +785,7 @@ void ircize(list_t *ll)
 
 			link = hash_get(adm_conn, c->name);
 			if (!link) {
-				mylog(LOG_DEBUG, "new connection: \"%s\"",
+				mylog(LOG_DEBUGVERB, "new connection: \"%s\"",
 						c->name);
 				link = irc_link_new();
 				hash_insert(adm_conn, c->name, link);
@@ -808,7 +808,7 @@ void ircize(list_t *ll)
 				}
 				list_add_last(ll, link);
 			} else {
-				mylog(LOG_DEBUG, "old connection: \"%s\"",
+				mylog(LOG_DEBUGVERB, "old connection: \"%s\"",
 						c->name);
 #define MAYFREE(a) do { \
 		if (a) { \
