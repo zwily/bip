@@ -1,13 +1,18 @@
-2006-01-26  Arnaud Cornet <arnaud.cornet@gmail.com>
+2007-02-26  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* *: Merge a patch from Trou for .oidentd.conf not to be overwritten.
+	* *: Fix loglevels.
+
+2007-01-26  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* Infamous nick bug: This changes pretty much everything and might fix
 	the damn thing. Needs testing.
 
-2006-01-12  Arnaud Cornet <arnaud.cornet@gmail.com>
+2007-01-12  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src/irc.c: /msg to -bip is now equivalent to /quote bip.
 
-2006-01-07  Arnaud Cornet <arnaud.cornet@gmail.com>
+2007-01-07  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* *: Backlog fixes.
 	* src/irc.c: WHO reply / banlist redirection to the asking client now
