@@ -479,7 +479,14 @@ int irc_dispatch_server(struct link_server *server, struct line *line)
 /* send join and related stuff to client */
 static void irc_send_join(struct link_client *ic, struct channel *chan)
 {
-	WRITE_LINE1(CONN(ic), LINK(ic)->l_server->nick, "JOIN", chan->name);
+	char *ircmask; /* fake an irc mask for rbot */
+
+	ircmask = malloc(strlen(LINK(ic)->l_server->nick) +
+			strlen("!bip@bip.bip.bip") + 1);
+	strcpy(ircmask, LINK(ic)->l_server->nick);
+	strcat(ircmask, "!bip@bip.bip.bip");
+	WRITE_LINE1(CONN(ic), ircmask, "JOIN", chan->name);
+	free(ircmask);
 	if (chan->topic)
 		WRITE_LINE3(CONN(ic), P_SERV, "332", LINK(ic)->l_server->nick,
 				chan->name, chan->topic);
@@ -2021,7 +2028,7 @@ void oidentd_dump(list_t *connl)
 {
 	list_iterator_t it;
 	FILE *f;
-	char *home, *filename, *content;
+	char *home, *filename;
 	char *bipstart = NULL, *bipend = NULL;
 	struct stat stats;
 	char tag_written = 0;
@@ -2048,6 +2055,7 @@ void oidentd_dump(list_t *connl)
 			return;
 		}
 	} else {
+		char *content;
 		f = fopen(filename, "r+");
 
 		if (!f) {
@@ -2069,6 +2077,7 @@ void oidentd_dump(list_t *connl)
 		if (fread(content, 1, stats.st_size, f) !=
 				(size_t)stats.st_size) {
 			mylog(LOG_WARN, "Can't read %s fully", filename);
+			free(content);
 			goto clean_oidentd;
 		}
 
@@ -2083,6 +2092,7 @@ void oidentd_dump(list_t *connl)
 			if (ftruncate(fileno(f), 0) == -1) {
 				mylog(LOG_DEBUG, "Can't reset %s size",
 						filename);
+				free(content);
 				goto clean_oidentd;
 			}
 
@@ -2145,7 +2155,6 @@ void oidentd_dump(list_t *connl)
 
 clean_oidentd:
 	fclose(f);
-	free(content);
 	free(filename);
 }
 #endif
