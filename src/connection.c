@@ -98,10 +98,6 @@ void connection_free(connection_t *cn)
 	free(cn);
 }
 
-/* XXX
- * m'expliquer le local bind
- * API Suxor
- */
 static void connect_trynext(connection_t *cn)
 {
 	struct addrinfo *cur;
@@ -634,8 +630,11 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 		if (err2 < 0) {
 			mylog(LOG_DEBUGVERB, "fd:%d getsockopt error: %s",
 					cn->handle, strerror(errno));
-			if (cn->connecting_data)
+			if (cn->connecting_data) {
+				close(cn->handle);
+				cn->handle = -1;
 				connect_trynext(cn);
+			}
 			return (cn_is_new(cn) || cn->connected ==
 					CONN_NEED_SSLIZE) ? 0 : 1;
 
@@ -658,8 +657,11 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 		} else {
 			mylog(LOG_WARN, "fd:%d Socket error: %s", cn->handle,
 					strerror(err));
-			if (cn->connecting_data)
+			if (cn->connecting_data) {
+				close(cn->handle);
+				cn->handle = -1;
 				connect_trynext(cn);
+			}
 			return (cn_is_new(cn) || cn->connected ==
 					CONN_NEED_SSLIZE) ? 0 : 1;
 		}
@@ -1057,7 +1059,7 @@ connection_t *listen_new(char *hostname, int port, int ssl)
 	/* TODO: allow litteral service name in the function interface */
 	if (snprintf(portbuf, 20, "%d", port) >= 20)
 		portbuf[19] = '\0';
-	
+
 	/*
 	 * SSL flag is only here to tell program to convert socket to SSL after
 	 * accept(). Listening socket will NOT be SSL
@@ -1408,9 +1410,11 @@ static int connection_timedout(connection_t *cn)
 
 	if (!cn->connecting_data)
 		fatal("connection_timedout called with no connecting_data!\n");
-	
-	if (time(NULL)-cn->connect_time > cn->timeout) {
+
+	if (time(NULL) - cn->connect_time > cn->timeout) {
 		/* connect() completion timed out */
+		close(cn->handle);
+		cn->handle = -1;
 		connect_trynext(cn);
 		if (!cn_is_new(cn) && cn->connected != CONN_NEED_SSLIZE)
 			return 1;

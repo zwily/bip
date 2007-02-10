@@ -214,6 +214,11 @@ static void irc_server_connected(struct link_server *server)
 {
 	int i;
         LINK(server)->s_state = IRCS_CONNECTED;
+        LINK(server)->s_conn_attempt = 0;
+
+	mylog(LOG_INFO, "Connected user %s to %s", LINK(server)->username,
+		LINK(server)->name);
+
         irc_server_join(server);
         log_connected(LINK(server)->log);
 
@@ -1902,6 +1907,8 @@ static void irc_close(struct link_any *l)
 
 		if (LINK(is)->s_state == IRCS_CONNECTED)
 			irc_notify_disconnection(is);
+		else
+			LINK(is)->s_conn_attempt++;
 		irc_server_shutdown(is);
 		log_disconnected(LINK(is)->log);
 
@@ -1910,7 +1917,7 @@ static void irc_close(struct link_any *l)
 		if (LINK(is)->last_connection &&
 				time(NULL) - LINK(is)->last_connection
 					< CONN_INTERVAL)
-			timer = RECONN_TIMER;
+			timer = RECONN_TIMER * (LINK(is)->s_conn_attempt);
 		mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds",
 				LINK(l)->name, timer);
 		LINK(is)->recon_timer = timer;

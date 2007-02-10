@@ -78,6 +78,7 @@ struct link {
 
 	/* server related live stuff */
 	int s_state;
+	int s_conn_attempt;
 	char *prev_nick; /* XXX del me */
 	char *cli_nick;
 	list_t init_strings;

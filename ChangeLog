@@ -1,3 +1,8 @@
+2007-01-01  Arnaud Cornet <arnaud.cornet@gmail.com>
+
+	* src/connection.c: Fix fd leak.
+	* src/irc.c: Delay reconnections.
+
 2007-02-26  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* *: Merge a patch from Trou for .oidentd.conf not to be overwritten.
