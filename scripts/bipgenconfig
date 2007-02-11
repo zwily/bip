@@ -8,6 +8,7 @@ use Data::Dumper;
 my $CFILE = $ENV{'HOME'} . '/.bip/bip.conf.autogen';
 my $CONFIG = ".config";
 my %cf;
+my $debug = 0;
 my $global_done = 0;
 my $cert_done = 0;
 my $mode = 'normal';
@@ -58,7 +59,7 @@ my %optdesc = (
 			'optional' => 1,
 			'depends' => 'backlog', 'depval' => 'true',
 			'desc' => 'How much line do you want bip to play back upon client connect' .
-				"\n {0 => replay everything since backlog's last reset} ?" },
+				" {0 => replay everything since backlog's last reset} ?" },
 		'backlog_no_timestamp' => { 'type' => 'b', 'adv' => 0,
 			'optional' => 1,
 			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
@@ -119,14 +120,20 @@ my %optdesc = (
 		'network' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 0, 'postdepends' => 'networks.$value',
 			'desc' => 'Network to connect to' },
+		'defid'	=> { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1, 'nosave' => 1,
+			'desc' => 'Use default identity ?' },
 		'nick' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 1,
+			'depends' => 'defid', 'depval' => 'false',
 			'desc' => 'IRC nickname on this connection ?' },
 		'user' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 1,
+			'depends' => 'defid', 'depval' => 'false',
 			'desc' => 'IRC username on this connection ?' },
 		'realname' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 1,
+			'depends' => 'defid', 'depval' => 'false',
 			'desc' => 'IRC realname on this connection ?' },
 		'password' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 1,
@@ -134,12 +141,12 @@ my %optdesc = (
 		'vhost' => { 'type' => 's', 'adv' => 1, 'default' => '',
 			'optional' => 1,
 			'desc' => 'Connect to IRC server from this specific IP address:' },
-		'source_port' => { 'type' => 'i', 'adv' => 0, 'default' => '',
+		'source_port' => { 'type' => 'i', 'adv' => 1, 'default' => '',
 			'optional' => 1,
 			'desc' => 'Connect to IRC server from this specific port:' },
 		'follow_nick' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
 			'optional' => 1,
-			'desc' => 'Follow (and store) nicknames changes from clients to use upon reconnection (if false, bip\'ll use config nickname)' },
+			'desc' => 'Follow nicknames changes from clients to use upon reconnection (if false, bip\'ll use config nickname)' },
 		'ignore_first_nick' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
 			'optional' => 1,
 			'desc' => 'Ignore nickname change sent by a client (first one only, upon client attach)' },
@@ -179,11 +186,13 @@ my %optorder = (
 		'port' ,
 		'client_side_ssl' ,
 		'pid_file' ,
+		undef,
 		'log' ,
 		'log_sync_interval' ,
 		'log_level' ,
 		'log_root' ,
 		'log_format' ,
+		undef,
 		'backlog' ,
 		'backlog_lines' ,
 		'backlog_no_timestamp' ,
@@ -203,6 +212,7 @@ my %optorder = (
 		'password' ,
 		'ssl_check_mode' ,
 		'ssl_check_store' ,
+		undef,
 		'default_nick' ,
 		'default_user' ,
 		'default_realname' ,
@@ -212,10 +222,12 @@ my %optorder = (
 	'connection' => [
 		'name' ,
 		'network' ,
+		'defid',
 		'nick' ,
 		'user' ,
 		'realname' ,
 		'password' ,
+		undef,
 		'vhost' ,
 		'source_port' ,
 		'follow_nick' ,
@@ -255,12 +267,15 @@ sub askOpt {
 	return $sel if ($mode eq 'normal' && $e->{'adv'} eq 1);
 
 	while (1) {
+		my $opt = (defined $e->{'optional'} && $e->{'optional'} eq 1 ?
+				1 : 0);
 		if ($e->{'type'} eq 'b') {
-			$o = askbool($e->{'desc'}, $sel);
+			$o = askbool($e->{'desc'}, $sel, 1);
 		} else {
-			$o = askval($e->{'desc'}, $sel);
+			$o = askval($e->{'desc'}, $sel, ($opt ne 1 ||
+					$e->{'type'} eq 'i' ? 1 : undef), 1);
 		}
-		if ($o eq undef && $e->{'optional'} eq 0) {
+		if ($o eq undef && $opt eq 0) {
 			print("This value is mandatory, please enter a value\n");
 			next;
 		}
@@ -273,15 +288,34 @@ sub askOpt {
 	return $o;
 }
 
+sub align {
+	my ($text, $num) = @_;
+	my ($out, $pos, $orig);
+
+	$orig = $text;
+	while ($text ne '' || $text ne undef) {
+		$num = 60 if (!$num);
+		$pos = rindex($text, " ", 60);
+		$out .= "\n" if ($out);
+		$out .= substr($text, 0, $pos);
+		$text = substr($text, $pos+1);
+	}
+	$out .= " ";
+
+	return $out;
+}
+
 sub askbool {
-	my ($text, $default) = @_;
-	
+	my ($text, $default, $star) = @_;
+	 
+	$text = "* $text" if $star;
 	if ($default eq "true") {
-		print "$text [Y/n] ";
+		print align("$text [Y/n] ");
 	} else {
 		$default = "false";
-		print "$text [y/N] ";
+		print align("$text [y/N] ");
 	}
+
 	
 	while (my $l = <STDIN>) {
 		chomp($l);
@@ -300,11 +334,12 @@ sub askbool {
 sub askPass {
 	my ($text) = @_;
 	
-	while (!$bipmkpw && ! -x $bipmkpw) {
+	while (!$bipmkpw || ! -x "$bipmkpw") {
 		if ($bipmkpw ne '' && ! -x $bipmkpw) {
 			print("No exec permission: $bipmkpw\n");
 		}
-		$bipmkpw = askval("Please enter the full path to bipmkpw binary :");
+		$bipmkpw = askval("Please enter the path to bipmkpw:",
+				undef, 1);
 	}
 	print("$text ? ");
 	my $pass = `$bipmkpw`;
@@ -315,15 +350,16 @@ sub askPass {
 }
 
 sub askval {
-	my ($text, $default, $skipblank) = @_;
+	my ($text, $default, $skipblank, $star) = @_;
 	
 	$text .= " ";
 	$text .= "[$default] " if ($default ne undef);
-	print($text);
+	$text = "* $text" if $star;
+	print(align("$text"));
 	while (my $l = <STDIN>) {
 		chomp($l);
 		if ($default eq undef && !$skipblank && $l eq '') {
-			my $q = askbool("You've entered a blank value, do you want this field to be unset\n (if not, it'll be set to the empty string) ?", "true");
+			my $q = askbool("You've entered a blank value, do you want this field to be unset (if not, it'll be set to the empty string) ?", "true");
 			return undef if ($q eq 'true');
 		}
 		return ($l ne '' ? $l : $default);
@@ -371,10 +407,14 @@ sub resetConfig {
 
 sub setOptions {
 	foreach my $n (@{$optorder{'global'}}) {
+		if ($n eq undef) {
+			print("\n");
+			next;
+		}
 		my $e = $optdesc{'global'}->{$n};
 		my $r = checkDepends($n, $e);
 		if ($r) {
-			print("$r\n");
+			print("$r\n") if ($debug);
 			$cf{'global'}->{$n} = undef;
 			next;
 		}
@@ -453,7 +493,7 @@ sub writeConfig {
 	my ($f) = @_;
 	my ($fh, $ts, @t);
 
-	$ts = localtime(time));
+	$ts = localtime(time);
 	$fh = new IO::File;
 	$fh->open('> ' . $f) || return "Unable to open $f for writing";
 	print $fh "# vim:ft=bip:ts=2\n";
@@ -462,6 +502,7 @@ sub writeConfig {
 	print $fh "### Global options\n";
 	foreach my $k (keys(%{$cf{'global'}})) {
 		next if ($cf{'global'}->{$k} eq undef);
+		next if ($optdesc{'global'}->{$k}->{'nosave'} eq "true");
 		my $t = $optdesc{'global'}->{$k}->{'type'};
 		if ($t eq 's' || $t eq 'b') {
 			print $fh "$k = \"" . $cf{'global'}->{$k} . "\";\n";
@@ -496,7 +537,8 @@ sub printBlock {
 	$out .= $prefix . $name . " {\n";
 	foreach my $k (keys(%{$e})) {
 		next if ($e->{$k} eq undef);
-		my $t = $optdesc{$k}->{'type'};
+		next if ($optdesc{$name}->{$k}->{'nosave'} eq "true");
+		my $t = $optdesc{$name}->{$k}->{'type'};
 		if ($t eq 's' || $t eq 'b') {
 			$out .= $prefix . "\t$k = \"" . $e->{$k} . "\";\n";
 		} elsif (ref($e->{$k}) eq 'ARRAY') {
@@ -518,11 +560,16 @@ sub addEntry {
 	$opts = $optdesc{$section};
 
 	foreach my $n (@{$optorder{$section}}) {
+		if ($n eq undef) {
+			print("\n");
+			next;
+		}
+
 		my $v = $optdesc{$section}->{$n};
 		my $r = checkDepends($n, $v);
 		if ($r) {
 			$e->{$n} = undef;
-			print("$r\n");
+			print("$r\n") if ($debug);
 			next;
 		}
 		if ($v->{'type'} eq 'e') {
@@ -562,8 +609,19 @@ sub pause {
 sub printMenu {
 	my ($mhead, $mopts, $mfoot, $mask) = @_;
 
+	push(@{$mhead}, undef);
+	if ($mode eq 'normal') {
+		push(@{$mhead},
+			"WARNING: non-advanced mode, some 'expert' " .
+			"options'll be hidden !");
+	} else {
+		push(@{$mhead}, undef);
+	}
+	push(@{$mhead}, undef);
 	print($clear_string);
-	print(join("\n", @{$mhead}));
+	print("###########################################################" .
+		"###################\n# ");
+	print(join("\n# ", @{$mhead}));
 	print("\n");
 	print("\n");
 	foreach my $n (sort {$a <=> $b} keys(%{$mopts})) {
@@ -580,6 +638,407 @@ sub printMenu {
 	return askval($mask, undef, 1);
 }
 
+sub printUsers {
+	my ($txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $num, $warn, $act, $out);
+
+	$mhead = [
+		"Bip's user list",
+	];
+	$mfoot = [ $txt ];
+	$mask = "Enter id of the user to edit ?";
+	$mopts = { 0 => 'Return to main menu'};
+	$mopts->{"0.5"} = undef;
+	$num = 1;
+	foreach my $n (@{$cf{'users'}}) {
+		$mopts->{$num} = $n->{'name'} . ': ' .
+			(scalar @{$n->{'connection'}}) . ' connections.';
+		$num++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act =~ /^\d+$/) {
+		my $n = $cf{'users'};
+		my $c = scalar @{$n};
+		if ($c lt $act) {
+			$out = "There is only $c users";
+		} else {
+			$out = printEditUser($act-1);
+		}
+	} else {
+		$out = "Invalid user ID";
+	}
+	printUsers($out);
+}
+
+sub printNetworks {
+	my ($txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $num, $warn, $act, $out);
+
+	$mhead = [
+		"Bip's network list",
+	];
+	$mfoot = [ $txt ];
+	$mask = "Enter ID of the network to edit ?";
+	$mopts = { 0 => 'Return to main menu'};
+	$mopts->{"0.5"} = undef;
+	$num = 1;
+	foreach my $n (@{$cf{'networks'}}) {
+		$mopts->{$num} = $n->{'name'} . ': ' . (scalar @{$n->{'server'}})
+				. ' servers, SSL ' . ($n->{'ssl'} eq 'true' ?
+						'enabled' : 'disabled');
+		$num++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act =~ /^\d+$/) {
+		my $n = $cf{'networks'};
+		my $c = scalar @{$n};
+		if ($c lt $act) {
+			$out = "There is only $c networks";
+		} else {
+			$out = printEditNetwork($act-1);
+		}
+	} else {
+		$out = "Invalid network ID";
+	}
+	printNetworks($out);
+}
+
+sub addChannel {
+	my ($uid, $cid) = @_;
+	my ($cnt, @o, $n, $c, $name);
+
+	return "Invalid user ID $uid"
+		if ((scalar @{$cf{'users'}}) le $uid);
+	$n = $cf{'users'}[$uid];
+	return "Invalid connection ID $cid"
+		if ((scalar @{$n->{'connection'}}) le $cid);
+	my $e = addEntry('channel');
+	if ($e) {
+		push(@{$n->{'connection'}[$cid]->{'channel'}}, $e);
+		return "Channel " . $e->{'name'} . " added";
+	} else {
+		return "Channel add failed";
+	}
+
+}
+
+sub addServer {
+	my ($id) = @_;
+
+	return "Invalid network ID $id"
+		if ((scalar @{$cf{'networks'}}) le $id);
+	my $e = addEntry('server');
+	if ($e) {
+		push(@{$cf{'networks'}[$id]->{'server'}}, $e);
+		return "Server " . $e->{'host'} . " added";
+	} else {
+		return "Server add failed";
+	}
+}
+
+sub addConnection {
+	my ($id) = @_;
+
+	return "Invalid user ID $id"
+		if ((scalar @{$cf{'users'}}) le $id);
+	my $e = addEntry('connection');
+	if ($e) {
+		push(@{$cf{'users'}[$id]->{'connection'}}, $e);
+		return "Connection " . $e->{'name'} . " added";
+	} else {
+		return "Connection add failed";
+	}
+}
+
+
+sub deleteServer {
+	my ($net, $sid) = @_;
+	my ($sname, $ss, $cnt, @o);
+
+	return "Invalid network ID $net"
+		if ((scalar @{$cf{'networks'}}) le $net);
+	$ss = $cf{'networks'}[$net]->{'server'};
+	return "Invalid server ID $sid" if ((scalar @{$ss}) lt $sid);
+	@o = ();
+	$cnt = 0;
+	foreach my $s (@{$ss}) {
+		if ($sid ne $cnt) {
+			push(@o, $s);
+		} else {
+			$sname = $s->{'host'};
+		}
+		$cnt++;
+	}
+	$cf{'networks'}[$net]->{'server'} = [ @o ];
+	return "Server $sname removed";
+}
+
+sub delUser {
+	my ($id) = @_;
+	my ($cnt, @o, $name);
+
+	return "Invalid user ID $id"
+		if ((scalar @{$cf{'users'}}) le $id);
+	$cnt = 0;
+	@o = ();
+	foreach my $n (@{$cf{'users'}}) {
+		if ($id ne $cnt) {
+			push(@o, $n);
+		} else {
+			$name = $n->{'name'};
+		}
+		$cnt++;
+	}
+	$cf{'users'} = [ @o ];
+	return "User $name removed";
+}
+
+sub delNetwork {
+	my ($id) = @_;
+	my ($cnt, @o, $name);
+
+	return "Invalid network ID $id"
+		if ((scalar @{$cf{'networks'}}) le $id);
+	$cnt = 0;
+	@o = ();
+	foreach my $n (@{$cf{'networks'}}) {
+		if ($id ne $cnt) {
+			push(@o, $n);
+		} else {
+			$name = $n->{'name'};
+		}
+		$cnt++;
+	}
+	$cf{'networks'} = [ @o ];
+	return "Network $name removed";
+}
+
+sub deleteConn {
+	my ($uid, $cid) = @_;
+	my ($cnt, @o, $n, $name);
+
+	return "Invalid user ID $uid"
+		if ((scalar @{$cf{'users'}}) le $uid);
+	$n = $cf{'users'}[$uid];
+	return "Invalid connection ID $cid"
+		if ((scalar @{$n->{'connection'}}) le $cid);
+
+	$cnt = 0;
+	@o = ();
+	foreach my $n (@{$n->{'connection'}}) {
+		if ($cid ne $cnt) {
+			push(@o, $n);
+		} else {
+			$name = $n->{'name'};
+		}
+		$cnt++;
+	}
+	$cf{'users'}[$uid]->{'connection'} = [ @o ];
+	return "Connection $name removed";
+}
+
+sub deleteChannel {
+	my ($uid, $cid, $chid) = @_;
+	my ($cnt, @o, $n, $c, $name);
+
+	return "Invalid user ID $uid"
+		if ((scalar @{$cf{'users'}}) le $uid);
+	$n = $cf{'users'}[$uid];
+	return "Invalid connection ID $cid"
+		if ((scalar @{$n->{'connection'}}) le $cid);
+	$c = $n->{'connection'}[$cid];
+	return "Invalid channel ID $chid"
+		if ((scalar @{$c->{'channel'}}) le $chid);
+
+	$cnt = 0;
+	@o = ();
+	foreach my $n (@{$c->{'channel'}}) {
+		if ($chid ne $cnt) {
+			push(@o, $n);
+		} else {
+			$name = $n->{'name'};
+		}
+		$cnt++;
+	}
+	$cf{'users'}[$uid]->{'connection'}[$cid]->{'channel'} = [ @o ];
+	return "Channel $name removed";
+}
+
+
+sub printEditConnOptions {
+#TODO
+}
+
+sub printEditConnection {
+	my ($num, $num2, $txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $warn, $act, $out);
+	my ($n, $name, $sub, $cnt, $c);
+
+	return "Invalid user ID $num"
+		if ((scalar @{$cf{'users'}}) le $num);
+	$n = $cf{'users'}[$num];
+	return "Invalid connection ID $num2"
+		if ((scalar @{$n->{'connection'}}) le $num2);
+	$c = $n->{'connection'}[$num2];
+	$name = $c->{'name'};
+	$sub = $c->{'channel'};
+	$mhead = [
+		"Edit connection $name/" . $n->{'name'},
+	];
+	$mfoot = [ $txt ];
+	$mask = "What do you want to do ?";
+	$mopts = { 0 => 'Return to user ' . $n->{'name'},
+		1 => 'Add a channel',
+		2 => 'Edit options',
+		3 => 'Remove this connection',
+		"3.5" => undef,
+	};
+	$cnt = 4;
+	foreach my $s (@{$sub}) {
+		$mopts->{$cnt} = "Delete channel " . $s->{'name'};
+		$mopts->{$cnt} .= '/' .	$s->{'key'} if (defined $s->{'key'} &&
+				$s->{'key'} ne '');
+		$cnt++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act eq 1) {
+		$out = addChannel($num, $num2);
+	} elsif ($act eq 2) {
+		return printEditConnOptions($num, $num2);
+	} elsif ($act eq 3) {
+		return deleteConn($num, $num2);
+	} elsif ($act =~ /^\d+$/) {
+		my $c = (scalar @{$sub});
+		if ($c le $act-4) {
+			$out = "This connection has only $c channels";
+		} else {
+			$out = deleteChannel($num, $num2, $act-4);
+		}
+	} else {
+		$out = "Invalid channel ID";
+	}
+	printEditConnection($num, $num2, $out);
+
+}
+
+sub printEditUserOptions {
+# TODO
+}
+
+sub printEditUser {
+	my ($num, $txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $warn, $act, $out);
+	my ($n, $name, $sub, $cnt);
+
+	return "Invalid user ID $num"
+		if ((scalar @{$cf{'users'}}) le $num);
+	$n = $cf{'users'}[$num];
+	$name = $n->{'name'};
+	$sub = $n->{'connection'};
+	$mhead = [
+		"Edit user $name",
+	];
+	$mfoot = [ $txt ];
+	$mask = "What do you want to do ?";
+	$mopts = { 0 => 'Return to users list',
+		1 => 'Add a connection',
+		2 => 'Edit options',
+		3 => 'Remove this user',
+		"3.5" => undef,
+	};
+	$cnt = 4;
+	foreach my $s (@{$sub}) {
+		$mopts->{$cnt} = "Edit connection " . $s->{'name'};
+		$cnt++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act eq 1) {
+		$out = addConnection($num);
+	} elsif ($act eq 2) {
+		return printEditUserOptions($num);
+	} elsif ($act eq 3) {
+		return delUser($num);
+	} elsif ($act =~ /^\d+$/) {
+		my $c = (scalar @{$sub});
+		if ($c le $act-4) {
+			$out = "This user has only $c connections";
+		} else {
+			$out = printEditConnection($num, $act-4)
+		}
+	} else {
+		$out = "Invalid connection ID";
+	}
+	printEditUser($num, $out);
+
+}
+
+sub printEditNetwork {
+	my ($num, $txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $warn, $act, $out);
+	my ($n, $name, $sub, $cnt);
+
+	return "Invalid network ID $num"
+		if ((scalar @{$cf{'networks'}}) le $num);
+	$n = $cf{'networks'}[$num];
+	$name = $n->{'name'};
+	$sub = $n->{'server'};
+	$mhead = [
+		"Edit network $name",
+		undef,
+		undef,
+		$warn,
+	];
+	$mfoot = [ $txt ];
+	$mask = "What do you want to do ?";
+	$mopts = { 0 => 'Return to networks list',
+		1 => 'Add a server',
+		2 => 'Remove this network',
+		"2.5" => undef,
+	};
+	$cnt = 3;
+	foreach my $s (@{$sub}) {
+		$mopts->{$cnt} = "Delete server: " . $s->{'host'} . '/' .
+				$s->{'port'};
+		$cnt++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act eq 1) {
+		$out = addServer($num);
+	} elsif ($act eq 2) {
+		return delNetwork($num);
+	} elsif ($act =~ /^\d+$/) {
+		my $c = (scalar @{$sub});
+		if ($c le $act-3) {
+			$out = "This network has only $c servers";
+		} else {
+			$out = deleteServer($num, $act-3)
+		}
+	} else {
+		$out = "Invalid server ID";
+	}
+	printEditNetwork($num, $out);
+}
+
 sub main_menu {
 	my ($txt) = @_;
 	my ($act, $out, $warn, $mopts, $mhead, $mfoot);
@@ -590,7 +1049,7 @@ sub main_menu {
 		2	=> 'Add a new network',
 		3	=> 'Add a new user',
 		4	=> 'View/Edit/Unset global options',
-		5	=> 'View/Edit/Delete networks (todo)',
+		5	=> 'View/Edit/Delete networks',
 		6	=> 'View/Edit/Delete users (todo)',
 		7	=> 'Generate a server certificate/key pair',
 		8	=> 'Load saved config (todo)',
@@ -601,21 +1060,9 @@ sub main_menu {
 		90	=> 'Save and exit',
 		91	=> 'Debug (will be exit)',
 	};
-	if ($mode eq 'normal') {
-		$warn = "# WARNING: non-advanced mode, some 'expert' options'll be hidden !";
-	} else {
-		$warn = "# ";
-	}
 	$mhead = [
-		"########################################################################",
-		"# Welcome to bip configuration program.",
-		"# This script will help you build a configuration file",
-		"# ",
-		$warn,
-		"# Please note this script not finalized, and that you'll only be able to",
-		"# generate a config at once, no modifications will be possible without",
-		"# resetting all config options. Feature is coming soon !",
-		"# ",
+		"Welcome to bip configuration program.",
+		"This script will help you build a configuration file",
 	];
 	$mfoot = [ $txt ];
 	$mask = "What do you want to do ?";
@@ -631,7 +1078,7 @@ sub main_menu {
 	} elsif ($act eq 1) {
 		$out = setOptions();
 	} elsif ($act eq 6) {
-#		$out = printUsers();
+		$out = printUsers();
 	} elsif ($act eq 3) {
 		$out = addEntry('user');
 		if ($out) {
@@ -641,7 +1088,7 @@ sub main_menu {
 			$out = "User add failed";
 		}
 	} elsif ($act eq 5) {
-#		$out = printNetworks();
+		$out = printNetworks();
 	} elsif ($act eq 2) {
 		$out = addEntry('network');
 		if ($out) {
