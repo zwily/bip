@@ -62,7 +62,7 @@ also find an example configuration file along with BIP.
 .SH GLOBAL OPTIONS
 
 .TP
-\fBalways_backlog\fP (default: \fBfalse\fP)
+\fBbacklog_always\fP (default: \fBfalse\fP)
 If true, clients will always receive \fBbacklog_lines\fP log lines, even if
 they were already sent before. This option should of course not be enabled if
 \fBbacklog_lines\fP is 0 !
@@ -85,14 +85,14 @@ Coyote's.
 If true, backlogged line won't include the timestamp.
 
 .TP
-\fBblreset_on_talk\fP (default: \fBfalse\fP)
+\fBbacklog_reset_on_talk\fP (default: \fBfalse\fP)
 When true, backlog will not be reset upon client disconnection but upon client
 talk (channel/private message or action).  It means that next time you log to
 your bip session the backlogging will start at the time right after your last
 words on irc.
 
 .TP
-\fBbl_msg_only\fP (default: \fBfalse\fP)
+\fBbacklog_msg_only\fP (default: \fBfalse\fP)
 When true, bip will backlog only channel/private messages/notices. No topic
 change, nick change, user quit/part/join will be backlogged upon connection.
 

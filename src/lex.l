@@ -83,9 +83,13 @@ list_t *parse_conf(FILE *file)
 "backlog_lines"		{ return LEX_BACKLOG_LINES; }
 "backlog_no_timestamp"	{ return LEX_BACKLOG_NO_TIMESTAMP; }
 "backlog"		{ return LEX_BACKLOG; }
+"backlog_always"	{ return LEX_ALWAYS_BACKLOG; }
+"backlog_msg_only"	{ return LEX_BL_MSG_ONLY; }
+"backlog_reset_on_talk"	{ return LEX_BLRESET_ON_TALK; }
+"blreset_on_talk"	{ return LEX_BLRESET_ON_TALK; }
 "bl_msg_only"		{ return LEX_BL_MSG_ONLY; }
-"log"			{ return LEX_LOG; }
 "always_backlog"	{ return LEX_ALWAYS_BACKLOG; }
+"log"			{ return LEX_LOG; }
 "log_sync_interval"	{ return LEX_LOG_SYNC_INTERVAL; }
 "follow_nick"		{ return LEX_FOLLOW_NICK; }
 "ignore_first_nick"	{ return LEX_IGN_FIRST_NICK; }
