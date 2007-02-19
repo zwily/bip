@@ -1027,8 +1027,8 @@ static int irc_dispatch_trust_client(struct link_client *ic, struct line *line)
 	if (line->elemc < 2)
 		return ERR_PROTOCOL;
 
-	if (strcmp(line->elemv[0], "BIP") == 0 &&
-	    strcmp(line->elemv[1], "TRUST") == 0)
+	if (strcasecmp(line->elemv[0], "BIP") == 0 &&
+	    strcasecmp(line->elemv[1], "TRUST") == 0)
 		r = adm_trust(ic, line);
 
 	return r;
