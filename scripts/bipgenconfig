@@ -260,7 +260,7 @@ sub myexit {
 }
 
 sub askOpt {
-	my ($e, $curval) = @_;
+	my ($e, $curval, $mayempty) = @_;
 	my ($o, $sel);
 
 	$sel = (($curval ne undef) ? $curval : $e->{'default'});
@@ -271,9 +271,11 @@ sub askOpt {
 				1 : 0);
 		if ($e->{'type'} eq 'b') {
 			$o = askbool($e->{'desc'}, $sel, 1);
+		} elsif ($e->{'type'} eq 'p') {
+			$o = askPass($e->{'desc'});
 		} else {
-			$o = askval($e->{'desc'}, $sel, ($opt ne 1 ||
-					$e->{'type'} eq 'i' ? 1 : undef), 1);
+			$o = askval($e->{'desc'}, $sel, ($mayempty && ($opt ne 1 ||
+					$e->{'type'} eq 'i' ? 1 : undef)), 1);
 		}
 		if ($o eq undef && $opt eq 0) {
 			print("This value is mandatory, please enter a value\n");
@@ -335,7 +337,7 @@ sub askPass {
 	my ($text) = @_;
 	
 	while (!$bipmkpw || ! -x "$bipmkpw") {
-		if ($bipmkpw ne '' && ! -x $bipmkpw) {
+		if ($bipmkpw ne '' && (! -f $bipmkpw || ! -x $bipmkpw)) {
 			print("No exec permission: $bipmkpw\n");
 		}
 		$bipmkpw = askval("Please enter the path to bipmkpw:",
@@ -358,10 +360,10 @@ sub askval {
 	print(align("$text"));
 	while (my $l = <STDIN>) {
 		chomp($l);
-		if ($default eq undef && !$skipblank && $l eq '') {
-			my $q = askbool("You've entered a blank value, do you want this field to be unset (if not, it'll be set to the empty string) ?", "true");
-			return undef if ($q eq 'true');
-		}
+#		if ($default eq undef && !$skipblank && $l eq '') {
+#			my $q = askbool("You've entered a blank value, do you want this field to be unset (if not, it'll be set to the empty string) ?", "true");
+#			return undef if ($q eq 'true');
+#		}
 		return ($l ne '' ? $l : $default);
 	}
 }
@@ -428,7 +430,11 @@ sub setOptions {
 sub printOptions {
 	my $cnt = 1;
 	foreach my $n (@{$optorder{'global'}}) {
+		next if (!$n);
 		my $e = $optdesc{'global'}->{$n};
+		next if ($e->{'type'} eq 'e' || $e->{'nosave'} eq 1);
+		next if ($mode eq 'normal' && $e->{'adv'} eq 1);
+
 		my $r = checkDepends($n, $e);
 		if ($r) {
 			printf('%02d.(%s - unset, missing dependency)'."\n", $cnt, $n);
@@ -446,7 +452,7 @@ sub printOptions {
 sub makeCert {
 	my ($fh, $c, $o, $ou, $cn);
 	$fh = new IO::File;
-	$c = askval("SSL cert country :");
+	$c = askval("SSL cert country :", undef, 1);
 	$o = askval("SSL cert organisation :", "Sexy boys");
 	$ou = askval("SSL cert organisational unit :", "Bip");
 	$cn = askval("SSL cert common name :", "Bip");
@@ -502,7 +508,7 @@ sub writeConfig {
 	print $fh "### Global options\n";
 	foreach my $k (keys(%{$cf{'global'}})) {
 		next if ($cf{'global'}->{$k} eq undef);
-		next if ($optdesc{'global'}->{$k}->{'nosave'} eq "true");
+		next if ($optdesc{'global'}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{'global'}->{$k}->{'type'};
 		if ($t eq 's' || $t eq 'b') {
 			print $fh "$k = \"" . $cf{'global'}->{$k} . "\";\n";
@@ -537,7 +543,7 @@ sub printBlock {
 	$out .= $prefix . $name . " {\n";
 	foreach my $k (keys(%{$e})) {
 		next if ($e->{$k} eq undef);
-		next if ($optdesc{$name}->{$k}->{'nosave'} eq "true");
+		next if ($optdesc{$name}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{$name}->{$k}->{'type'};
 		if ($t eq 's' || $t eq 'b') {
 			$out .= $prefix . "\t$k = \"" . $e->{$k} . "\";\n";
@@ -588,8 +594,6 @@ sub addEntry {
 				}
 				$first = 0;
 			} while (1);
-		} elsif ($v->{'type'} eq 'p') {
-			$e->{$n} = askPass($v->{'desc'});
 		} else {
 			$e->{$n} = askOpt($v);
 		}
@@ -662,9 +666,9 @@ sub printUsers {
 		return;
 	} elsif ($act =~ /^\d+$/) {
 		my $n = $cf{'users'};
-		my $c = scalar @{$n};
-		if ($c lt $act) {
-			$out = "There is only $c users";
+		my $c = $num-1;
+		if (($num-$act) le 0) {
+			$out = "There are only $c users";
 		} else {
 			$out = printEditUser($act-1);
 		}
@@ -699,9 +703,9 @@ sub printNetworks {
 		return;
 	} elsif ($act =~ /^\d+$/) {
 		my $n = $cf{'networks'};
-		my $c = scalar @{$n};
-		if ($c lt $act) {
-			$out = "There is only $c networks";
+		my $c = $num-1;
+		if (($num-$act) le 0) {
+			$out = "There are only $c networks";
 		} else {
 			$out = printEditNetwork($act-1);
 		}
@@ -874,7 +878,58 @@ sub deleteChannel {
 
 
 sub printEditConnOptions {
-#TODO
+	my ($num, $num2, $txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $warn, $act, $out);
+	my ($n, $c, $name, $sub, $cnt);
+
+	return "Invalid user ID $num"
+		if ((scalar @{$cf{'users'}}) le $num);
+	$n = $cf{'users'}[$num];
+	return "Invalid connection ID $num2"
+		if ((scalar @{$n->{'connection'}}) le $num2);
+	$c = $n->{'connection'}[$num2];
+	$name = $c->{'name'};
+	$mhead = [
+		"Edit connection options $name/" . $n->{'name'},
+	];
+	$mfoot = [ $txt ];
+	$mopts = { 0 => 'Return to connection ' . $name,
+		"0.5" => undef,
+	};
+	$cnt = 1;
+	my %oo = ();
+	foreach my $s (@{$optorder{'connection'}}) {
+		next if (!$s);
+		next if ($optdesc{'connection'}->{$s}->{'type'} eq 'e');
+		next if ($optdesc{'connection'}->{$s}->{'nosave'} eq 1);
+		next if ($mode eq 'normal' &&
+				$optdesc{'connection'}->{$s}->{'adv'} eq 1);
+		$mopts->{$cnt} = "Change $s: ";
+		$mopts->{$cnt} .= $c->{$s} if (defined $c->{$s});
+		$oo{$cnt} = $s;
+		$cnt++;
+	}
+
+	$act = int(printMenu($mhead, $mopts, $mfoot, $mask));
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act =~ /^\d+$/) {
+		my $c = $cnt-1;
+		if (($cnt-$act) le 0) {
+			$out = "There are only $c options";
+		} else {
+			my $on = $oo{$act};
+			$cf{'users'}[$num]->{'connection'}[$num2]->{$on} =
+				askOpt($optdesc{'connection'}->{$on},
+				$cf{'users'}[$num]->{'connection'}[$num2]->{$on});
+			$out = "Option $on set";
+			pause();
+		}
+	} else {
+		$out = "Invalid option ID";
+	}
+	printEditConnOptions($num, $num2, $out);
 }
 
 sub printEditConnection {
@@ -920,8 +975,8 @@ sub printEditConnection {
 	} elsif ($act eq 3) {
 		return deleteConn($num, $num2);
 	} elsif ($act =~ /^\d+$/) {
-		my $c = (scalar @{$sub});
-		if ($c le $act-4) {
+		my $c = $cnt-4;
+		if (($cnt-$act) le 0) {
 			$out = "This connection has only $c channels";
 		} else {
 			$out = deleteChannel($num, $num2, $act-4);
@@ -934,7 +989,58 @@ sub printEditConnection {
 }
 
 sub printEditUserOptions {
-# TODO
+	my ($num, $txt) = @_;
+	my ($mopts, $mhead, $mfoot, $mask, $warn, $act, $out);
+	my ($n, $name, $sub, $cnt);
+
+	return "Invalid user ID $num"
+		if ((scalar @{$cf{'users'}}) le $num);
+	$n = $cf{'users'}[$num];
+	$name = $n->{'name'};
+	$mhead = [
+		"Edit user $name options",
+	];
+	$mfoot = [ $txt ];
+	$mask = "What do you want to do ?";
+	$mopts = { 0 => 'Return to user ' . $name,
+		"0.5" => undef,
+	};
+	$cnt = 1;
+	my %oo = ();
+	foreach my $s (@{$optorder{'user'}}) {
+		next if (!$s);
+		next if ($optdesc{'user'}->{$s}->{'type'} eq 'e');
+		next if ($optdesc{'user'}->{$s}->{'nosave'} eq 1);
+		next if ($mode eq 'normal' &&
+				$optdesc{'user'}->{$s}->{'adv'} eq 1);
+		$mopts->{$cnt} = "Change $s: ";
+		$mopts->{$cnt} .= $n->{$s} if (defined $n->{$s});
+		$oo{$cnt} = $s;
+		$cnt++;
+	}
+
+	$act = printMenu($mhead, $mopts, $mfoot, $mask);
+	print($clear_string);
+	if ($act eq 0) {
+		return;
+	} elsif ($act =~ /^\d+$/) {
+		my $c = $cnt-1;
+		if (($cnt-$act) le 0) {
+			$out = "There are only $c options";
+		} else {
+			my $on = $oo{$act};
+			$cf{'users'}[$num]->{$on} = askOpt(
+				$optdesc{'user'}->{$on},
+				$cf{'users'}[$num]->{$on});
+			$out = "Option $on set";
+			pause();
+		}
+	} else {
+		$out = "Invalid option ID";
+	}
+	printEditUserOptions($num, $out);
+
+
 }
 
 sub printEditUser {
@@ -975,8 +1081,8 @@ sub printEditUser {
 	} elsif ($act eq 3) {
 		return delUser($num);
 	} elsif ($act =~ /^\d+$/) {
-		my $c = (scalar @{$sub});
-		if ($c le $act-4) {
+		my $c = $cnt-4;
+		if (($cnt-$act) le 0) {
 			$out = "This user has only $c connections";
 		} else {
 			$out = printEditConnection($num, $act-4)
@@ -1000,9 +1106,6 @@ sub printEditNetwork {
 	$sub = $n->{'server'};
 	$mhead = [
 		"Edit network $name",
-		undef,
-		undef,
-		$warn,
 	];
 	$mfoot = [ $txt ];
 	$mask = "What do you want to do ?";
@@ -1027,8 +1130,8 @@ sub printEditNetwork {
 	} elsif ($act eq 2) {
 		return delNetwork($num);
 	} elsif ($act =~ /^\d+$/) {
-		my $c = (scalar @{$sub});
-		if ($c le $act-3) {
+		my $c = $cnt-3;
+		if (($cnt-$act) le 0) {
 			$out = "This network has only $c servers";
 		} else {
 			$out = deleteServer($num, $act-3)
@@ -1050,7 +1153,7 @@ sub main_menu {
 		3	=> 'Add a new user',
 		4	=> 'View/Edit/Unset global options',
 		5	=> 'View/Edit/Delete networks',
-		6	=> 'View/Edit/Delete users (todo)',
+		6	=> 'View/Edit/Delete users',
 		7	=> 'Generate a server certificate/key pair',
 		8	=> 'Load saved config (todo)',
 		9	=> 'Parse and load current config (todo)',
