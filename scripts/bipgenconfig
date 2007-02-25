@@ -1,14 +1,14 @@
 #!/usr/bin/env perl
 
 use strict;
-#use serialize;
 use IO::File;
 use Data::Dumper;
 
 my $CFILE = $ENV{'HOME'} . '/.bip/bip.conf.autogen';
-my $CONFIG = ".config";
+my $sfile = $ENV{'HOME'} . '/.bip/bipgenconfig.store';
+my $SERIALIZE_DBG = 1;
 my %cf;
-my $debug = 0;
+my $DEBUG = 0;
 my $global_done = 0;
 my $cert_done = 0;
 my $mode = 'normal';
@@ -75,7 +75,7 @@ my %optdesc = (
 		'blreset_on_talk' => { 'type' => 'b', 'adv' => 0,
 			'optional' => 1,
 			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'Reset backlog when an attached client sends is talking ?' },
+			'desc' => 'Reset backlog each time an attached client "talks" ?' },
 	},
 
 	'network' => {
@@ -384,13 +384,20 @@ sub checkDepends {
 }
 
 sub loadConfig {
-	-e "$CONFIG" || return "There's no saved configuration at the moment";
-	my $data;
-	my $fh = new IO::File;
-	$fh->open($CONFIG) || return "Unable to open $CONFIG";
-	while ($data .= <$fh>) {};
-	%cf = unserialize($data) || return "Invalid format in $CONFIG";
-	return "Config loaded from $CONFIG";
+	my ($f) = @_;
+	my ($fh, $data, $hr);
+
+	$fh = new IO::File;
+	$data = '';
+	$fh->open($f) || return "Unable to open $f";
+	while (<$fh>) {
+		chomp();
+		$data .= $_;
+	}
+	$fh->close;
+	$hr = unserialize($data) || return "Invalid format in $f";
+	%cf = %{$hr};
+	return "Config loaded from $f";
 }
 
 sub resetConfig {
@@ -398,10 +405,10 @@ sub resetConfig {
 	$r eq 'false' && return "Reset config aborted";
 
 	%cf = ();
-	-e "$CONFIG" || return "Configuration cleared";
-	my $r = askbool("Do you want to delete saved configuration file $CONFIG too ?", 'false');
+	-e "$sfile" || return "Configuration cleared";
+	my $r = askbool("Do you want to delete saved configuration file $sfile too ?", 'false');
 	if ($r eq 'true') {
-		unlink($CONFIG) || return "Unable to remove file $CONFIG, current config has been cleared";
+		unlink($sfile) || return "Unable to remove file $sfile, current config has been cleared";
 		return "Configuration cleared, saved-configuration file removed";
 	}
 	return "Configuration cleared";
@@ -416,7 +423,7 @@ sub setOptions {
 		my $e = $optdesc{'global'}->{$n};
 		my $r = checkDepends($n, $e);
 		if ($r) {
-			print("$r\n") if ($debug);
+			print("$r\n") if ($DEBUG);
 			$cf{'global'}->{$n} = undef;
 			next;
 		}
@@ -501,7 +508,10 @@ sub writeConfig {
 
 	$ts = localtime(time);
 	$fh = new IO::File;
-	$fh->open('> ' . $f) || return "Unable to open $f for writing";
+	if (!$fh->open('> ' . $f)) {
+		print("Unable to open $f for writing\n");
+		return;
+	}
 	print $fh "# vim:ft=bip:ts=2\n";
 	print $fh "# Auto-generated BIP IRC Proxy configuration $ts \n";
 	print $fh "#\n";
@@ -531,7 +541,28 @@ sub writeConfig {
 	print $fh "\n";
 	$fh->close;
 	print("Configuration saved in $f\n");
+	my $u = (exists($cf{'users'}) ? scalar @{$cf{'users'}}
+		: 0);
+	my $n = (exists($cf{'networks'}) ? scalar @{$cf{'networks'}}
+		: 0);
+	print "You haven't set global options\n" if (!$global_done);
+	print "$u users defined, $n networks defined\n";
+	print "The certificate/key pair is in $certout\n"
+		if ($cert_done eq 1);
+	print "Configuration has been generated in $CFILE\n";
+		print "You have to rename all generated files to use them\n";
 	return;
+}
+
+sub storeConfig {
+	my ($f) = @_;
+	my ($fh);
+
+	$fh = new IO::File;
+	$fh->open('> ' . $f) || return "Unable to open $f for writing";
+	print $fh serialize(\%cf);
+	$fh->close;
+	return "Configuration stored in $f";
 }
 
 sub printBlock {
@@ -575,7 +606,7 @@ sub addEntry {
 		my $r = checkDepends($n, $v);
 		if ($r) {
 			$e->{$n} = undef;
-			print("$r\n") if ($debug);
+			print("$r\n") if ($DEBUG);
 			next;
 		}
 		if ($v->{'type'} eq 'e') {
@@ -1151,17 +1182,20 @@ sub main_menu {
 		1	=> 'Set global options',
 		2	=> 'Add a new network',
 		3	=> 'Add a new user',
-		4	=> 'View/Edit/Unset global options',
+		3.5	=> undef,
+		4	=> 'View global options',
 		5	=> 'View/Edit/Delete networks',
 		6	=> 'View/Edit/Delete users',
 		7	=> 'Generate a server certificate/key pair',
-		8	=> 'Load saved config (todo)',
-		9	=> 'Parse and load current config (todo)',
-		10	=> 'Reset config options',
-		11	=> 'Switch to ' . invMode($mode) . ' mode',
-		12	=> undef,
-		90	=> 'Save and exit',
-		91	=> 'Debug (will be exit)',
+		8	=> 'Switch to ' . invMode($mode) . ' mode',
+		8.5	=> undef,
+		10	=> 'Exit: store, write configuration and exit',
+		11	=> 'Exit without saving',
+		12	=> 'Store configuration for later use',
+		12.5	=> undef,
+		20	=> 'Reset config options',
+		21	=> 'Load stored config',
+		22	=> 'Parse and load current config (todo)',
 	};
 	$mhead = [
 		"Welcome to bip configuration program.",
@@ -1172,26 +1206,9 @@ sub main_menu {
 
 	$act = printMenu($mhead, $mopts, $mfoot, $mask);
 	print($clear_string);
-	if ($act eq 8) {
-		$out = loadConfig();
-	} elsif ($act eq 10) {
-		$out = resetConfig();
-	} elsif ($act eq 4) {
-		$out = printOptions();
+	if ($act eq 0) {
 	} elsif ($act eq 1) {
 		$out = setOptions();
-	} elsif ($act eq 6) {
-		$out = printUsers();
-	} elsif ($act eq 3) {
-		$out = addEntry('user');
-		if ($out) {
-			push(@{$cf{'users'}}, $out);
-			$out = "New user added";
-		} else {
-			$out = "User add failed";
-		}
-	} elsif ($act eq 5) {
-		$out = printNetworks();
 	} elsif ($act eq 2) {
 		$out = addEntry('network');
 		if ($out) {
@@ -1200,30 +1217,42 @@ sub main_menu {
 		} else {
 			$out = "Network add failed";
 		}
+	} elsif ($act eq 3) {
+		$out = addEntry('user');
+		if ($out) {
+			push(@{$cf{'users'}}, $out);
+			$out = "New user added";
+		} else {
+			$out = "User add failed";
+		}
+	} elsif ($act eq 4) {
+		$out = printOptions();
+	} elsif ($act eq 5) {
+		$out = printNetworks();
+	} elsif ($act eq 6) {
+		$out = printUsers();
 	} elsif ($act eq 7) {
 		$out = makeCert();
-	} elsif ($act eq 11) {
+	} elsif ($act eq 8) {
 		$mode = invMode();
 		$out = "Ok, configuration mode set to $mode";
-	} elsif ($act eq 90) {
-		$out = writeConfig($CFILE);
-		if (!$out) {
-			my $u = (exists($cf{'users'}) ? scalar @{$cf{'users'}}
-					: 0);
-			my $n = (exists($cf{'networks'}) ? scalar @{$cf{'networks'}}
-					: 0);
-			print "You haven't set global options\n" if (!$global_done);
-			print "$u users defined, $n networks defined\n";
-			print "The certificate/key pair is in $certout\n"
-				if ($cert_done eq 1);
-			print "Configuration has been generated in $CFILE\n";
-			print "You have to rename all generated files to use them\n";
-			exit(0);
-		}
-	} elsif ($act eq 91) {
-		print Dumper(\%cf);
+	} elsif ($act eq 10) {
+		print Dumper(\%cf) if ($DEBUG);
+		$out = storeConfig($sfile);
+		print ("$out\n") if ($out);
+		writeConfig($CFILE);
+		exit(0);
+	} elsif ($act eq 11) {
+		print Dumper(\%cf) if ($DEBUG);
+		exit(0);
+	} elsif ($act eq 12) {
+		$out = storeConfig($sfile);
+		print ("$out\n") if ($out);
 		pause();
-#		exit(0);
+	} elsif ($act eq 20) {
+		$out = resetConfig();
+	} elsif ($act eq 21) {
+		$out = loadConfig($sfile);
 	}
 	main_menu($out);
 }
@@ -1235,3 +1264,374 @@ sub invMode {
 main_menu();
 #sets config backlog
 #different user/nick/real ?
+
+
+####################
+# Serialize code, from Scott Hurring's serialize serialize module
+# see http://hurring.com/ for more
+# TODO maybe use Storable ?
+
+sub serialize {
+	my ($value) = @_;
+	return serialize_value($value);
+}
+
+sub serialize_key {
+	my ($value) = @_;
+	my $s;
+	
+	# Serialize this as an integer
+	if ($value =~ /^\d+$/) {
+		# Kevin Haidl - PHP can only handle (((2**32)/2) - 1) 
+		# before value must be serialized as a double
+		if (abs($value) > ((2**32)/2-1)) {
+			$s = "d:$value;";
+		}
+		else {
+			$s = "i:$value;";
+		}
+	}
+	
+	# Serialize everything else as a string
+	else {
+		my $vlen = length($value);
+		$s = "s:$vlen:\"$value\";";
+	}
+	
+	return $s;
+}
+
+sub serialize_value {
+	my ($value) = @_;
+	my $s;
+	
+	$value = defined($value) ? $value : '';
+	
+	# This is a hash ref
+	if ( ref($value) =~ /hash/i) {
+		#The data in the hashref
+		my $num = keys(%{$value});
+		$s .= "a:$num:{";
+		foreach my $k ( keys(%$value) ) {
+			$s .= serialize_key( $k );
+			$s .= serialize_value( $$value{$k} );
+		}
+		$s .= "}";
+	}
+
+	# This is an array ref
+	elsif ( ref($value) =~ /array/i) {
+		#The data in the arrayref
+		my $num = @{$value};
+		$s .= "a:$num:{";
+		for (my $k=0; $k < @$value; $k++ ) {
+			$s .= serialize_key( $k );
+			$s .= serialize_value( $$value[$k] );
+		}
+		$s .= "}";
+	}
+
+	# This is a double
+	# Thanks to Konrad Stepien <konrad@interdata.net.pl>
+	# for pointing out correct handling of negative numbers.
+	elsif ($value =~ /^\-?(\d+)\.(\d+)$/) {
+		$s = "d:$value;";
+	}
+
+	# This is an integer
+	elsif ($value =~ /^\-?\d+$/) {
+		# Kevin Haidl - PHP can only handle (((2**32)/2) - 1) 
+		# before value must be serialized as a double
+		if (abs($value) > ((2**32)/2-1)) {
+			$s = "d:$value;";
+		}
+		else {
+			$s = "i:$value;";
+		}
+	}
+	
+	# This is a NULL value
+	#
+	# Only values of "\0" will be serialized as NULL
+	# Empty strings are not NULL, they are simply empty strings.
+	# @note Differs from v0.7 where string "NULL" was serialized as "N;"
+	elsif ($value eq "\0")  {
+		$s = "N;";
+	}
+	
+	# Anything else is interpreted as a string
+	else {
+		my $vlen = length($value);
+		$s = "s:$vlen:\"$value\";";
+	}
+	
+	return $s;
+}
+
+sub unserialize {
+	my ($string) = @_;
+	return unserialize_value($string);
+}
+
+sub unserialize_value {
+	my ($value) = @_;
+	
+	# Thanks to Ron Grabowski [ronnie (at) catlover.com] for suggesting
+	# the need for single-value unserialize code
+	
+	# This is an array
+	if ($value =~ /^a:(\d+):\{(.*)\}$/) {
+		serialize_dbg("Unserializing array");
+		
+		my @chars = split(//, $2);
+		
+		# Add one extra char at the end so that the loop has one extra
+		# cycle to hit the 'set' state and set the final value
+		# Otherwise it'll terminate before setting the last value
+		push(@chars, ';');
+		
+		return unserialize_sub({}, $1*2, \@chars);
+	}
+	
+	# This is a single string
+	elsif ($value =~ /^s:(\d+):(.*);$/) {
+		serialize_dbg("Unserializing single string ($value)");
+		#$string =~ /^s:(\d+):/;
+		return $2;
+		#return substr($string, length($1) + 4, $1);
+	}
+		
+	# This is a single integer or double value
+	elsif ($value =~ /^(i|d):(\-?\d+\.?\d+?);$/) {
+		serialize_dbg("Unserializing integer or double ($value)");
+		return $2
+		#substr($string, 2) + 0;
+	}
+	
+	# This is a NULL value
+	# Thanks to Julian Jares [jjares at uolsinectis.com.ar]
+	elsif ($value == /^N;$/i) {
+		serialize_dbg("Unserializing NULL value ($value)");
+		return "\0";
+	}
+	
+	# This is a boolean
+	# Thanks to Charles M Hall (cmhall at hawaii dot edu)
+	elsif ($value =~/^b:(\d+);$/) {
+		serialize_dbg("Unserializing boolean value ($value)");
+		return $1;
+	}
+	
+	# Invalid data
+	else {
+		serialize_dbg("Unserializing BAD DATA!\n($value)");
+		die("Trying to unserialize bad data!");
+		return '';
+	}
+
+}
+
+sub unserialize_sub {
+	my ($hashref, $keys, $chars) = @_;
+	my ($temp, $keyname, $skip, $strlen);
+	my $mode = 'normal';		#default mode
+	
+	serialize_dbg("> unserialize: $hashref, $keys, $chars");
+
+	# Loop through the data char-by-char, eating them as we go...
+	while ( defined(my $c = shift @{$chars}) )
+	{
+		serialize_dbg("\twhile [$mode] = $c (skip=$skip)");
+	
+		# Processing a serialized string
+		# Format: s:length:"data"
+		if ($mode eq 'string') {
+			$skip = 1;	#how many chars should 'readstring' skip?
+					#skip initial quote " at the beginning.
+	
+			#find out how many chars need to be read
+			if ($c =~ /\d+/) {
+				#get the length of string
+				$strlen = $strlen . $c;
+			}
+	
+			#if we already have a length, and see ':', we know that
+			#the actual string is coming next (see format above)
+	
+			if (($strlen =~ /\d+/) && ($c eq ':')) {
+				serialize_dbg("[string] length = $strlen");
+				$mode = 'readstring';
+			}
+	
+		}
+		# Read $strlen number of characters into $temp
+		elsif ($mode eq 'readstring') {
+			next			if ($skip && ($skip-- > 0));
+			$mode = 'set', next	if (!$strlen--);
+	
+			$temp .= $c;
+	
+		}
+	
+		# Process a serialized integer
+		# Format: i:data
+		elsif ($mode eq 'integer') {
+			next 			if ($c eq ':');
+			$mode = 'set', next	if ($c eq ';');
+	
+			# Grab the digits
+			# Thanks to Konrad Stepien <konrad@interdata.net.pl>
+			# for pointing out correct handling of negative numbers.
+			if ($c =~ /\-|\d+/) {
+				if ($c eq '-') {
+					$temp .= $c unless $temp;
+				} else {
+					$temp .= $c;
+				}
+			}
+		}
+	
+		# Process a serialized double
+		# Format: d:data
+		elsif ($mode eq 'double') {
+			next 			if ($c eq ':');
+			$mode = 'set', next	if ($c eq ';');
+	
+			# Grab the digits
+			# Thanks to Konrad Stepien <konrad@interdata.net.pl>
+			# for pointing out correct handling of negative numbers.
+			if ($c =~ /\-|\d+|\./) {
+				if ($c eq '-') {
+					$temp .= $c unless $temp;
+				} else {
+					$temp .= $c;
+				}
+			}
+		}
+	
+		# Process a serialized NULL value
+		# Format: N
+		# Thanks to Julian Jares [jjares at uolsinectis.com.ar]
+		elsif ($mode eq 'null') {
+	
+			# Set $temp to something perl will recognize as null "\0"
+			# Don't unserialize as an empty string, becuase PHP 
+			# serializes empty srings as empty strings, not null.
+			$temp = "\0";
+	
+			$mode = 'set', next;
+		}
+	
+		# Process an array
+		# Format: a:num_of_keys:{...}
+		elsif ($mode eq 'array') {
+	
+			# Start of array definition, start processing it
+			if ($c eq '{') {
+	
+				$temp = unserialize_sub( $$hashref{$keyname}, ($temp*2), $chars );
+
+				# If temp is an empty array, change to {}
+				# Thanks to Charles M Hall (cmhall at hawaii dot edu)
+				if(!defined($temp) || $temp eq "") {
+					$temp = {};
+				}
+				
+				$mode = 'set', next;
+			}
+	
+			# Reading in the number of keys in this array
+			elsif ($c =~ /\d+/) {
+				$temp = $temp . $c;
+				serialize_dbg("array_length = $temp ($c)");
+			}
+		}
+	
+		# Do something with the $temp variable we read in.
+		# It's either holding data for a key or a value.
+		elsif ($mode eq 'set') {
+	
+			# The keyname has already been set, so that means
+			# $temp holds the value
+			if (defined($keyname)) {
+				serialize_dbg("set [$keyname]=$temp");
+	
+				$$hashref{$keyname} = $temp;	
+				
+				# blank out keyname
+				undef $keyname;
+			}
+	
+			# $temp holds a keyname
+			else {
+				serialize_dbg("set KEY=$temp");
+				$keyname = $temp;
+			}
+	
+			undef $temp;
+			$mode = 'normal';	# dont eat any chars
+		}
+	
+		# Figure out what the upcoming value is and set the state for it.
+		if ($mode eq 'normal') {
+			# Blank out temp vars used by previous state.
+			$strlen = $temp = '';
+	
+			if (!$keys) {
+				serialize_dbg("return normally, finished processing keys");
+				return $hashref;
+			}
+	
+			# Upcoming information is integer
+			if ($c eq 'i') {
+				$mode = 'integer';
+				$keys--;
+			}
+			# Upcoming information is a bool,
+			# process the same as an integer
+			if ($c eq 'b') {
+				$mode = 'integer';
+				$keys--;
+			}
+			# Upcoming information is a double
+			if ($c eq 'd') {
+				$mode = 'double';
+				$keys--;
+			}
+			# Upcoming information is string
+			if ($c eq 's') {
+				$mode = 'string';
+				$keys--;
+			}
+			# Upcoming information is array/hash
+			if ($c eq 'a') {
+				$mode = 'array';
+				$keys--;
+			}
+			# Upcoming information is a null value
+			if ($c eq 'N') {
+				$mode = 'null';
+				$keys--;
+			}
+		}
+
+	} #while there are chars to process
+
+
+	# You should never hit this point.
+	# If you do hit this, it means that the code was expecting more 
+	# characters than it was given.
+	# Perhaps your data was unexpectedly truncated or mutilated?
+
+	serialize_dbg("> unserialize_sub ran out of chars when it was expecting more.");
+	die("unserialize_sub() ran out of characters when it was expecting more.");
+	
+	return 0;
+}
+
+sub serialize_dbg {
+	my ($string) = @_;
+	if ($SERIALIZE_DBG) {
+		print $string ."\n";
+	}
+}
