@@ -530,7 +530,7 @@ sub writeConfig {
 		next if ($cf{'global'}->{$k} eq undef);
 		next if ($optdesc{'global'}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{'global'}->{$k}->{'type'};
-		if ($t eq 's' || $t eq 'b') {
+		if ($t eq 's') {
 			print $fh "$k = \"" . $cf{'global'}->{$k} . "\";\n";
 		} else {
 			print $fh "$k = " . $cf{'global'}->{$k} . ";\n";
@@ -586,7 +586,7 @@ sub printBlock {
 		next if ($e->{$k} eq undef);
 		next if ($optdesc{$name}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{$name}->{$k}->{'type'};
-		if ($t eq 's' || $t eq 'b') {
+		if ($t eq 's') {
 			$out .= $prefix . "\t$k = \"" . $e->{$k} . "\";\n";
 		} elsif (ref($e->{$k}) eq 'ARRAY') {
 			foreach my $e2 (@{$e->{$k}}) {
@@ -596,7 +596,7 @@ sub printBlock {
 			$out .= $prefix .  "\t$k = " . $e->{$k} . ";\n";
 		}
 	}
-	$out .= $prefix . "}\n\n";
+	$out .= $prefix . "};\n\n";
 	return $out;
 }
 
