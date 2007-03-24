@@ -586,7 +586,7 @@ sub printBlock {
 		next if ($e->{$k} eq undef);
 		next if ($optdesc{$name}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{$name}->{$k}->{'type'};
-		if ($t eq 's') {
+		if ($t eq 's' || $t eq 'p') {
 			$out .= $prefix . "\t$k = \"" . $e->{$k} . "\";\n";
 		} elsif (ref($e->{$k}) eq 'ARRAY') {
 			foreach my $e2 (@{$e->{$k}}) {
