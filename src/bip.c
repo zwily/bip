@@ -985,6 +985,7 @@ int main(int argc, char **argv)
 		exit(28);
 	}
 
+	check_dir(conf_log_root, 1);
 	fd = do_pid_stuff();
 	pid_t pid = 0;
 	if (conf_daemonize)

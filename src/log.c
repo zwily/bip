@@ -38,7 +38,7 @@ static char *_log_wrap(char *dest, char *line);
 
 /* TODO: change fatal("out of memory") to cleanup & return NULL */
 
-int check_dir(char *filename)
+int check_dir(char *filename, int is_fatal)
 {
 	int err;
 	struct stat statbuf;
@@ -47,15 +47,22 @@ int check_dir(char *filename)
 	if (err && errno == ENOENT) {
 		err = mkdir(filename, 0750);
 		if (err) {
+			if (is_fatal)
+				fatal("mkdir(%s) %s", filename,
+						strerror(errno));
 			mylog(LOG_ERROR, "mkdir(%s) %s", filename,
 					strerror(errno));
 			return 1;
 		}
 	} else if (err) {
+		if (is_fatal)
+			fatal("stat(%s) %s", filename, strerror(errno));
 		mylog(LOG_ERROR, "stat(%s) %s", filename,
 				strerror(errno));
 		return 1;
 	} else if (!(statbuf.st_mode & S_IFDIR)) {
+		if (is_fatal)
+			fatal("%s is not a directory", filename);
 		mylog(LOG_ERROR, "%s is not a directory", filename);
 		return 1;
 	}
@@ -88,7 +95,7 @@ int check_dir_r(char *dirname)
 		count += pos;
 		*(dir + count) = '\0';
 		mylog(LOG_DEBUGVERB,"check_dir_r: %s", dir);
-		if (check_dir(dir)) {
+		if (check_dir(dir, 0)) {
 			free(dir);
 			return 1;
 		}

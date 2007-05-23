@@ -14,8 +14,10 @@ use strict;
 use IO::File;
 use Data::Dumper;
 
-my $CFILE = $ENV{'HOME'} . '/.bip/bip.conf.autogen';
-my $sfile = $ENV{'HOME'} . '/.bip/bipgenconfig.store';
+my $bipdir = $ENV{'HOME'} . '/.bip';
+my $CFILE = $bipdir . '/bip.conf.autogen';
+my $sfile = $bipdir . '/bipgenconfig.store';
+my $certout = $bipdir . '/bip.pem.autogen';
 my $SERIALIZE_DBG = 1;
 my %cf;
 my $DEBUG = 0;
@@ -26,7 +28,6 @@ my $mode = 'normal';
 my $maxlevel = 5;
 my $bipmkpw;
 my $tmpcrt = "/tmp/bip-cert.cnf";
-my $certout = $ENV{'HOME'} . '/.bip/bip.pem.autogen';
 my %optdesc = (
 	'global' => {
 		'ip' => { 'type' => 's', 'adv' => 1, 'default' => '0.0.0.0',
@@ -39,7 +40,7 @@ my %optdesc = (
 			'optional' => 1,
 			'desc' => 'Do you want to enable client side SSL ?' },
 		'pid_file' => { 'type' => 's', 'adv' => 1, 'optional' => 1,
-			'default' => $ENV{'HOME'} . '/.bip/bip.pid',
+			'default' => $bipdir . '/bip.pid',
 			'desc' => 'Where do you want the pidfile to be stored ?' },
 		'log' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
 			'optional' => 1,
@@ -54,7 +55,7 @@ my %optdesc = (
 			'desc' => 'Define bip\'s system logs verbosity level {less 0 - 7 tremendous}:' },
 		'log_root' => { 'type' => 's', 'adv' => 0,
 			'optional' => 1,
-			'default' => $ENV{'HOME'} . '/.bip/logs',
+			'default' => $bipdir . '/logs',
 			'depends' => 'log', 'depval' => 'true',
 			'desc' => 'In which directory do you want logs to be stored ?' },
 		'log_format' => { 'type' => 's', 'adv' => 1, 'default' => '%n/%Y-%m/%c.%d.log', 
@@ -1269,6 +1270,14 @@ sub main_menu {
 
 sub invMode {
 	return ($mode eq 'advanced' ? 'normal' : 'advanced');
+}
+
+if (! -e $bipdir) {
+	mkdir($bipdir) || fatal("Unable to create bip's dir `$bipdir'");
+} elsif (! -d $bipdir) {
+	fatal("Bip's dir `$bipdir' already exists and is not a directory");
+} elsif (! -w $bipdir) {
+	fatal("Bip's dir `$bipdir' already exists and is not writable");
 }
 
 main_menu();
