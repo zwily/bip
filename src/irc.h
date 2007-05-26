@@ -85,7 +85,7 @@ struct link {
 
 	/* connection state (reconnecting, was_connected ...) */
 	int recon_timer;
-	time_t last_connection;
+	time_t last_connection_attempt;
 
 	/** link options */
 
@@ -168,6 +168,7 @@ struct link_client {
 #define IRCS_CONNECTED (2)
 #define IRCS_WAS_CONNECTED (3)
 #define IRCS_RECONNECTING (4)
+#define IRCS_TIMER_WAIT (5)
 
 struct log;
 
@@ -195,14 +196,26 @@ struct link_server {
 	int lagtest_timeout;
 };
 
+typedef struct bip {
+	connection_t *listener;
+	/* all connected tcp connections */
+	list_t conn_list;
+	/* all links */
+	list_t link_list;
+	/* connecting clients */
+	list_t connecting_client_list;
+} bip_t;
+
+void bip_init(bip_t *bip);
 struct link_client *irc_client_new(void);
 struct link_server *irc_server_new(struct link *link, connection_t *conn);
 void irc_server_free(struct link_server *is);
 struct client *client_new();
-void irc_main(connection_t *inc, list_t *clientl);
+void irc_main(bip_t *);
 int ischannel(char p);
 void irc_client_close(struct link_client *);
 void irc_client_free(struct link_client *);
 struct link *irc_link_new();
 void unbind_from_link(struct link_client *ic);
 #endif
+

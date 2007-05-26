@@ -338,9 +338,12 @@ void rotate_who_client(struct link *link)
  * parses:join part mode kick kill privmsg quit nick names
  * returns: -1 invalid protocol
  */
-int irc_dispatch_server(struct link_server *server, struct line *line)
+int irc_dispatch_server(bip_t *bip, struct link_server *server,
+		struct line *line)
 {
 	int ret = OK_COPY;
+	/* shut gcc up */
+	(void)bip;
 
 	if (line->elemc == 0)
 		return ERR_PROTOCOL;
@@ -568,14 +571,9 @@ void unbind_from_link(struct link_client *ic)
 		fatal("unbind_from_link");
 
 	if (l->who_client == ic) {
-		mylog(LOG_DEBUG, "unbind_from_link:  %p: %d",
-				l->who_client, ic->who_count);
-		l->who_client = NULL;
-	} else {
-		mylog(LOG_DEBUG,
-			"unbind_from_link: nothing to do %p != %p: %d",
-				ic, l->who_client,
+		mylog(LOG_DEBUG, "unbind_from_link:  %p: %d", l->who_client,
 				ic->who_count);
+		l->who_client = NULL;
 	}
 
 	for (i = i + 1; i < l->l_clientc; i++)
@@ -667,8 +665,8 @@ static void irc_cli_make_join(struct link_client *ic)
 	}
 }
 
-static int irc_cli_startup(struct link_client *ic, struct line *line,
-		list_t *linkl)
+static int irc_cli_startup(bip_t *bip, struct link_client *ic,
+		struct line *line)
 {
 	char *init_nick;
 	char *user, *pass, *connname;
@@ -693,10 +691,11 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	}
 
 	list_iterator_t it;
-	for (list_it_init(linkl, &it); list_it_item(&it); list_it_next(&it)) {
+	for (list_it_init(&bip->link_list, &it); list_it_item(&it);
+			list_it_next(&it)) {
 		struct link *l = list_it_item(&it);
-		if (strcmp(user, l->username) == 0
-				&& strcmp(connname, l->name) == 0) {
+		if (strcmp(user, l->username) == 0 &&
+				strcmp(connname, l->name) == 0) {
 			if (chash_cmp(pass, l->password, l->seed) == 0) {
 				bind_to_link(l, ic);
 				break;
@@ -743,6 +742,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 		return OK_CLOSE;
 	}
 
+	list_remove(&bip->connecting_client_list, ic);
 	TYPE(ic) = IRC_TYPE_CLIENT;
 
 	for (list_it_init(&LINK(ic)->init_strings, &it);
@@ -779,7 +779,7 @@ static int irc_cli_startup(struct link_client *ic, struct line *line,
 	return OK_FORGET;
 }
 
-static int irc_cli_nick(struct link_client *ic, struct line *line, list_t *cl)
+static int irc_cli_nick(bip_t *bip, struct link_client *ic, struct line *line)
 {
 	if (line->elemc != 2)
 		return ERR_PROTOCOL;
@@ -793,16 +793,17 @@ static int irc_cli_nick(struct link_client *ic, struct line *line, list_t *cl)
 	ic->init_nick = strdup(line->elemv[1]);
 
 	if ((ic->state & IRCC_READY) == IRCC_READY)
-		return irc_cli_startup(ic, line, cl);
+		return irc_cli_startup(bip, ic, line);
 
 	if ((ic->state & IRCC_PASS) != IRCC_PASS)
 		WRITE_LINE2(CONN(ic), P_SERV, "NOTICE", ic->init_nick,
-				"You should type /QUOTE PASS your_username:your_password:your_connection_name");
+				"You should type /QUOTE PASS your_username:"
+				"your_password:your_connection_name");
 
 	return OK_FORGET;
 }
 
-static int irc_cli_user(struct link_client *ic, struct line *line, list_t *cl)
+static int irc_cli_user(bip_t *bip, struct link_client *ic, struct line *line)
 {
 	if (line->elemc != 5)
 		return ERR_PROTOCOL;
@@ -812,11 +813,11 @@ static int irc_cli_user(struct link_client *ic, struct line *line, list_t *cl)
 
 	ic->state |= IRCC_USER;
 	if ((ic->state & IRCC_READY) == IRCC_READY)
-		return irc_cli_startup(ic, line, cl);
+		return irc_cli_startup(bip, ic, line);
 	return OK_FORGET;
 }
 
-static int irc_cli_pass(struct link_client *ic, struct line *line, list_t *cl)
+static int irc_cli_pass(bip_t *bip, struct link_client *ic, struct line *line)
 {
 	if (line->elemc != 2)
 		return ERR_PROTOCOL;
@@ -829,7 +830,7 @@ static int irc_cli_pass(struct link_client *ic, struct line *line, list_t *cl)
 		free(ic->init_pass);
 	ic->init_pass = strdup(line->elemv[1]);
 	if ((ic->state & IRCC_READY) == IRCC_READY)
-		return irc_cli_startup(ic, line, cl);
+		return irc_cli_startup(bip, ic, line);
 	return OK_FORGET;
 }
 
@@ -1036,7 +1037,8 @@ static int irc_dispatch_trust_client(struct link_client *ic, struct line *line)
 #endif
 
 int irc_cli_bip(struct link_client *ic, struct line *line);
-static int irc_dispatch_client(struct link_client *ic, struct line *line)
+static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
+		struct line *line)
 {
 	int r = OK_COPY;
 	if (line->elemc == 0)
@@ -1059,7 +1061,7 @@ static int irc_dispatch_client(struct link_client *ic, struct line *line)
 	} else if (strcmp(line->elemv[0], "PART") == 0) {
 		r = irc_cli_part(ic, line);
 	} else if (strcmp(line->elemv[0], "NICK") == 0) {
-		r = irc_cli_nick(ic, line, NULL);
+		r = irc_cli_nick(bip, ic, line);
 	} else if (strcmp(line->elemv[0], "QUIT") == 0) {
 		r = irc_cli_quit(ic, line);
 	} else if (strcmp(line->elemv[0], "PRIVMSG") == 0) {
@@ -1145,34 +1147,34 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 	return;
 }
 
-static int irc_dispatch_loging_client(struct link_client *ic, struct line *line,
-		list_t *linkl)
+static int irc_dispatch_loging_client(bip_t *bip, struct link_client *ic,
+		struct line *line)
 {
 	if (line->elemc == 0)
 		return ERR_PROTOCOL;
 
 	if (strcmp(line->elemv[0], "NICK") == 0) {
-		return irc_cli_nick(ic, line, linkl);
+		return irc_cli_nick(bip, ic, line);
 	} else if (strcmp(line->elemv[0], "USER") == 0) {
-		return irc_cli_user(ic, line, linkl);
+		return irc_cli_user(bip, ic, line);
 	} else if (strcmp(line->elemv[0], "PASS") == 0) {
-		return irc_cli_pass(ic, line, linkl);
+		return irc_cli_pass(bip, ic, line);
 	}
 	return OK_FORGET;
 }
 
-int irc_dispatch(struct link_any *l, struct line *line, list_t *linkl)
+int irc_dispatch(bip_t *bip, struct link_any *l, struct line *line)
 {
 	switch (TYPE(l)) {
 	case IRC_TYPE_SERVER:
-		return irc_dispatch_server((struct link_server*)l, line);
+		return irc_dispatch_server(bip, (struct link_server*)l, line);
 		break;
 	case IRC_TYPE_CLIENT:
-		return irc_dispatch_client((struct link_client*)l, line);
+		return irc_dispatch_client(bip, (struct link_client*)l, line);
 		break;
 	case IRC_TYPE_LOGING_CLIENT:
-		return irc_dispatch_loging_client((struct link_client*)l,
-				line, linkl);
+		return irc_dispatch_loging_client(bip, (struct link_client*)l,
+				line);
 		break;
 #ifdef HAVE_LIBSSL		
 	case IRC_TYPE_TRUST_CLIENT:
@@ -1909,13 +1911,14 @@ static void irc_close(struct link_any *l)
 			irc_notify_disconnection(is);
 		else
 			LINK(is)->s_conn_attempt++;
+		printf("%d\n", LINK(is)->s_conn_attempt);
 		irc_server_shutdown(is);
 		log_disconnected(LINK(is)->log);
 
 		server_next(LINK(is));
 		server_cleanup(is);
-		if (LINK(is)->last_connection &&
-				time(NULL) - LINK(is)->last_connection
+		if (LINK(is)->last_connection_attempt &&
+				time(NULL) - LINK(is)->last_connection_attempt
 					< CONN_INTERVAL)
 			timer = RECONN_TIMER * (LINK(is)->s_conn_attempt);
 		mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds",
@@ -2166,9 +2169,6 @@ clean_oidentd:
 }
 #endif
 
-/* do not use */
-list_t *_connections = NULL;
-
 void timeout_clean_who_counts(list_t *conns)
 {
 	list_iterator_t it;
@@ -2192,36 +2192,21 @@ void timeout_clean_who_counts(list_t *conns)
 	}
 }
 
-struct link_client *reloading_client;
-/*
- * The main loop
- * inc is the incoming connection, clientl list a list of client struct that
- * represent the accepcted credentials
- */
-void irc_main(connection_t *inc, list_t *ll)
+void bip_init(bip_t *bip)
 {
-	list_t reconnectl;
-	list_t timerwaitl;
-	list_t connl;
-	list_t connecting_c;
-	list_t connected_c;
-	int timeleft = 1000;
-	int logflush_timer = conf_log_sync_interval;
+	memset(bip, 0, sizeof(bip_t));
+	list_init(&bip->link_list, list_ptr_cmp);
+	list_init(&bip->conn_list, list_ptr_cmp);
+}
 
-	list_init(&reconnectl, NULL);
-	list_init(&timerwaitl, NULL);
-	list_init(&connl, list_ptr_cmp);
-	list_init(&connecting_c, list_ptr_cmp);
-	list_init(&connected_c, list_ptr_cmp);
-
-	_connections = &connl;
-
-	/* XXX: This one MUST be first */
-	list_add_first(&connl, inc);
-
+void bip_recover_sighup(bip_t *bip)
+{
+	/* gcc */
+	(void)bip;
 	/*
 	 * Merge with already connected data, happens on SIGHUP
 	 */
+#if 0
 	list_iterator_t it;
 	for (list_it_init(ll, &it); list_it_item(&it); list_it_next(&it)) {
 		struct link *link = list_it_item(&it);
@@ -2252,191 +2237,185 @@ void irc_main(connection_t *inc, list_t *ll)
 				conf_errstr);
 		reloading_client = NULL;
 	}
+#endif
+}
 
+/* Called each second. */
+void bip_tick(bip_t *bip)
+{
+	static int logflush_timer = 0;
+	struct link *link;
+	list_iterator_t li;
+
+	/* log flushs */
+	if (logflush_timer-- <= 0) {
+		logflush_timer = conf_log_sync_interval;
+		log_flush_all();
+	}
+
+	/* handle tick for links: detect lags or start a reconnection */
+	for (list_it_init(&bip->link_list, &li); (link = list_it_item(&li));
+			list_it_next(&li)) {
+		if (link->l_server) {
+			if (irc_server_lag_compute(link)) {
+				log_ping_timeout(link->log);
+				list_remove(&bip->conn_list,
+						CONN(link->l_server));
+				irc_close((struct link_any *) link->l_server);
+			}
+		} else {
+			if (link->recon_timer == 0) {
+				connection_t *conn;
+				conn = irc_server_connect(link);
+				list_add_last(&bip->conn_list, conn);
+				link->last_connection_attempt = time(NULL);
+			} else {
+				link->recon_timer--;
+			}
+		}
+	}
+
+	/* drop lagging connecting client */
+	for (list_it_init(&bip->connecting_client_list, &li); list_it_item(&li);
+			list_it_next(&li)) {
+		struct link_client *ic = list_it_item(&li);
+		ic->logging_timer++;
+		if (ic->logging_timer > LOGGING_TIMEOUT) {
+			list_remove(&bip->conn_list, CONN(ic));
+			irc_close((struct link_any *)ic);
+			list_it_remove(&li);
+		}
+	}
+
+	/*
+	 * Cleanup lagging or dangling who_count buffers
+	 */
+	timeout_clean_who_counts(&bip->link_list);
+}
+
+void bip_on_event(bip_t *bip, connection_t *conn)
+{
+	struct link_any *lc = (struct link_any *)conn->user_data;
+
+	if (conn == bip->listener) {
+		struct link_client *n = irc_accept_new(conn);
+		if (!n)
+			fatal("Problem while binding local socket");
+		list_add_last(&bip->conn_list, CONN(n));
+		list_add_last(&bip->connecting_client_list, n);
+		return;
+	}
+
+	/* reached only if socket is not listening */
+	int err;
+	list_t *linel = read_lines(conn, &err);
+	if (err) {
+		if (TYPE(lc) == IRC_TYPE_SERVER) {
+			mylog(LOG_ERROR, "read_lines error, closing %s ...",
+					LINK(lc)->name);
+			irc_server_shutdown(LINK(lc)->l_server);
+		} else {
+			mylog(LOG_ERROR, "read_lines error, closing...");
+		}
+		goto prot_err;
+	}
+	if (!linel)
+		return;
+
+	char *line_s;
+	while ((line_s = list_remove_first(linel))) {
+		struct line *line;
+		mylog(LOG_DEBUG, "\"%s\"", line_s);
+		if (*line_s == 0) { /* irssi does that.*/
+			free(line_s);
+			continue;
+		}
+
+		line = irc_line(line_s);
+		if (!line) {
+			mylog(LOG_ERROR, "Error in protocol, closing...");
+			free(line_s);
+			goto prot_err_lines;
+		}
+		int r;
+		r = irc_dispatch(bip, lc, line);
+		irc_line_free(line);
+		free(line_s);
+		if (r == ERR_PROTOCOL) {
+			mylog(LOG_ERROR, "Error in protocol, "
+					"closing...");
+			goto prot_err_lines;
+		}
+		if (r == ERR_AUTH)
+			goto prot_err_lines;
+		/* XXX: not real error */
+		if (r == OK_CLOSE)
+			goto prot_err_lines;
+
+	}
+	list_free(linel);
+	return;
+prot_err_lines:
+	while ((line_s = list_remove_first(linel)))
+		free(line_s);
+prot_err:
+	list_remove(&bip->conn_list, conn);
+	if (linel)
+		list_free(linel);
+	if (lc) {
+		if (TYPE(lc) == IRC_TYPE_LOGING_CLIENT)
+			list_remove(&bip->connecting_client_list, lc);
+		irc_close(lc);
+	}
+}
+
+struct link_client *reloading_client;
+/*
+ * The main loop
+ * inc is the incoming connection, clientl list a list of client struct that
+ * represent the accepcted credentials
+ */
+void irc_main(bip_t *bip)
+{
+	int timeleft = 1000;
+
+	/* XXX: This one MUST be first */
+	/* TODO: maybe not anymore, check */
+	printf("%p\n", bip->listener);
+	list_add_first(&bip->conn_list, bip->listener);
+
+	bip_recover_sighup(bip);
 
 	while (!sighup) {
-		struct link *link;
 		connection_t *conn;
 
 		if (timeleft == 0) {
 			/*
 			 * Compute timeouts for next reconnections and lagouts
 			 */
-			static int throttle_prot = S_CONN_DELAY - 1;
 
 			timeleft = 1000;
-
-			if (++throttle_prot == S_CONN_DELAY) {
-				throttle_prot = 0;
-
-				/* Lauch one reconnection at a time */
-				if ((link = list_remove_first(&reconnectl))) {
-					conn = irc_server_connect(link);
-					list_add_last(&connl, conn);
-					link->last_connection = time(NULL);
-				}
-			}
-
-			/* log flushs */
-			if (logflush_timer-- <= 0) {
-				logflush_timer = conf_log_sync_interval;
-				log_flush_all();
-			}
-
-			/* reconnects */
-			list_iterator_t li;
-			for (list_it_init(&timerwaitl, &li); list_it_item(&li);
-					list_it_next(&li)) {
-				struct link *l = list_it_item(&li);
-				if (l->recon_timer <= 0) {
-					list_it_remove(&li);
-					list_add_last(&reconnectl, l);
-				} else {
-					l->recon_timer--;
-				}
-			}
-
-			/* server lags */
-			for (list_it_init(ll, &li); list_it_item(&li);
-					list_it_next(&li)) {
-				struct link *l = list_it_item(&li);
-				if(l->l_server && irc_server_lag_compute(l)) {
-					log_ping_timeout(l->log);
-					list_remove(&connl, CONN(l->l_server));
-					irc_close((struct link_any *)
-							l->l_server);
-					list_add_last(&timerwaitl, l);
-				}
-			}
-
-			/* drop lagging connecting client */
-			for (list_it_init(&connecting_c, &li);
-					list_it_item(&li); list_it_next(&li)) {
-				struct link_client *ic = list_it_item(&li);
-				ic->logging_timer++;
-				if (ic->logging_timer > LOGGING_TIMEOUT) {
-					list_remove(&connl, CONN(ic));
-					irc_close((struct link_any *)ic);
-					list_it_remove(&li);
-				}
-			}
-
-			/*
-			 * Cleanup lagging or dangling who_count buffers
-			 */
-			timeout_clean_who_counts(ll);
+			bip_tick(bip);
 		}
 
 		int nc;
 		/* Da main loop */
-		list_t *ready = wait_event(&connl, &timeleft, &nc);
+		list_t *ready = wait_event(&bip->conn_list, &timeleft, &nc);
 #ifdef HAVE_OIDENTD
 		if (nc)
-			oidentd_dump(&connl);
+			oidentd_dump(&bip->connl);
 #endif
 		while ((conn = list_remove_first(ready))) {
-			struct link_any *lc =
-				(struct link_any *)conn->user_data;
-
-			if (conn == inc) {
-				struct link_client *n = irc_accept_new(conn);
-				if (!n)
-					fatal("Problem while binding local"
-							" socket");
-				list_add_last(&connl, CONN(n));
-				list_add_last(&connecting_c, n);
-				continue;
-			}
-
-			/* reached only if socket is not listening */
-			int err;
-			list_t *linel = read_lines(conn, &err);
-			if (err) {
-				if (TYPE(lc) == IRC_TYPE_SERVER) {
-					mylog(LOG_ERROR, "read_lines error, "
-						"closing %s ...",
-						LINK(lc)->name);
-					irc_server_shutdown(LINK(lc)->l_server);
-				} else {
-					mylog(LOG_ERROR, "read_lines error, "
-						"closing...");
-				}
-				goto prot_err;
-			}
-			if (!linel)
-				continue;
-
-			char *line_s;
-			while ((line_s = list_remove_first(linel))) {
-				struct line *line;
-				mylog(LOG_DEBUG, "\"%s\"", line_s);
-				if (*line_s == 0) { /* irssi does that.*/
-					free(line_s);
-					continue;
-				}
-
-				line = irc_line(line_s);
-				if (!line) {
-					mylog(LOG_ERROR, "Error in protocol, "
-							"closing...");
-					free(line_s);
-					goto prot_err_lines;
-				}
-				int r;
-				int oldtype = TYPE(lc);
-				r = irc_dispatch((struct link_any*)
-						conn->user_data, line, ll);
-				irc_line_free(line);
-				free(line_s);
-				if (r == ERR_PROTOCOL) {
-					mylog(LOG_ERROR, "Error in protocol, "
-							"closing...");
-					goto prot_err_lines;
-				}
-				if (r == ERR_AUTH)
-					goto prot_err_lines;
-				/* XXX: not real error */
-				if (r == OK_CLOSE)
-					goto prot_err_lines;
-
-				if (oldtype == IRC_TYPE_LOGING_CLIENT &&
-						TYPE(lc) == IRC_TYPE_CLIENT) {
-					list_remove(&connecting_c, lc);
-					list_add_last(&connected_c, lc);
-				}
-			}
-			list_free(linel);
-			continue;
-prot_err_lines:
-			while ((line_s = list_remove_first(linel)))
-				free(line_s);
-prot_err:
-			list_remove(&connl, conn);
-			if (linel)
-				list_free(linel);
-			if (lc) {
-				if (TYPE(lc) == IRC_TYPE_CLIENT)
-					list_remove(&connected_c, lc);
-				if (TYPE(lc) == IRC_TYPE_LOGING_CLIENT)
-					list_remove(&connecting_c, lc);
-				if (TYPE(lc) == IRC_TYPE_SERVER)
-					list_add_last(&timerwaitl, LINK(lc));
-				irc_close(lc);
-			}
+			bip_on_event(bip, conn);
 		}
 		list_free(ready);
 	}
-	while (list_remove_first(&connecting_c))
+	while (list_remove_first(&bip->conn_list))
 		;
-	while (list_remove_first(&connected_c))
+	while (list_remove_first(&bip->link_list))
 		;
-	while (list_remove_first(&connl))
+	while (list_remove_first(&bip->connecting_client_list))
 		;
-	while (list_remove_first(&timerwaitl))
-		;
-	while (list_remove_first(&reconnectl))
-		;
-	_connections = NULL;
 	return;
 }
 

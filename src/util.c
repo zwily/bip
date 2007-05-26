@@ -188,6 +188,9 @@ static struct list_item *list_item(void *ptr)
 void list_add_first(list_t *list, void *ptr)
 {
 	struct list_item *li;
+
+	if (!ptr)
+		fatal("Cannot add NULL ptr to list.");
 	li = list_item(ptr);
 	if (!list->first) {
 		list->first = list->last = li;
@@ -200,6 +203,8 @@ void list_add_first(list_t *list, void *ptr)
 
 void list_add_first_uniq(list_t *list, void *ptr)
 {
+	if (!ptr)
+		fatal("Cannot add NULL ptr to list.");
 	if (list_get(list, ptr))
 		return;
 	list_add_first(list, ptr);
@@ -208,6 +213,9 @@ void list_add_first_uniq(list_t *list, void *ptr)
 void list_add_last(list_t *list, void *ptr)
 {
 	struct list_item *li;
+
+	if (!ptr)
+		fatal("Cannot add NULL ptr to list.");
 	li = list_item(ptr);
 	if (!list->first) {
 		list->first = list->last = li;

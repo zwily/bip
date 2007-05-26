@@ -1383,7 +1383,6 @@ connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
 		tmp = srcportbuf;
 	} else
 		tmp = NULL;
-	
 #ifdef HAVE_LIBSSL
 	if (ssl)
 		return _connection_new_SSL(dsthostname, dstportbuf, srchostname,

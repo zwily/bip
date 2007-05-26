@@ -285,18 +285,17 @@ void reload_config(int i)
 	sighup = 1;
 }
 
-extern list_t *_connections;
+bip_t *_bip;
 
 void bad_quit(int i)
 {
 	list_iterator_t it;
-	for (list_it_init(_connections, &it); list_it_item(&it);
+	for (list_it_init(&_bip->link_list, &it); list_it_item(&it);
 			list_it_next(&it)) {
-		connection_t *c = list_it_item(&it);
-		struct link_any *la = c->user_data;
-		if (c->connected == CONN_OK && la &&
-				TYPE(la) == IRC_TYPE_SERVER) {
-			write_line_fast(CONN(la), "QUIT :Coyote finally "
+		struct link *l = list_it_item(&it);
+		struct link_server *ls = l->l_server;
+		if (ls && l->s_state == IRCS_CONNECTED) {
+			write_line_fast(CONN(ls), "QUIT :Coyote finally "
 					"caught me\r\n");
 		}
 	}
@@ -749,7 +748,7 @@ int fireup(FILE *conf)
 	return 1;
 }
 
-void ircize(list_t *ll)
+void ircize(bip_t *bip)
 {
 	hash_iterator_t it;
 	for (hash_it_init(&conf_users, &it); hash_it_item(&it);
@@ -806,7 +805,7 @@ void ircize(list_t *ll)
 					list_add_last(&link->chan_infos_order,
 							ci);
 				}
-				list_add_last(ll, link);
+				list_add_last(&bip->link_list, link);
 			} else {
 				mylog(LOG_DEBUGVERB, "old connection: \"%s\"",
 						c->name);
@@ -909,17 +908,19 @@ int main(int argc, char **argv)
 {
 	FILE *conf = NULL;
 	char *confpath = NULL;
-	list_t *ll = list_new(NULL);
 	int ch;
 	int r,fd;
 	char buf[30];
+	bip_t bip;
+
+	bip_init(&bip);
+	_bip = &bip;
 
 	conf_ip = strdup("0.0.0.0");
 	conf_port = 7778;
 	conf_css = 0;
 
 	hash_init(&adm_users, HASH_NOCASE);
-
 	hash_init(&conf_users, HASH_NOCASE);
 	hash_init(&conf_networks, HASH_NOCASE);
 
@@ -996,18 +997,17 @@ int main(int argc, char **argv)
 	write(fd, buf, strlen(buf));
 	close(fd);
 
-	connection_t *inc;
-	inc = listen_new(conf_ip, conf_port, conf_css);
-	if (!inc)
+	bip.listener = listen_new(conf_ip, conf_port, conf_css);
+	if (!bip.listener)
 		fatal("Could not create listening socket");
 
 	for (;;) {
 		if (r)
-			ircize(ll);
+			ircize(&bip);
 		if (conf_error)
 			mylog(LOG_ERROR, "conf error: %s", conf_errstr);
 
-		irc_main(inc, ll);
+		irc_main(&bip);
 
 		sighup = 0;
 
