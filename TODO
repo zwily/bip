@@ -4,6 +4,7 @@
 - more /bip commands
 - DCC proxying...
 - encrypt logs
+- pre_on_connect_send => before join
 
 - use gnutls
 - MODE #channel and WHO #channel on join
@@ -43,3 +44,6 @@ FAQ:
 - no ciphers => check SSL key file
 - why I cannot add non-ssl servers with ssl-servers
 - why is my vhost not used when I connect (one IP)
+
+
+backlog_no_private
