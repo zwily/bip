@@ -1423,7 +1423,15 @@ static int connection_timedout(connection_t *cn)
 
 static int socket_set_nonblock(int s)
 {
-	if (fcntl(s, F_SETFL, O_NONBLOCK) < 0) {
+	int flags;
+
+	if ((flags = fcntl(s, F_GETFL, 0)) < 0) {
+		mylog(LOG_ERROR, "Cannot set socket %d to non blocking : %s",
+				s, strerror(errno));
+		return 0;
+	}
+
+	if (fcntl(s, F_SETFL, flags | O_NONBLOCK) < 0) {
 		mylog(LOG_ERROR, "Cannot set socket %d to non blocking : %s",
 				s, strerror(errno));
 		return 0;
