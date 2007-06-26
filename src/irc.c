@@ -2403,7 +2403,7 @@ void irc_main(bip_t *bip)
 		list_t *ready = wait_event(&bip->conn_list, &timeleft, &nc);
 #ifdef HAVE_OIDENTD
 		if (nc)
-			oidentd_dump(&bip->connl);
+			oidentd_dump(&bip->conn_list);
 #endif
 		while ((conn = list_remove_first(ready))) {
 			bip_on_event(bip, conn);
