@@ -2197,6 +2197,7 @@ void bip_init(bip_t *bip)
 	memset(bip, 0, sizeof(bip_t));
 	list_init(&bip->link_list, list_ptr_cmp);
 	list_init(&bip->conn_list, list_ptr_cmp);
+	list_init(&bip->connecting_client_list, list_ptr_cmp);
 }
 
 void bip_recover_sighup(bip_t *bip)

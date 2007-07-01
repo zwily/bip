@@ -49,6 +49,7 @@ hash_t adm_users;
 int conf_backlog = 0;
 extern int conf_memlog;
 int conf_log = 0;
+int conf_log_system = 0;
 /* number of lines in backlog */
 int conf_backlog_lines = 10;
 int conf_backlog_no_timestamp = 0;
@@ -180,7 +181,7 @@ static pid_t daemonize(void)
 		_exit(0);
 	}
 
-	if (conf_log) {
+	if (conf_log_system) {
 		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
 		FILE *f = fopen(buf, "a");
 		if (!f)
@@ -621,6 +622,9 @@ int fireup(FILE *conf)
 		case LEX_LOG:
 			conf_log = t->ndata;
 			break;
+		case LEX_LOG_SYSTEM:
+			conf_log_system = t->ndata;
+			break;
 		case LEX_BACKLOG_LINES:
 			conf_backlog_lines = t->ndata;
 			break;
@@ -935,6 +939,7 @@ int main(int argc, char **argv)
 	conf_log_level = LOG_INFO;
 	conf_backlog = 1;
 	conf_log = 1;
+	conf_log_system = 1;
 	conf_backlog_lines = 100;
 	conf_log_sync_interval = 5;
 	conf_daemonize = 1;

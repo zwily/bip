@@ -90,6 +90,7 @@ list_t *parse_conf(FILE *file)
 "bl_msg_only"		{ return LEX_BL_MSG_ONLY; }
 "always_backlog"	{ return LEX_ALWAYS_BACKLOG; }
 "log"			{ return LEX_LOG; }
+"log_system"		{ return LEX_LOG_SYSTEM; }
 "log_sync_interval"	{ return LEX_LOG_SYNC_INTERVAL; }
 "follow_nick"		{ return LEX_FOLLOW_NICK; }
 "ignore_first_nick"	{ return LEX_IGN_FIRST_NICK; }
