@@ -54,8 +54,9 @@ void connection_close(connection_t *cn)
 			(long)cn->handle);
 	if (cn->connected != CONN_DISCONN) {
 		cn->connected = CONN_DISCONN;
-		shutdown(cn->handle, SHUT_RDWR);
-		close(cn->handle);
+		if (close(cn->handle) == -1)
+			mylog(LOG_WARN, "Error on socket close: %s",
+					strerror(errno));
 	}
 }
 
@@ -409,7 +410,7 @@ static int read_socket_SSL(connection_t *cn)
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUGTOOMUCH, "fd %d: Connection lost",
 					cn->handle);
-			cn->connected = CONN_DISCONN;
+			connection_close(cn);
 		}
 		return 1;
 	}
@@ -444,7 +445,7 @@ static int read_socket(connection_t *cn)
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUGVERB, "fd %d: Connection lost",
 					cn->handle);
-			cn->connected = CONN_DISCONN;
+			connection_close(cn);
 			mylog(LOG_DEBUGTOOMUCH, "fd %d: read() %s", cn->handle,
 					strerror(errno));
 		}
@@ -1003,7 +1004,6 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	conn->ssl_check_mode = SSL_CHECK_NONE;
 #endif
 	conn->connected = CONN_NEW;
-	
 	return conn;
 }
 
