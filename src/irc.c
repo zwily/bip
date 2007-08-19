@@ -1925,8 +1925,8 @@ static void irc_close(struct link_any *l)
 				LINK(l)->name, timer);
 		LINK(is)->recon_timer = timer;
 
-		irc_server_free((struct link_server *)is);
 		LINK(is)->l_server = NULL;
+		irc_server_free((struct link_server *)is);
 	} else {
 		irc_client_close((struct link_client *)l);
 	}
