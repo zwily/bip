@@ -109,28 +109,13 @@ command:
        | LEX_IP LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_IP, $3); }
        | LEX_PORT LEX_EQ LEX_INT { $$ = tuple_i_new(LEX_PORT, $3); }
        | LEX_CSS LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_CSS, $3); }
-       | LEX_BACKLOG_LINES LEX_EQ LEX_INT { $$ = tuple_i_new(LEX_BACKLOG_LINES,
-      						$3); }
-       | LEX_BACKLOG_NO_TIMESTAMP LEX_EQ LEX_BOOL {
-	       $$ = tuple_i_new(LEX_BACKLOG_NO_TIMESTAMP, $3);
-	       }
-       | LEX_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_BACKLOG,
-       						$3); }
-       | LEX_BL_MSG_ONLY LEX_EQ LEX_BOOL {
-	       $$ = tuple_i_new(LEX_BL_MSG_ONLY, $3);
-	       }
        | LEX_LOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_LOG, $3); }
        | LEX_LOG_SYSTEM LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_LOG_SYSTEM, $3); }
-       | LEX_ALWAYS_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(
-       						LEX_ALWAYS_BACKLOG, $3); }
        | LEX_LOG_SYNC_INTERVAL LEX_EQ LEX_INT { $$ = tuple_i_new(
-       						LEX_LOG_SYNC_INTERVAL, $3); }
+						LEX_LOG_SYNC_INTERVAL, $3); }
        | LEX_PID_FILE LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_PID_FILE, $3); }
-       | LEX_BLRESET_ON_TALK LEX_EQ LEX_BOOL {
-	       $$ = tuple_i_new(LEX_BLRESET_ON_TALK, $3);
-	       }
        | LEX_NETWORK LEX_LBRA network LEX_RBRA { $$ = tuple_l_new(LEX_NETWORK,
-       						$3); }
+						$3); }
        | LEX_USER LEX_LBRA user LEX_RBRA { $$ = tuple_l_new(LEX_USER, $3); }
 
 network:
@@ -141,7 +126,7 @@ net_command:
 	   LEX_NAME LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_NAME, $3); }
 	   | LEX_SSL LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_SSL, $3); }
 	   | LEX_SERVER LEX_LBRA server LEX_RBRA {
-		   	$$ = tuple_l_new(LEX_SERVER, $3); }
+			$$ = tuple_l_new(LEX_SERVER, $3); }
 
 user:
     { $$ = list_new(NULL); }
@@ -151,19 +136,34 @@ usr_command:
 	   LEX_NAME LEX_EQ LEX_STRING {
 		   $$ = tuple_s_new(LEX_NAME, $3); }
 	   | LEX_PASSWORD LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_PASSWORD,
-	   	$3); }
+		$3); }
 	   | LEX_SSL_CHECK_MODE LEX_EQ LEX_STRING { $$ = tuple_s_new(
-	   		LEX_SSL_CHECK_MODE, $3); }
+			LEX_SSL_CHECK_MODE, $3); }
 	   | LEX_SSL_CHECK_STORE LEX_EQ LEX_STRING { $$ = tuple_s_new(
-	   		LEX_SSL_CHECK_STORE, $3); }
+			LEX_SSL_CHECK_STORE, $3); }
 	   | LEX_DEFAULT_USER LEX_EQ LEX_STRING {
 		   $$ = tuple_s_new(LEX_DEFAULT_USER, $3); }
 	   | LEX_DEFAULT_NICK LEX_EQ LEX_STRING {
 		   $$ = tuple_s_new(LEX_DEFAULT_NICK, $3); }
 	   | LEX_DEFAULT_REALNAME LEX_EQ LEX_STRING {
 		   $$ = tuple_s_new(LEX_DEFAULT_REALNAME, $3); }
+           | LEX_BACKLOG_LINES LEX_EQ LEX_INT {
+	           $$ = tuple_i_new(LEX_BACKLOG_LINES, $3);
+		  }
+           | LEX_BACKLOG_NO_TIMESTAMP LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BACKLOG_NO_TIMESTAMP, $3);
+	       }
+           | LEX_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_BACKLOG, $3); }
+           | LEX_BLRESET_ON_TALK LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BLRESET_ON_TALK, $3);
+	       }
+           | LEX_BL_MSG_ONLY LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BL_MSG_ONLY, $3);
+	       }
+           | LEX_ALWAYS_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(
+						LEX_ALWAYS_BACKLOG, $3); }
        	   | LEX_CONNECTION LEX_LBRA connection LEX_RBRA {
-		  		 $$ = tuple_l_new(LEX_CONNECTION, $3); }
+				 $$ = tuple_l_new(LEX_CONNECTION, $3); }
 
 connection:
           { $$ = list_new(NULL); }
@@ -173,18 +173,18 @@ connection:
 con_command:
 	   LEX_NAME LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_NAME, $3); }
 	   | LEX_NETWORK LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_NETWORK,
-	  		 $3); }
+			 $3); }
 	   | LEX_NICK LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_NICK, $3); }
 	   | LEX_USER LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_USER, $3); }
 	   | LEX_REALNAME LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_REALNAME,
-	  	 $3); }
+		 $3); }
 	   | LEX_PASSWORD LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_PASSWORD,
-	  	 $3); }
+		 $3); }
 	   | LEX_VHOST LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_VHOST, $3); }
 	   | LEX_SOURCE_PORT LEX_EQ LEX_INT {
 		   $$ = tuple_i_new(LEX_SOURCE_PORT, $3); }
 	   | LEX_AWAY_NICK LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_AWAY_NICK,
-	  					$3); }
+						$3); }
            | LEX_FOLLOW_NICK LEX_EQ LEX_BOOL {
 		   $$ = tuple_i_new(LEX_FOLLOW_NICK, $3); }
            | LEX_IGN_FIRST_NICK LEX_EQ LEX_BOOL { $$ = tuple_i_new(

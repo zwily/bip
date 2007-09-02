@@ -1,0 +1,3 @@
+02-09-2007: as of now log parameters go in the user {} statment. This brakes
+every config and there is no backwrads compatibility as of now.
+Lots of internal changes, expect crashes.

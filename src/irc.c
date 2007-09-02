@@ -696,7 +696,8 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 		struct link *l = list_it_item(&it);
 		if (strcmp(user, l->username) == 0 &&
 				strcmp(connname, l->name) == 0) {
-			if (chash_cmp(pass, l->password, l->seed) == 0) {
+			if (chash_cmp(pass, l->user->password,
+						l->user->seed) == 0) {
 				bind_to_link(l, ic);
 				break;
 			}
@@ -849,7 +850,7 @@ static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 	if (strcmp(line->elemv[1], "-bip") == 0)
 		return adm_bip(ic, line, 1);
 
-	if (conf_blreset_on_talk)
+	if (LINK(ic)->user->blreset_on_talk)
 		adm_blreset(ic);
 	return OK_COPY_CLI;
 }
@@ -1799,12 +1800,18 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 static void irc_server_startup(struct link_server *ircs)
 {
 	char *nick;
+	char *username, *realname;
 
 	if (LINK(ircs)->s_password)
 		WRITE_LINE1(CONN(ircs), NULL, "PASS", LINK(ircs)->s_password);
 
-	WRITE_LINE4(CONN(ircs), NULL, "USER", LINK(ircs)->user, "0", "*",
-			LINK(ircs)->real_name);
+	username = LINK(ircs)->username;
+	if (!username)
+		username = LINK(ircs)->user->default_username;
+	realname = LINK(ircs)->realname;
+	if (!realname)
+		realname = LINK(ircs)->user->default_realname;
+	WRITE_LINE4(CONN(ircs), NULL, "USER", username, "0", "*", realname);
 
 	nick = ircs->nick;
 	if (LINK(ircs)->away_nick && LINK(ircs)->l_clientc == 0) {
@@ -1816,6 +1823,9 @@ static void irc_server_startup(struct link_server *ircs)
 			|| nick == NULL) {
 		if (nick)
 			free(nick);
+		if (!LINK(ircs)->connect_nick)
+			LINK(ircs)->connect_nick =
+				strdup(LINK(ircs)->user->default_nick);
 		nick = strdup(LINK(ircs)->connect_nick);
 	}
 
@@ -1826,8 +1836,8 @@ static void irc_server_startup(struct link_server *ircs)
 static void server_next(struct link *l)
 {
 	l->cur_server++;
-	if (l->cur_server >= l->serverc)
-		l->cur_server -= l->serverc;
+	if (l->cur_server >= l->network->serverc)
+		l->cur_server = 0;
 }
 
 static struct link_client *irc_accept_new(connection_t *conn)
@@ -1976,11 +1986,11 @@ connection_t *irc_server_connect(struct link *link)
 	connection_t *conn;
 
 	mylog(LOG_INFO, "Connecting user '%s' to network '%s' using server "
-		"%s:%d", link->username, link->name,
-		link->serverv[link->cur_server]->host,
-		link->serverv[link->cur_server]->port);
-	conn = connection_new(link->serverv[link->cur_server]->host,
-				link->serverv[link->cur_server]->port,
+		"%s:%d", link->user->name, link->name,
+		link->network->serverv[link->cur_server].host,
+		link->network->serverv[link->cur_server].port);
+	conn = connection_new(link->network->serverv[link->cur_server].host,
+				link->network->serverv[link->cur_server].port,
 				link->vhost, link->bind_port,
 #ifdef HAVE_LIBSSL
 				link->s_ssl, link->ssl_check_mode,
@@ -2154,7 +2164,7 @@ void oidentd_dump(list_t *connl)
 			fprintf(f, "to %s fport %d from %s lport %d {\n",
 					remoteip, remoteport, localip,
 					localport);
-			fprintf(f, "\treply \"%s\"\n", l->user);
+			fprintf(f, "\treply \"%s\"\n", l->username);
 			fprintf(f, "}\n");
 			free(localip);
 			free(remoteip);
@@ -2198,47 +2208,9 @@ void bip_init(bip_t *bip)
 	list_init(&bip->link_list, list_ptr_cmp);
 	list_init(&bip->conn_list, list_ptr_cmp);
 	list_init(&bip->connecting_client_list, list_ptr_cmp);
-}
 
-void bip_recover_sighup(bip_t *bip)
-{
-	/* gcc */
-	(void)bip;
-	/*
-	 * Merge with already connected data, happens on SIGHUP
-	 */
-#if 0
-	list_iterator_t it;
-	for (list_it_init(ll, &it); list_it_item(&it); list_it_next(&it)) {
-		struct link *link = list_it_item(&it);
-		if (link->l_server)
-			list_add_last(&connl, CONN(link->l_server));
-		else
-			list_add_last(&reconnectl, link);
-		if (link->l_clientc) {
-			int i;
-			for (i = 0; i < link->l_clientc; i++) {
-				struct link_client *c;
-				c = link->l_clientv[i];
-				list_add_last(&connl, CONN(c));
-				if (TYPE(c) == IRC_TYPE_LOGING_CLIENT)
-					list_add_last(&connecting_c, c);
-				if (TYPE(c) == IRC_TYPE_CLIENT)
-					list_add_last(&connected_c, c);
-			}
-		}
-	}
-	if (conf_error && reloading_client) {
-		char *nick;
-		if (LINK(reloading_client)->l_server)
-			nick = LINK(reloading_client)->l_server->nick;
-		else
-			nick = LINK(reloading_client)->prev_nick;
-		WRITE_LINE2(CONN(reloading_client), P_IRCMASK, "PRIVMSG", nick,
-				conf_errstr);
-		reloading_client = NULL;
-	}
-#endif
+	hash_init(&bip->users, HASH_NOCASE);
+	hash_init(&bip->networks, HASH_NOCASE);
 }
 
 /* Called each second. */
@@ -2382,10 +2354,7 @@ void irc_main(bip_t *bip)
 
 	/* XXX: This one MUST be first */
 	/* TODO: maybe not anymore, check */
-	printf("%p\n", bip->listener);
 	list_add_first(&bip->conn_list, bip->listener);
-
-	bip_recover_sighup(bip);
 
 	while (!sighup) {
 		connection_t *conn;
@@ -2406,9 +2375,8 @@ void irc_main(bip_t *bip)
 		if (nc)
 			oidentd_dump(&bip->conn_list);
 #endif
-		while ((conn = list_remove_first(ready))) {
+		while ((conn = list_remove_first(ready)))
 			bip_on_event(bip, conn);
-		}
 		list_free(ready);
 	}
 	while (list_remove_first(&bip->conn_list))

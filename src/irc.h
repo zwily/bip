@@ -62,19 +62,53 @@ struct channel {
 #define IRC_TYPE_LOGING_CLIENT (2)
 #define IRC_TYPE_TRUST_CLIENT (3)
 
+struct user {
+	/** client connection static data **/
+
+	char *name;
+	unsigned char *password;
+	unsigned int seed;
+
+	/* common link options */
+
+	char *default_nick;
+	char *default_username;
+	char *default_realname;
+
+	/* backlog options */
+	int backlog;
+	int backlog_lines;
+	int always_backlog;
+	int bl_msg_only;
+	int backlog_no_timestamp;
+	int blreset_on_talk;
+
+	hash_t connections;
+};
+
+struct network
+{
+	char *name;
+#ifdef HAVE_LIBSSL
+	int ssl;
+#endif
+	int serverc;
+	struct server *serverv;
+};
+
 struct link {
-	char *name; 	/* id */
+	char *name;	/* id */
 
 	/** link live data **/
 	struct link_server *l_server;
 	int l_clientc;
 	struct link_client **l_clientv;
 
-	/* we honnor the /who from clients one client at a time, this is the 
+	struct log *log;
+
+	/* we honnor the /who from clients one client at a time, this is the
 	 * client that is /who-ing. Now for bans too */
 	struct link_client *who_client;
-
-	struct log *log;
 
 	/* server related live stuff */
 	int s_state;
@@ -97,20 +131,15 @@ struct link {
 	hash_t chan_infos;		/* channels we want */
 	list_t chan_infos_order;	/* for order only */
 
-	/** client connection static data **/
-
-	char *username;
-	unsigned char *password;
-	unsigned int seed;
+	struct user *user;
 
 	/** server connection static data **/
 	/* server list */
-	int serverc;
-	struct server **serverv;
+	struct network *network;
 	int cur_server;
 
-	char *user;
-	char *real_name;
+	char *username;
+	char *realname;
 	char *s_password;
 	char *connect_nick;
 
@@ -204,6 +233,9 @@ typedef struct bip {
 	list_t link_list;
 	/* connecting clients */
 	list_t connecting_client_list;
+
+	hash_t networks;
+	hash_t users;
 } bip_t;
 
 void bip_init(bip_t *bip);

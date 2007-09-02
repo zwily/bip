@@ -24,13 +24,6 @@ extern int conf_log;
 
 int conf_memlog = 1;
 
-/* conf_always_backlog => conf_backlog_lines != 0 */
-extern int conf_backlog;
-extern int conf_backlog_lines;
-extern int conf_always_backlog;
-extern int conf_bl_msg_only;
-extern int conf_backlog_no_timestamp;
-
 int log_set_backlog_offset(log_t *logdata, char *dest);
 static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
 void logfile_free(logfile_t *lf);
@@ -153,7 +146,7 @@ char *log_build_filename(log_t *logdata, char *destination)
 	snprintf(month, 3, "%02d", now->tm_mon + 1);
 	snprintf(logfile, MAX_PATH_LEN, "%s/%s", conf_log_root,
 			conf_log_format);
-	replace_var(logfile, "%u", logdata->user, MAX_PATH_LEN);
+	replace_var(logfile, "%u", logdata->user->name, MAX_PATH_LEN);
 	replace_var(logfile, "%n", logdata->network, MAX_PATH_LEN);
 	replace_var(logfile, "%c", dest, MAX_PATH_LEN);
 	replace_var(logfile, "%Y", year, MAX_PATH_LEN);
@@ -328,7 +321,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 	time(&t);
 	ltime = localtime(&t);
 	lf = list_get_last(&lfg->file_group);
- 	if (ltime->tm_mday != lf->last_log.tm_mday) {
+	if (ltime->tm_mday != lf->last_log.tm_mday) {
 		logfile_t *oldlf;
 
 		/* day changed, we might want to rotate logfile */
@@ -351,7 +344,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 		}
 		free(filename);
 
-		if (!conf_backlog) {
+		if (!logdata->user->backlog) {
 			/* remove oldlf from file_group */
 			if (list_remove_first(&lfg->file_group) != oldlf)
 				fatal("internal log_find_file 2");
@@ -617,7 +610,7 @@ void log_client_none_connected(log_t *logdata)
 
 	logdata->connected = 0;
 
-	if (conf_always_backlog)
+	if (logdata->user->always_backlog)
 		return;
 
 
@@ -638,10 +631,10 @@ void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 {
 	int c;
 	(void)ld;
-	if (!conf_backlog || conf_backlog_lines == 0)
+	if (!ld->user->backlog || ld->user->backlog_lines == 0)
 		return;
 
-	if (lfg->skip_advance < conf_backlog_lines) {
+	if (lfg->skip_advance < ld->user->backlog_lines) {
 		lfg->skip_advance++;
 		return;
 	}
@@ -708,7 +701,7 @@ int log_has_backlog(log_t *logdata, char *destination)
  * 01-08-2005 10:46:11 < * jj!john@thebox.ofjj.net
  */
 
-char *log_beautify(char *buf, char *dest)
+char *log_beautify(log_t *logdata, char *buf, char *dest)
 {
 	int action = 0;
 	char *p;
@@ -736,7 +729,7 @@ char *log_beautify(char *buf, char *dest)
 	lots = p - sots;
 	p++;
 	if (strncmp(p, "-!-", 3) == 0) {
-		if (conf_bl_msg_only)
+		if (logdata->user->bl_msg_only)
 			return NULL;
 		else
 			return _log_wrap(dest, buf);
@@ -849,7 +842,7 @@ char *log_beautify(char *buf, char *dest)
 		strcpy(p, " -> ");
 		p += strlen(" -> ");
 	}
-	if (conf_backlog_no_timestamp == 0) {
+	if (logdata->user->backlog_no_timestamp == 0) {
 		memcpy(p, sots, lots);
 		p += lots;
 		*p++ = '>';
@@ -879,7 +872,7 @@ char *log_backread(log_t *logdata, char *destination, int *skip)
 
 	*skip = 0;
 
-	if (!conf_always_backlog && logdata->connected)
+	if (!logdata->user->always_backlog && logdata->connected)
 		return NULL;
 
 	lfg = hash_get(&logdata->logfgs, destination);
@@ -941,7 +934,7 @@ next_file:
 		}
 		for(;;) {
 			c = fgetc(lf->file);
-			if (!conf_always_backlog)
+			if (!logdata->user->always_backlog)
 				lf->backlog_offset++;
 			if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
 				/* change file if we reach EOF, if pos == maxlen
@@ -951,11 +944,11 @@ next_file:
 					mylog(LOG_DEBUG, "logline too long");
 				if (c == EOF || pos == LOGLINE_MAXLEN) {
 					mylog(LOG_DEBUGVERB, "EOF: %s (%d)!",
-							lf->filename,
-							conf_always_backlog);
+						lf->filename,
+						logdata->user->always_backlog);
 
 					list_it_next(&logdata->file_it);
-					if (!conf_always_backlog) {
+					if (!logdata->user->always_backlog) {
 						list_remove_first(
 							&lfg->file_group);
 						logfile_free(lf);
@@ -972,7 +965,7 @@ next_file:
 					*skip = 1;
 					return buf;
 				}
-				ret = log_beautify(buf, destination);
+				ret = log_beautify(logdata, buf, destination);
 				if (ret == NULL) {
 					pos = 0;
 					continue;
@@ -1002,14 +995,14 @@ next_file:
 		free(buf);
 		return NULL;
 	}
-	if (!conf_always_backlog)
+	if (!logdata->user->always_backlog)
 		lf->backlog_offset++;
 
 	if (c != '\n')
 		buf[pos++] = c;
 	for(;;) {
 		c = fgetc(lf->file);
-		if (!conf_always_backlog)
+		if (!logdata->user->always_backlog)
 			lf->backlog_offset++;
 		if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
 			if (pos == LOGLINE_MAXLEN) {
@@ -1022,14 +1015,14 @@ next_file:
 				return NULL;
 			}
 
-			if (!conf_always_backlog && c == EOF)
+			if (!logdata->user->always_backlog && c == EOF)
 				lf->backlog_offset--;
 			buf[pos] = 0;
 			if (pos == 0) {
 				*skip = 1;
 				return buf;
 			}
-			ret = log_beautify(buf, destination);
+			ret = log_beautify(logdata, buf, destination);
 			if (ret == NULL) {
 				pos = 0;
 				continue;
@@ -1070,10 +1063,10 @@ static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
 	str[LOGLINE_MAXLEN] = 0;
 
 	if (lfg->memlog) {
-		char *r = log_beautify(str, destination);
+		char *r = log_beautify(logdata, str, destination);
 		if (r != NULL) {
 			list_add_last(lfg->memlog, r);
-			if (lfg->memc == conf_backlog_lines)
+			if (lfg->memc == logdata->user->backlog_lines)
 				free(list_remove_first(lfg->memlog));
 			else
 				lfg->memc++;
@@ -1092,7 +1085,7 @@ static int _log_write(log_t *logdata, logfilegroup_t *lfg, char *destination,
 	if (nbwrite != len + 1)
 		mylog(LOG_ERROR, "Error writing to %s logfile", lf->filename);
 	lf->len += nbwrite;
-	if (!logdata->connected || conf_always_backlog)
+	if (!logdata->connected || logdata->user->always_backlog)
 		log_advance_backlogs(logdata, lfg);
 	return nbwrite;
 }
@@ -1134,14 +1127,14 @@ void log_flush_all(void)
 	}
 }
 
-log_t *log_new(char *user, char *network)
+log_t *log_new(struct user *user, char *network)
 {
 	log_t *logdata;
 
 	logdata = (log_t*)calloc(sizeof(log_t), 1);
 	if (!logdata)
 		fatal("out of memory");
-	logdata->user = strdup(user);
+	logdata->user = user;
 	logdata->network = strdup(network);
 	hash_init(&logdata->logfgs, HASH_NOCASE);
 	logdata->buffer = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));

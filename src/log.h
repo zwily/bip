@@ -51,16 +51,17 @@ typedef struct logfilegroup
 typedef struct log {
 	hash_t logfgs;
 	char *network;
-	char *user;
 	char *buffer;
 	int connected;
 	int backlogging;
 	list_iterator_t file_it;
 	int lastfile_seeked;
+
+	struct user *user;
 } log_t;
 
 void log_close_all(log_t *logdata);
-log_t *log_new(char *user, char *network);
+log_t *log_new(struct user *user, char *network);
 void logdata_free(log_t *logdata);
 int log_compare_files(logfile_t *f1, char *f2);
 
