@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# This thinggie bootstraps the auto* build sys.
+
+set -e
+
+aclocal
+autoconf
+automake --add-missing --copy -Wall
+
