@@ -178,16 +178,6 @@ static pid_t daemonize(void)
 		_exit(0);
 	}
 
-	if (conf_log_system) {
-		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
-		FILE *f = fopen(buf, "a");
-		if (!f)
-			fatal("Can't open %s: %s", buf, strerror(errno));
-		conf_global_log_file = f;
-	} else {
-		conf_global_log_file = stderr;
-	}
-
 	close(0);
 	close(1);
 	close(2);
@@ -861,6 +851,21 @@ void ircize(bip_t *bip)
 }
 #endif
 
+static void log_file_setup(void)
+{
+	if (conf_log_system) {
+		if (conf_global_log_file && conf_global_log_file != stderr)
+			fclose(conf_log_system);
+		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
+		FILE *f = fopen(buf, "a");
+		if (!f)
+			fatal("Can't open %s: %s", buf, strerror(errno));
+		conf_global_log_file = f;
+	} else {
+		conf_global_log_file = stderr;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	FILE *conf = NULL;
@@ -942,6 +947,8 @@ int main(int argc, char **argv)
 	check_dir(conf_log_root, 1);
 	fd = do_pid_stuff();
 	pid_t pid = 0;
+
+	log_file_setup();
 	if (conf_daemonize)
 		pid = daemonize();
 	else
@@ -967,6 +974,9 @@ int main(int argc, char **argv)
 			fatal("%s config file not found", confpath);
 		fireup(&bip, conf);
 		fclose(conf);
+
+		/* re-open to allow logfile rotate */
+		log_file_setup();
 	}
 	return 1;
 }

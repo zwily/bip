@@ -216,7 +216,7 @@ static void irc_server_connected(struct link_server *server)
         LINK(server)->s_state = IRCS_CONNECTED;
         LINK(server)->s_conn_attempt = 0;
 
-	mylog(LOG_INFO, "Connected user %s to %s", LINK(server)->username,
+	mylog(LOG_INFO, "Connected user %s to %s", LINK(server)->user->name,
 		LINK(server)->name);
 
         irc_server_join(server);
@@ -694,7 +694,7 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 	for (list_it_init(&bip->link_list, &it); list_it_item(&it);
 			list_it_next(&it)) {
 		struct link *l = list_it_item(&it);
-		if (strcmp(user, l->username) == 0 &&
+		if (strcmp(user, l->user->name) == 0 &&
 				strcmp(connname, l->name) == 0) {
 			if (chash_cmp(pass, l->user->password,
 						l->user->seed) == 0) {
