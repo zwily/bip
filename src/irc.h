@@ -248,6 +248,7 @@ int ischannel(char p);
 void irc_client_close(struct link_client *);
 void irc_client_free(struct link_client *);
 struct link *irc_link_new();
+void link_kill(bip_t *bip, struct link *);
 void unbind_from_link(struct link_client *ic);
 #endif
 

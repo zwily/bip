@@ -530,7 +530,6 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 
 	WRITE_LINE3(CONN(ic), P_SERV, "366", LINK(ic)->l_server->nick,
 			chan->name, "End of /NAMES list.");
-
 }
 
 static void write_init_string(connection_t *c, struct line *line, char *nick)
@@ -1921,7 +1920,6 @@ static void irc_close(struct link_any *l)
 			irc_notify_disconnection(is);
 		else
 			LINK(is)->s_conn_attempt++;
-		printf("%d\n", LINK(is)->s_conn_attempt);
 		irc_server_shutdown(is);
 		log_disconnected(LINK(is)->log);
 
@@ -2416,5 +2414,42 @@ struct link *irc_link_new()
 	list_init(&link->chan_infos_order, list_ptr_cmp);
 	list_init(&link->on_connect_send, list_ptr_cmp);
 	return link;
+}
+
+void link_kill(bip_t *bip, struct link *link)
+{
+	int i;
+
+	hash_remove(&link->user->connections, link->name);
+	free(link->name);
+	irc_close((struct link_any *)link->l_server);
+	while (link->l_clientc)
+		irc_close((struct link_any *)link->l_clientv[0]);
+	log_free(link->log);
+	MAYFREE(link->prev_nick);
+	MAYFREE(link->cli_nick);
+
+	void *p;
+	while ((p = list_remove_first(&link->init_strings)))
+		free(p);
+	while ((p = list_remove_first(&link->on_connect_send)))
+		free(p);
+	MAYFREE(link->no_client_away_msg);
+	MAYFREE(link->away_nick);
+	hash_clean(&link->chan_infos);
+
+	struct chan_infos *ci;
+	while ((ci = list_remove_first(&link->chan_infos_order)))
+		free(ci);
+
+	MAYFREE(link->username);
+	MAYFREE(link->realname);
+	MAYFREE(link->s_password);
+	MAYFREE(link->connect_nick);
+	MAYFREE(link->vhost);
+#ifdef HAVE_LIBSSL
+	MAYFREE(link->ssl_check_store);
+	sk_X509_free(link->untrusted_certs);
+#endif
 }
 

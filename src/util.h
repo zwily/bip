@@ -56,6 +56,22 @@ typedef struct hash_iterator {
 	hash_t *hash;
 } hash_iterator_t;
 
+#define MOVE_STRING(dest, src) do {\
+	if (dest)\
+		free(dest);\
+	(dest) = (src);\
+	(src) = NULL;\
+} while(0)
+
+#define FREE(a) free(a); (a) = NULL;
+
+#define MAYFREE(a) do { \
+		if (a) { \
+			free(a); \
+			(a) = NULL; \
+		} \
+	} while(0);
+
 void list_init(list_t *list, int (*cmp)(void*,void*));
 int list_ptr_cmp(void *a, void *b);
 list_t *list_new(int (*cmp)(void *, void *));
@@ -97,4 +113,5 @@ char *strmaydup(char *s);
 
 void strucase(char *s);
 int ischannel(char p);
+
 #endif

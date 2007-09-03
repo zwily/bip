@@ -25,22 +25,6 @@
 #include "bip.h"
 #include "line.h"
 
-#define MOVE_STRING(dest, src) do {\
-	if (dest)\
-		free(dest);\
-	(dest) = (src);\
-	(src) = NULL;\
-} while(0)
-
-#define FREE(a) free(a); (a) = NULL;
-
-#define MAYFREE(a) do { \
-		if (a) { \
-			free(a); \
-			(a) = NULL; \
-		} \
-	} while(0);
-
 int sighup = 0;
 
 char *conf_log_root;
@@ -154,7 +138,6 @@ FILE *conf_global_log_file;
 
 static pid_t daemonize(void)
 {
-	char buf[4096];
 	switch (fork()) {
 	case -1:
 		fatal("Fork failed");
@@ -550,6 +533,47 @@ static int add_user(bip_t *bip, list_t *data)
 	return 1;
 }
 
+static int validate_config(bip_t *bip)
+{
+	/* nick username realname or default_{nick,username,realname} in user */
+	hash_iterator_t it, sit;
+	struct user *user;
+	struct link *link;
+	int r = 1;
+
+	for (hash_it_init(&bip->users, &it); (user = hash_it_item(&it));
+			hash_it_next(&it)) {
+		if (!user->default_nick || !user->default_username ||
+				!user->default_realname) {
+			for (hash_it_init(&user->connections, &sit);
+					(link = hash_it_item(&sit));
+					hash_it_next(&sit)) {
+				if ((!link->username &&
+						!user->default_username) ||
+						(!link->connect_nick &&
+						 !user->default_nick) ||
+						(!link->realname &&
+						 !user->default_realname))
+					link_kill(bip, link);
+				//conf_die("user: ... net: ... can i has nick/user/rael");
+				r = 0;
+			}
+		}
+	}
+
+#warning CODE ME
+#if 0
+	if (conf_backlog && !conf_log) {
+		if (conf_backlog_lines == 0) {
+			conf_die("You must set conf_backlog_lines if "
+					"conf_log = false and "
+					"conf_backlog = true");
+		}
+	}
+#endif
+	return r;
+}
+
 int fireup(bip_t *bip, FILE *conf)
 {
 	struct tuple *t;
@@ -631,71 +655,7 @@ int fireup(bip_t *bip, FILE *conf)
 	free(root_list);
 	root_list = NULL;
 
-#warning move me
-#if 0
-	if (conf_backlog && !conf_log) {
-		if (conf_backlog_lines == 0) {
-			conf_die("You must set conf_backlog_lines if "
-					"conf_log = false and "
-					"conf_backlog = true");
-		}
-	}
-#endif
-
-	if (!conf_log)
-		conf_memlog = 1;
-	else
-		conf_memlog = 0;
-
-	/*
-	check_networks(networkl);
-	check_clients(userl);
-	*/
-
-	if (!conf_biphome) {
-		char *home = getenv("HOME");
-		if (!home) {
-			conf_die("no $HOME !, do you live in a trailer ?");
-			return 0;
-		}
-		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
-		strcpy(conf_biphome, home);
-		strcat(conf_biphome, "/.bip");
-	}
-	if (!conf_log_root) {
-		char *ap = "/logs";
-		conf_log_root = malloc(strlen(conf_biphome) + strlen(ap) + 1);
-		strcpy(conf_log_root, conf_biphome);
-		strcat(conf_log_root, ap);
-		mylog(LOG_INFO, "Default log root: %s", conf_log_root);
-	}
-	if (!conf_pid_file) {
-		char *pid = "/bip.pid";
-		conf_pid_file = malloc(strlen(conf_biphome) + strlen(pid) + 1);
-		strcpy(conf_pid_file, conf_biphome);
-		strcat(conf_pid_file, pid);
-		mylog(LOG_INFO, "Default pid file: %s", conf_pid_file);
-	}
-
-#ifdef HAVE_LIBSSL
-	conf_ssl_certfile = NULL;	/* Make into a config option */
-	if (!conf_ssl_certfile) {
-		char *ap = "/bip.pem";
-		if (conf_ssl_certfile) {
-			free(conf_ssl_certfile);
-			conf_ssl_certfile = NULL;
-		}
-		conf_ssl_certfile = malloc(strlen(conf_biphome) +
-				strlen(ap) + 1);
-		strcpy(conf_ssl_certfile, conf_biphome);
-		strcat(conf_ssl_certfile, ap);
-		mylog(LOG_INFO, "Default SSL certificate file: %s",
-				conf_ssl_certfile);
-	}
-#endif
-	if (!conf_log_format)
-		conf_log_format = "%u/%n/%Y-%m/%c.%d.log";
-
+	validate_config(bip);
 	return 1;
 }
 
@@ -853,9 +813,11 @@ void ircize(bip_t *bip)
 
 static void log_file_setup(void)
 {
+	char buf[4096];
+
 	if (conf_log_system) {
 		if (conf_global_log_file && conf_global_log_file != stderr)
-			fclose(conf_log_system);
+			fclose(conf_global_log_file);
 		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
 		FILE *f = fopen(buf, "a");
 		if (!f)
@@ -937,12 +899,57 @@ int main(int argc, char **argv)
 			fatal("%s config file not found", confpath);
 	}
 
+
 	r = fireup(&bip, conf);
 	fclose(conf);
 	if (!r) {
 		fatal("%s", conf_errstr);
 		exit(28);
 	}
+
+	if (!conf_biphome) {
+		char *home = getenv("HOME");
+		if (!home) {
+			conf_die("no $HOME !, do you live in a trailer ?");
+			return 0;
+		}
+		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
+		strcpy(conf_biphome, home);
+		strcat(conf_biphome, "/.bip");
+	}
+	if (!conf_log_root) {
+		char *ap = "/logs";
+		conf_log_root = malloc(strlen(conf_biphome) + strlen(ap) + 1);
+		strcpy(conf_log_root, conf_biphome);
+		strcat(conf_log_root, ap);
+		mylog(LOG_INFO, "Default log root: %s", conf_log_root);
+	}
+	if (!conf_pid_file) {
+		char *pid = "/bip.pid";
+		conf_pid_file = malloc(strlen(conf_biphome) + strlen(pid) + 1);
+		strcpy(conf_pid_file, conf_biphome);
+		strcat(conf_pid_file, pid);
+		mylog(LOG_INFO, "Default pid file: %s", conf_pid_file);
+	}
+
+#ifdef HAVE_LIBSSL
+	conf_ssl_certfile = NULL;	/* Make into a config option */
+	if (!conf_ssl_certfile) {
+		char *ap = "/bip.pem";
+		if (conf_ssl_certfile) {
+			free(conf_ssl_certfile);
+			conf_ssl_certfile = NULL;
+		}
+		conf_ssl_certfile = malloc(strlen(conf_biphome) +
+				strlen(ap) + 1);
+		strcpy(conf_ssl_certfile, conf_biphome);
+		strcat(conf_ssl_certfile, ap);
+		mylog(LOG_INFO, "Default SSL certificate file: %s",
+				conf_ssl_certfile);
+	}
+#endif
+	if (!conf_log_format)
+		conf_log_format = "%u/%n/%Y-%m/%c.%d.log";
 
 	check_dir(conf_log_root, 1);
 	fd = do_pid_stuff();

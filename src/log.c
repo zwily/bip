@@ -1148,3 +1148,21 @@ log_t *log_new(struct user *user, char *network)
 	list_add_last(log_all_logs, logdata);
 	return logdata;
 }
+
+void log_free(log_t *log)
+{
+	hash_iterator_t it;
+	logfilegroup_t *lfg;
+	logfile_t *lf;
+
+	for (hash_it_init(&log->logfgs, &it); (lfg = hash_it_item(&it));
+			hash_it_next(&it)) {
+		log_reset(lfg);
+		if ((lf = list_remove_first(&lfg->file_group)))
+			logfile_free(lf);
+		free(lf);
+	}
+	hash_clean(&log->logfgs);
+	free(log);
+}
+

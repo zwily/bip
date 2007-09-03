@@ -882,7 +882,7 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 		connecting_data_free(cdata);
 		cdata = NULL;
 		return;
- 	}
+	}
 
 	if (srchostname || srcport) {
 		if ((err = getaddrinfo(srchostname, srcport, &hint,
@@ -925,7 +925,7 @@ static void create_listening_socket(char *hostname, char *port,
 	if (err) {
 		mylog(LOG_DEBUG, "getaddrinfo(): %s", gai_strerror(err));
 		return;
- 	}
+	}
 
 	for (cur = res ; cur ; cur = cur->ai_next) {
 		if ((cn->handle = socket(cur->ai_family, cur->ai_socktype,
