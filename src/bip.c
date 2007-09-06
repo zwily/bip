@@ -659,158 +659,6 @@ int fireup(bip_t *bip, FILE *conf)
 	return 1;
 }
 
-#if 0
-void ircize(bip_t *bip)
-{
-	hash_iterator_t it;
-	for (hash_it_init(&conf_users, &it); hash_it_item(&it);
-			hash_it_next(&it)) {
-		struct c_user *u = hash_it_item(&it);
-
-		hash_t *adm_conn = hash_get(&adm_users, u->name);
-		if (!adm_conn) {
-			adm_conn = hash_new(HASH_NOCASE);
-			hash_insert(&adm_users, u->name, adm_conn);
-			mylog(LOG_DEBUG, "new user: \"%s\"", u->name);
-		} else {
-			mylog(LOG_DEBUG, "old user: \"%s\"", u->name);
-		}
-
-		/*
-		 * TODO: keep track of removed connection on sighup
-		 */
-		/*
-		 * A user has multiple connections.
-		 * For each connections create a irc_client and a irc_server
-		 * instance and register them in connection structure;
-		 */
-		list_iterator_t cit;
-		for (list_it_init(&u->connectionl, &cit); list_it_item(&cit);
-				list_it_next(&cit)) {
-			struct c_connection *c = list_it_item(&cit);
-			struct link *link;
-			int i;
-
-			if (!c->name)
-				fatal("no name for a connection");
-
-			link = hash_get(adm_conn, c->name);
-			if (!link) {
-				mylog(LOG_DEBUGVERB, "new connection: \"%s\"",
-						c->name);
-				link = irc_link_new();
-				hash_insert(adm_conn, c->name, link);
-				link->name = strmaydup(c->name);
-				link->log = log_new(u->name, link->name);
-
-				list_iterator_t chit;
-				for (list_it_init(&c->channell, &chit);
-						list_it_item(&chit);
-						list_it_next(&chit)) {
-					struct c_channel *chan =
-						list_it_item(&chit);
-					struct chan_info *ci = chan_info_new();
-					ci->name = strdup(chan->name);
-					ci->key = strmaydup(chan->key);
-					hash_insert(&link->chan_infos,
-							ci->name, ci);
-					list_add_last(&link->chan_infos_order,
-							ci);
-				}
-				list_add_last(&bip->link_list, link);
-			} else {
-				mylog(LOG_DEBUGVERB, "old connection: \"%s\"",
-						c->name);
-				MAYFREE(link->away_nick);
-				MAYFREE(link->password);
-				MAYFREE(link->user);
-				MAYFREE(link->real_name);
-				MAYFREE(link->s_password);
-				MAYFREE(link->connect_nick);
-				MAYFREE(link->vhost);
-#ifdef HAVE_LIBSSL
-				MAYFREE(link->ssl_check_store);
-				sk_X509_free(link->untrusted_certs);
-#endif
-
-
-				for (i = 0; i < link->serverc; i++)
-					server_free(link->serverv[i]);
-				free(link->serverv);
-				link->serverv = NULL;
-				link->serverc = 0;
-			}
-
-			link->follow_nick = c->follow_nick;
-			link->ignore_first_nick = c->ignore_first_nick;
-
-			char *s;
-			while ((s = list_remove_first(
-						&link->on_connect_send))) {
-				free(s);
-			}
-			list_append(&c->on_connect_send,
-					&link->on_connect_send);
-
-			link->away_nick = strmaydup(c->away_nick);
-
-			link->no_client_away_msg =
-				strmaydup(c->no_client_away_msg);
-
-			link->username = strmaydup(u->name);
-			link->password = malloc(20);
-			memcpy(link->password, u->password, 20);
-			link->seed = u->seed;
-
-			list_iterator_t seit;
-			for (list_it_init(&c->network->serverl, &seit);
-					list_it_item(&seit);
-					list_it_next(&seit)) {
-				struct server *s = list_it_item(&seit);
-				link->serverv = realloc(link->serverv,
-						(link->serverc + 1)
-						* sizeof(struct server *));
-				link->serverv[link->serverc] = server_new();
-				/* XXX: wrong */
-				link->serverv[link->serverc]->host
-					= strmaydup(s->host);
-				link->serverv[link->serverc]->port = s->port;
-				link->serverc++;
-			}
-
-			link->user = strmaydup(c->user);
-			if (!link->user)
-				link->user = strmaydup(u->default_user);
-			link->real_name = strmaydup(c->realname);
-			if (!link->real_name)
-				link->real_name =
-						strmaydup(u->default_realname);
-			link->s_password = strmaydup(c->password);
-			link->connect_nick = strmaydup(c->nick);
-			if (!link->connect_nick)
-				link->connect_nick = strmaydup(u->default_nick);
-
-			link->vhost = strmaydup(c->vhost);
-			link->bind_port = c->source_port;
-#ifdef HAVE_LIBSSL
-			link->s_ssl = c->network->ssl;
-			link->ssl_check_mode = u->ssl_check_mode;
-			link->ssl_check_store = strmaydup(u->ssl_check_store);
-			link->untrusted_certs = sk_X509_new_null();
-#endif
-
-			if (!link->user)
-				link->user = strmaydup("bip");
-			if (!link->connect_nick)
-				link->connect_nick = strmaydup("bip");
-			if (!link->real_name)
-				link->real_name = strmaydup("bip");
-
-		}
-	}
-}
-#endif
-
 static void log_file_setup(void)
 {
 	char buf[4096];
@@ -1158,6 +1006,17 @@ int adm_trust(struct link_client *ic, struct line *line)
 }
 #endif
 
+void adm_reply(struct link_client *ic, char *str)
+{
+	char *nick;
+
+	if (LINK(ic)->l_server)
+		nick = LINK(ic)->l_server->nick;
+	else
+		nick = LINK(ic)->prev_nick;
+	WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick, str);
+}
+
 extern struct link_client *reloading_client;
 void adm_blreset(struct link_client *ic)
 {
@@ -1168,6 +1027,8 @@ void adm_blreset(struct link_client *ic)
 		logfilegroup_t *lfg = hash_it_item(&it);
 		log_reset(lfg);
 	}
+
+	adm_reply(ic, "Resetted.");
 }
 
 void adm_follow_nick(struct link_client *ic, char *val)
@@ -1175,8 +1036,10 @@ void adm_follow_nick(struct link_client *ic, char *val)
 	struct link *link = LINK(ic);
 	if (strncasecmp(val, "TRUE", 4) == 0) {
 		link->follow_nick = 1;
+		adm_reply(ic, "follow_nick is now true.");
 	} else {
 		link->follow_nick = 0;
+		adm_reply(ic, "follow_nick is now false.");
 	}
 }
 
@@ -1185,8 +1048,10 @@ void adm_ignore_first_nick(struct link_client *ic, char *val)
 	struct link *link = LINK(ic);
 	if (strncasecmp(val, "TRUE", 4) == 0) {
 		link->ignore_first_nick = 1;
+		adm_reply(ic, "ignore_first_nick is now true.");
 	} else {
 		link->ignore_first_nick = 0;
+		adm_reply(ic, "ignore_first_nick is now false.");
 	}
 }
 
@@ -1195,12 +1060,14 @@ void adm_on_connect_send(struct link_client *ic, char *val)
 	struct link *link = LINK(ic);
 	char *s;
 
-	if (val != NULL)
+	if (val != NULL) {
 		list_add_last(&link->on_connect_send, strdup(val));
-	else {
+		adm_reply(ic, "added to on_connect_send.");
+	} else {
 		s = list_remove_last(&link->on_connect_send);
 		if (s)
 			free(s);
+		adm_reply(ic, "on_connect_send emtpy.");
 	}
 }
 
@@ -1211,8 +1078,12 @@ void adm_away_nick(struct link_client *ic, char *val)
 		free(link->away_nick);
 		link->away_nick = NULL;
 	}
-	if (val != NULL)
+	if (val != NULL) {
 		link->away_nick = strdup(val);
+		adm_reply(ic, "away_nick emtpy.");
+	} else {
+		adm_reply(ic, "away_nick set.");
+	}
 }
 
 int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
