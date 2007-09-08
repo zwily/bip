@@ -350,6 +350,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 	} else {
 #warning "CODEME (user switch..)"
 		l->network = NULL;
+		log_reinit_all(l->log);
 	}
 
 	while ((t = list_remove_first(data))) {
@@ -1020,14 +1021,7 @@ void adm_reply(struct link_client *ic, char *str)
 extern struct link_client *reloading_client;
 void adm_blreset(struct link_client *ic)
 {
-	hash_iterator_t it;
-	for (hash_it_init(&LINK(ic)->log->logfgs, &it);
-			hash_it_item(&it);
-			hash_it_next(&it)) {
-		logfilegroup_t *lfg = hash_it_item(&it);
-		log_reset(lfg);
-	}
-
+	log_reinit_all(LINK(ic)->log);
 	adm_reply(ic, "Resetted.");
 }
 

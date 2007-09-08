@@ -603,22 +603,26 @@ void log_client_disconnected(log_t *logdata)
 	mylog(LOG_DEBUG, "A client disconnected");
 }
 
-void log_client_none_connected(log_t *logdata)
+void log_reinit_all(log_t *logdata)
 {
 	logfilegroup_t *lfg;
 	hash_iterator_t hi;
-
-	logdata->connected = 0;
-
-	if (logdata->user->always_backlog)
-		return;
-
 
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		lfg = hash_it_item(&hi);
 		log_reset(lfg);
 	}
+}
+
+void log_client_none_connected(log_t *logdata)
+{
+	logdata->connected = 0;
+
+	if (logdata->user->always_backlog)
+		return;
+
+	log_reinit_all(logdata);
 }
 
 void log_client_connected(log_t *logdata)
