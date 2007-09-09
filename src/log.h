@@ -96,4 +96,5 @@ void log_client_none_connected(log_t *logdata);
 void log_reset(logfilegroup_t *);
 int check_dir(char *filename, int is_fatal);
 void log_reinit_all(log_t *logdata);
+void log_free(log_t *log);
 #endif

@@ -2418,8 +2418,6 @@ struct link *irc_link_new()
 
 void link_kill(bip_t *bip, struct link *link)
 {
-	int i;
-
 	hash_remove(&link->user->connections, link->name);
 	free(link->name);
 	irc_close((struct link_any *)link->l_server);
