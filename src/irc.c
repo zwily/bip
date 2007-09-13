@@ -58,7 +58,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 		struct line *line);
 static void irc_cli_make_join(struct link_client *ic);
 
-#define LAGOUT_TIME (360)
+#define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
 #define RECONN_TIMER (120)
 #define LOGGING_TIMEOUT (360)
