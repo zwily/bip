@@ -2057,7 +2057,7 @@ void oidentd_dump(list_t *connl)
 		return;
 	}
 
-	filename = (char *)malloc(strlen(home) + strlen("/.oidentd.conf"));
+	filename = (char *)malloc(strlen(home) + strlen("/.oidentd.conf") + 1);
 	if(filename == NULL)
 		fatal("Out of memory.");
 
