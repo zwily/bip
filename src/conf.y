@@ -205,6 +205,7 @@ channel:
 cha_command:
 	   LEX_NAME LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_NAME, $3); }
 	   | LEX_KEY LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_KEY, $3); }
+           | LEX_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_BACKLOG, $3); }
 
 server:
        { $$ = list_new(NULL); }

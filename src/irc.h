@@ -206,6 +206,7 @@ struct log;
 struct chan_info {
 	char *name;
 	char *key;
+	int backlog;
 };
 
 #define chan_info_new() calloc(sizeof(struct chan_info), 1)

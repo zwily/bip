@@ -5,6 +5,8 @@
 	debug info...
 	* src/bip: add ssl_check_mode option to the connection block (requested
 	by Trou) + die if ssl_check_mode is unset while the network is SSL.
+	* src: add backlog option to channels, allowing to disable backlog on
+	a per channel basis
 
 
 2007-09-25  Loïc Gomez <opensource@kyoshiro.org>

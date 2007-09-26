@@ -718,6 +718,8 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 	char *ret;
 	int out;
 	int done;
+	struct link *l;
+	struct chan_info *ci;
 
 	if (!buf)
 		fatal("BUG log_beautify not called correctly!");
@@ -732,6 +734,21 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 		return _log_wrap(dest, buf);
 	lots = p - sots;
 	p++;
+
+	if (!logdata->user)
+		fatal("log_beautify: no user associated to logdata");
+	if (!logdata->network)
+		fatal("log_beautify: no network id associated to logdata");
+	l = hash_get(&logdata->user->connections, logdata->network);
+	if (!l)
+		fatal("log_beautify: no connection associated to logdata");
+	ci = hash_get(&l->chan_infos, dest);
+	if (ci && !ci->backlog) {
+		mylog(LOG_DEBUG, "Skipping unwanted channel %s for backlog",
+				dest);
+		return NULL;
+	}
+
 	if (strncmp(p, "-!-", 3) == 0) {
 		if (logdata->user->bl_msg_only)
 			return NULL;

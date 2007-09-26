@@ -357,7 +357,7 @@ static int add_network(bip_t *bip, list_t *data)
 
 static int add_connection(bip_t *bip, struct user *user, list_t *data)
 {
-	struct tuple *t;
+	struct tuple *t, *t2;
 	struct link *l;
 	struct chan_info *ci;
 	char *name = get_tuple_value(data, LEX_NAME);
@@ -373,7 +373,11 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		list_add_last(&bip->link_list, l);
 		l->user = user;
 		l->log = log_new(user, name);
+#ifdef HAVE_LIBSSL
 		l->ssl_check_mode = user->ssl_check_mode;
+		l->ssl_check_store = user->ssl_check_store;
+		l->untrusted_certs = sk_X509_new_null();
+#endif
 	} else {
 #warning "CODEME (user switch..)"
 		l->network = NULL;
@@ -412,9 +416,22 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			break;
 		case LEX_CHANNEL:
 			ci = calloc(sizeof(struct chan_info), 1);
+			ci->backlog = 1;
 
-			ci->name = get_tuple_value(t->pdata, LEX_NAME);
-			ci->key = get_tuple_value(t->pdata, LEX_KEY);
+			while ((t2 = list_remove_first(t->pdata))) {
+				switch (t2->type) {
+				case LEX_NAME:
+					MOVE_STRING(ci->name, t2->pdata);
+					break;
+				case LEX_KEY:
+					MOVE_STRING(ci->key, t2->pdata);
+					break;
+				case LEX_BACKLOG:
+					ci->backlog = t2->ndata;
+					break;
+				}
+			}
+			list_free(t->pdata);
 
 			hash_insert(&l->chan_infos, ci->name, ci);
 			list_add_last(&l->chan_infos_order, ci);
@@ -589,9 +606,10 @@ static int add_user(bip_t *bip, list_t *data)
 static int validate_config(bip_t *bip)
 {
 	/* nick username realname or default_{nick,username,realname} in user */
-	hash_iterator_t it, sit;
+	hash_iterator_t it, sit, cit;
 	struct user *user;
 	struct link *link;
+	struct chan_info *ci;
 	int r = 1;
 
 	for (hash_it_init(&bip->users, &it); (user = hash_it_item(&it));
@@ -618,6 +636,16 @@ static int validate_config(bip_t *bip)
 
 				//conf_die("user: ... net: ... can i has nick/user/rael");
 				r = 0;
+
+				for (hash_it_init(&link->chan_infos, &cit);
+						(ci = hash_it_item(&cit));
+						hash_it_next(&cit)) {
+					if (!ci->name)
+						conf_die("user %s, connection "
+							"%s: channel must have"
+							"a name.", user->name,
+							link->name);
+				}
 			}
 		}
 

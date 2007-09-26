@@ -2274,7 +2274,8 @@ void bip_tick(bip_t *bip)
 		struct link_client *ic = list_it_item(&li);
 		ic->logging_timer++;
 		if (ic->logging_timer > LOGGING_TIMEOUT) {
-			list_remove(&bip->conn_list, CONN(ic));
+			if (CONN(ic))
+				list_remove(&bip->conn_list, CONN(ic));
 			irc_close((struct link_any *)ic);
 			list_it_remove(&li);
 		}
