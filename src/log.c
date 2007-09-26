@@ -23,6 +23,7 @@ extern char *conf_log_format;
 extern int conf_log;
 
 int conf_memlog = 1;
+extern FILE *conf_global_log_file;
 
 int log_set_backlog_offset(log_t *logdata, char *dest);
 static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
@@ -1113,6 +1114,7 @@ void log_flush_all(void)
 	if (!log_all_logs)
 		return;
 
+	fflush(conf_global_log_file);
 	for (list_it_init(log_all_logs, &li); list_it_item(&li);
 			list_it_next(&li)) {
 		log_t *log = list_it_item(&li);

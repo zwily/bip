@@ -68,6 +68,7 @@ struct user {
 	char *name;
 	unsigned char *password;
 	unsigned int seed;
+	int admin;
 
 	/* common link options */
 
@@ -83,6 +84,8 @@ struct user {
 	int backlog_no_timestamp;
 	int blreset_on_talk;
 
+	int ssl_check_mode;
+	char *ssl_check_store;
 	hash_t connections;
 };
 

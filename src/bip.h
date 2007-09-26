@@ -32,6 +32,7 @@ struct c_connection
 	char *no_client_away_msg;
 
 	struct client *client;
+	struct c_user *bipuser;
 };
 
 struct c_channel

@@ -113,5 +113,10 @@ char *strmaydup(char *s);
 
 void strucase(char *s);
 int ischannel(char p);
+char *hrtime(time_t t);
+#ifdef HAVE_LIBSSL
+char *checkmode2text(int v);
+#endif
+char *bool2text(int v);
 
 #endif

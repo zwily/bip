@@ -12,6 +12,7 @@
  */
 
 #include "config.h"
+#include "connection.h"
 #include "util.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -72,6 +73,43 @@ char *timestamp(void)
 			tm->tm_mon + 1, tm->tm_year + 1900, tm->tm_hour,
 			tm->tm_min, tm->tm_sec);
 	return ts;
+}
+
+char *hrtime(time_t s)
+{
+	static char ts[20];
+	struct tm *tm;
+
+	if (s == 0)
+		return "never";
+	tm = localtime(&s);
+
+	snprintf(ts, 20, "%02d-%02d-%04d %02d:%02d:%02d", tm->tm_mday,
+			tm->tm_mon + 1, tm->tm_year + 1900, tm->tm_hour,
+			tm->tm_min, tm->tm_sec);
+	return ts;
+}
+
+#ifdef HAVE_LIBSSL
+char *checkmode2text(int v)
+{
+	switch (v) {
+	case SSL_CHECK_BASIC:
+		return "basic";
+	case SSL_CHECK_CA:
+		return "ca";
+	default:
+		return "none";
+	}
+}
+#endif
+
+char *bool2text(int v)
+{
+	if (v)
+		return "true";
+	else
+		return "false";
 }
 
 extern FILE *conf_global_log_file;

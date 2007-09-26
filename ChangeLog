@@ -1,3 +1,26 @@
+2007-09-25  Loïc Gomez <opensource@kyoshiro.org>
+
+	* src/sample: Update manpage, sample config and sample bip.vim + typo
+	* src/bip: warn the user about rlimits upon start and whenever they're
+	reached
+	* src/bip: add -v flag (show version)
+	* src/bip: add admin option to user block, and restrict some commands to
+	admins. Log whenever a /bip command is used
+	* src/bip: enhance /BIP LIST and HELP commands, add INFO command
+	* src: fix defaults user/nick/realnames not loaded into connections,
+	resulting in segfault (WRITE_LINE1 to NULL) and oidentd.conf file not
+	containing usernames
+	* src: add default.h and version.h
+	* src: fflush() system log every log_sync_interval
+	* src/bip: fix "Resetted." printed whenever a client talks with
+	backlog_reset_ontalk true
+	* src/bip: fix backlog user options not set to defaults in add_user
+	* src/bip: fix oidentd.conf config written lately. Still some issues
+	* src/util: add human readable time hrtime(), bool2text() and ssl
+	checlmode2text() functions
+	* src: lower RECONN_TIMER + add RECONN_TIMER_MAX option
+	* src/bip: code some validate_config
+
 2007-05-26  Arnaud Cornet <arnaud.cornet@gmail.com>
 
 	* src: lot's of code cleanup and refactoring. Open door to better

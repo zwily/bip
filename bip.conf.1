@@ -211,6 +211,11 @@ The user name. It'll be used to authenticate to bip and in \fBlog_format\fP.
 The password. It \fBMUST\fP be generated with \fBbimkpw\fP or it'll not work.
 
 .TP
+\fBadmin\fP (default: \fBfalse\fP)
+If a user has admin set to true, he'll become a bip administrator, which allows
+him for example to RELOAD bip from IRC or to see the user configuration.
+
+.TP
 \fBssl_check_mode\fP (default: \fBnone\fP)
 Tells whether BIP should check the server SSL certificate and against what.
 Can be \fBnone\fP for no check at all, \fBca\fP to check if the cert is signed

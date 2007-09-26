@@ -25,6 +25,7 @@
 #define S_CONN_DELAY (10)
 
 extern int sighup;
+extern bip_t *_bip;
 
 static int irc_join(struct link_server *server, struct line *line);
 static int irc_part(struct link_server *server, struct line *line);
@@ -44,13 +45,12 @@ static int irc_367(struct link_server *server, struct line *l);
 static int irc_368(struct link_server *server, struct line *l);
 void irc_server_shutdown(struct link_server *s);
 static int origin_is_me(struct line *l, struct link_server *server);
+void oidentd_dump(list_t *connl);
 
 void irc_client_free(struct link_client *cli);
-extern int conf_backlog;
 extern int conf_log_sync_interval;
 extern int conf_error;
 extern char conf_errstr[];
-extern int conf_blreset_on_talk;
 
 void write_user_list(connection_t *c, char *dest);
 
@@ -61,6 +61,7 @@ static void irc_cli_make_join(struct link_client *ic);
 #define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
 #define RECONN_TIMER (120)
+#define RECONN_TIMER_MAX (600)
 #define LOGGING_TIMEOUT (360)
 #define CONN_INTERVAL 60
 #define CONNECT_TIMEOUT 60
@@ -488,6 +489,11 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 static void irc_send_join(struct link_client *ic, struct channel *chan)
 {
 	char *ircmask; /* fake an irc mask for rbot */
+	struct user *user;
+
+	user = LINK(ic)->user;
+	if (!user)
+		fatal("irc_send_join: No user associated");
 
 	ircmask = malloc(strlen(LINK(ic)->l_server->nick) +
 			strlen("!bip@bip.bip.bip") + 1);
@@ -503,7 +509,7 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 				chan->name, chan->creator, chan->create_ts);
 
 	/* XXX: could be more efficient */
-	if (conf_backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
+	if (user->backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
 		int skip = 0;
 		while ((line =
@@ -850,7 +856,7 @@ static int irc_cli_privmsg(struct link_client *ic, struct line *line)
 		return adm_bip(ic, line, 1);
 
 	if (LINK(ic)->user->blreset_on_talk)
-		adm_blreset(ic);
+		log_reinit_all(LINK(ic)->log);
 	return OK_COPY_CLI;
 }
 
@@ -1927,8 +1933,11 @@ static void irc_close(struct link_any *l)
 		server_cleanup(is);
 		if (LINK(is)->last_connection_attempt &&
 				time(NULL) - LINK(is)->last_connection_attempt
-					< CONN_INTERVAL)
+					< CONN_INTERVAL) {
 			timer = RECONN_TIMER * (LINK(is)->s_conn_attempt);
+			if (timer > RECONN_TIMER_MAX)
+				timer = RECONN_TIMER_MAX;
+		}
 		mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds",
 				LINK(l)->name, timer);
 		LINK(is)->recon_timer = timer;
@@ -2001,8 +2010,12 @@ connection_t *irc_server_connect(struct link *link)
 		fatal("connection_new");
 
 	ls = irc_server_new(link, conn);
-
 	conn->user_data = ls;
+
+	list_add_last(&_bip->conn_list, conn);
+#ifdef HAVE_OIDENTD
+	oidentd_dump(&_bip->conn_list);
+#endif
 	irc_server_startup(ls);
 	return conn;
 }
@@ -2139,8 +2152,12 @@ void oidentd_dump(list_t *connl)
 	for (list_it_init(connl, &it); list_it_item(&it); list_it_next(&it)) {
 		connection_t *c = list_it_item(&it);
 		struct link_any *la = c->user_data;
-		if (c->connected == CONN_OK && la &&
-				TYPE(la) == IRC_TYPE_SERVER) {
+		if (la && TYPE(la) == IRC_TYPE_SERVER && (
+				c->connected == CONN_OK ||
+				c->connected == CONN_NEED_SSLIZE ||
+				c->connected == CONN_INPROGRESS ||
+				c->connected == CONN_NEW ||
+				c->connected == CONN_UNTRUSTED)) {
 			struct link_server *ls;
 			struct link *l;
 			char *localip, *remoteip;
@@ -2238,7 +2255,6 @@ void bip_tick(bip_t *bip)
 			if (link->recon_timer == 0) {
 				connection_t *conn;
 				conn = irc_server_connect(link);
-				list_add_last(&bip->conn_list, conn);
 				link->last_connection_attempt = time(NULL);
 			} else {
 				link->recon_timer--;
@@ -2410,6 +2426,7 @@ struct link *irc_link_new()
 	if (!link)
 		fatal("calloc");
 
+	link->l_server = NULL;
 	hash_init(&link->chan_infos, HASH_NOCASE);
 	list_init(&link->chan_infos_order, list_ptr_cmp);
 	list_init(&link->on_connect_send, list_ptr_cmp);
