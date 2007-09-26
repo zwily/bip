@@ -149,7 +149,6 @@ struct link {
 	/* socket creation info */
 	char *vhost;
 	int bind_port;
-	int s_ssl;
 
 #ifdef HAVE_LIBSSL
 	int ssl_check_mode;

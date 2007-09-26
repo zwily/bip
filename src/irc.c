@@ -2006,7 +2006,7 @@ connection_t *irc_server_connect(struct link *link)
 				link->network->serverv[link->cur_server].port,
 				link->vhost, link->bind_port,
 #ifdef HAVE_LIBSSL
-				link->s_ssl, link->ssl_check_mode,
+				link->network->ssl, link->ssl_check_mode,
 				link->ssl_check_store,
 #else
 				0, 0, NULL,
