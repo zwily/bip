@@ -196,6 +196,8 @@ con_command:
 	   					LEX_ON_CONNECT_SEND, $3); }
 	   | LEX_NO_CLIENT_AWAY_MSG LEX_EQ LEX_STRING { $$ = tuple_s_new(
 	   					LEX_NO_CLIENT_AWAY_MSG, $3); }
+	   | LEX_SSL_CHECK_MODE LEX_EQ LEX_STRING { $$ = tuple_s_new(
+			LEX_SSL_CHECK_MODE, $3); }
 channel:
        { $$ = list_new(NULL); }
        | channel cha_command LEX_SEMICOLON { list_add_last($1, $2); $$ = $1; }

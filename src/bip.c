@@ -373,6 +373,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		list_add_last(&bip->link_list, l);
 		l->user = user;
 		l->log = log_new(user, name);
+		l->ssl_check_mode = user->ssl_check_mode;
 	} else {
 #warning "CODEME (user switch..)"
 		l->network = NULL;
@@ -433,6 +434,15 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		case LEX_ON_CONNECT_SEND:
 			list_add_last(&l->on_connect_send, t->pdata);
 			break;
+#ifdef HAVE_LIBSSL
+		case LEX_SSL_CHECK_MODE:
+			if (!strncmp(t->pdata, "basic", 5))
+				l->ssl_check_mode = SSL_CHECK_BASIC;
+			if (!strncmp(t->pdata, "ca", 2))
+				l->ssl_check_mode = SSL_CHECK_CA;
+			free(t->pdata);
+			break;
+#endif
 		default:
 			conf_die("unknown keyword in connection statement");
 			if (t->type == TUPLE_STR)
@@ -598,6 +608,14 @@ static int validate_config(bip_t *bip)
 						(!link->realname &&
 						 !user->default_realname))
 					link_kill(bip, link);
+
+				if (link->network->ssl &&
+						!link->ssl_check_mode)
+					conf_die("user %s, connection %s: you "
+						"should define a "
+						"ssl_check_mode.", user->name,
+						link->name);
+
 				//conf_die("user: ... net: ... can i has nick/user/rael");
 				r = 0;
 			}
@@ -611,8 +629,7 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
-#warning CODE ME
-#warning DONE BY KYOSHIRO :p
+#warning CODE ME -> DONE BY KYOSHIRO ?
 #if 0
 	if (conf_backlog && !conf_log) {
 		if (conf_backlog_lines == 0) {

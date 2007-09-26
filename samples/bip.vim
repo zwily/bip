@@ -87,7 +87,7 @@ syn keyword	bipCoKeyword	contained nextgroup=bipBoolV ssl follow_nick
 	\ ignore_first_nick
 syn keyword	bipCoKeyword	contained nextgroup=bipStringV name user nick
 	\ network password vhost away_nick on_connect_send realname
-	\ no_client_away_msg
+	\ no_client_away_msg ssl_check_mode
 syn keyword	bipCoKeyword	contained nextgroup=bipNumericV source_port
 no_client_away_msg
 
