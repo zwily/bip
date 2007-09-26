@@ -509,7 +509,10 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 				chan->name, chan->creator, chan->create_ts);
 
 	/* XXX: could be more efficient */
-	if (user->backlog && log_has_backlog(LINK(ic)->log, chan->name)) {
+	if (!user->backlog) {
+		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
+			user->name);
+	} else if (log_has_backlog(LINK(ic)->log, chan->name)) {
 		char *line;
 		int skip = 0;
 		while ((line =
@@ -520,6 +523,9 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 		}
 		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
 				"End of backlog.");
+	} else {
+		mylog(LOG_DEBUG, "Nothing to backlog for %s/%s",
+			user->name, chan->name);
 	}
 
 	list_t *name_list = channel_name_list(chan);

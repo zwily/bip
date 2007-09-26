@@ -1,3 +1,9 @@
+2007-09-2   Loïc Gomez <opensource@kyoshiro.org>
+
+	* src/log: fix backlogging again, memlog was distrubing the process
+	* src/connection: change some log levels, errors are errors, not 
+	debug info...
+
 2007-09-25  Loïc Gomez <opensource@kyoshiro.org>
 
 	* src/sample: Update manpage, sample config and sample bip.vim + typo

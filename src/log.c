@@ -22,7 +22,6 @@ extern char *conf_log_root;
 extern char *conf_log_format;
 extern int conf_log;
 
-int conf_memlog = 1;
 extern FILE *conf_global_log_file;
 
 int log_set_backlog_offset(log_t *logdata, char *dest);
@@ -258,7 +257,7 @@ static int log_add_file(log_t *logdata, char *destination, char *filename)
 		hash_insert(&logdata->logfgs, destination, lfg);
 	}
 
-	if (conf_memlog) {
+	if (!conf_log && logdata->user->backlog) {
 		if (!lfg->memlog)
 			lfg->memlog = list_new(NULL);
 	}
@@ -904,8 +903,10 @@ char *log_backread(log_t *logdata, char *destination, int *skip)
 		return strdup(ptr);
 	}
 
-	if (!conf_log)
+	if (!conf_log) {
+		mylog(LOG_DEBUG, "No conf_log, not backlogging");
 		return NULL;
+	}
 
 	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
 
@@ -990,11 +991,12 @@ next_file:
 					"Error reading in logfile");
 		}
 		logdata->lastfile_seeked = 1;
-		mylog(LOG_DEBUG, "last file seedked!");
+		mylog(LOG_DEBUG, "last file seeked!");
 	}
 
 	c = fgetc(lf->file);
 	if (c == EOF) {
+		mylog(LOG_DEBUG, "Nothing more to backlog");
 		logdata->lastfile_seeked = 0;
 		logdata->backlogging = 0;
 		free(buf);
@@ -1029,9 +1031,11 @@ next_file:
 			}
 			ret = log_beautify(logdata, buf, destination);
 			if (ret == NULL) {
+				mylog(LOG_DEBUGVERB, "Line not backlogged");
 				pos = 0;
 				continue;
 			}
+			mylog(LOG_DEBUGVERB, "backlog: %s", ret);
 			free(buf);
 			return ret;
 		}

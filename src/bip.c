@@ -44,7 +44,6 @@ char *conf_pid_file;
 char *conf_biphome;
 
 /* log options, for sure the trickiest :) */
-extern int conf_memlog;
 int conf_log = 0;
 int conf_log_system = 0;
 int conf_log_sync_interval = 0;
