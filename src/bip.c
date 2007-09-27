@@ -44,9 +44,9 @@ char *conf_pid_file;
 char *conf_biphome;
 
 /* log options, for sure the trickiest :) */
-int conf_log = 0;
-int conf_log_system = 0;
-int conf_log_sync_interval = 0;
+int conf_log = DEFAULT_LOG;
+int conf_log_system = DEFAULT_LOG_SYSTEM;
+int conf_log_sync_interval = DEFAULT_LOG_SYNC_INTERVAL;
 
 list_t *parse_conf(FILE *file);
 static void conf_die(char *fmt, ...);
@@ -509,12 +509,12 @@ static int add_user(bip_t *bip, list_t *data)
 		hash_insert(&bip->users, name, u);
 		hash_init(&u->connections, HASH_NOCASE);
 		u->admin = 0;
-		u->backlog = DEFAULT_LEX_BACKLOG;
-		u->always_backlog = DEFAULT_LEX_ALWAYS_BACKLOG;
-		u->bl_msg_only = DEFAULT_LEX_BL_MSG_ONLY;
-		u->backlog_lines = DEFAULT_LEX_BACKLOG_LINES;
-		u->backlog_no_timestamp = DEFAULT_LEX_BACKLOG_NO_TIMESTAMP;
-		u->blreset_on_talk = DEFAULT_LEX_BLRESET_ON_TALK;
+		u->backlog = DEFAULT_BACKLOG;
+		u->always_backlog = DEFAULT_ALWAYS_BACKLOG;
+		u->bl_msg_only = DEFAULT_BL_MSG_ONLY;
+		u->backlog_lines = DEFAULT_BACKLOG_LINES;
+		u->backlog_no_timestamp = DEFAULT_BACKLOG_NO_TIMESTAMP;
+		u->blreset_on_talk = DEFAULT_BLRESET_ON_TALK;
 	} else {
 		FREE(u->name);
 		FREE(u->password);
@@ -843,11 +843,8 @@ int main(int argc, char **argv)
 	signal(SIGXCPU, rlimit_cpu_reached);
 
 	conf_log_root = NULL;
-	conf_log_format = NULL;
-	conf_log_level = LOG_INFO;
-	conf_log = 1;
-	conf_log_system = 1;
-	conf_log_sync_interval = 5;
+	conf_log_format = DEFAULT_LOG_FORMAT;
+	conf_log_level = DEFAULT_LOG_LEVEL;
 	conf_daemonize = 1;
 	conf_global_log_file = stderr;
 	conf_pid_file = NULL;
@@ -946,8 +943,6 @@ int main(int argc, char **argv)
 				conf_ssl_certfile);
 	}
 #endif
-	if (!conf_log_format)
-		conf_log_format = "%u/%n/%Y-%m/%c.%d.log";
 
 	check_dir(conf_log_root, 1);
 	fd = do_pid_stuff();
