@@ -84,8 +84,11 @@ struct user {
 	int backlog_no_timestamp;
 	int blreset_on_talk;
 
+#ifdef HAVE_LIBSSL
 	int ssl_check_mode;
 	char *ssl_check_store;
+#endif
+
 	hash_t connections;
 };
 
@@ -152,7 +155,6 @@ struct link {
 
 #ifdef HAVE_LIBSSL
 	int ssl_check_mode;
-	char *ssl_check_store;
 	STACK_OF(X509) *untrusted_certs;
 #endif
 };

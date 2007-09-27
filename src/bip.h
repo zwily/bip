@@ -14,34 +14,6 @@
 #ifndef BIP_H
 #define BIP_H
 
-#if 0
-struct c_connection
-{
-	char *name;
-	struct c_network *network;
-	char *realname, *user, *nick;
-	char *password;	/* server pass */
-	char *vhost;
-	unsigned short source_port;
-	list_t channell;
-
-	int follow_nick;
-	int ignore_first_nick;
-	char *away_nick;
-	list_t on_connect_send;
-	char *no_client_away_msg;
-
-	struct client *client;
-	struct c_user *bipuser;
-};
-
-struct c_channel
-{
-	char *name;
-	char *key;
-};
-#endif
-
 #ifdef HAVE_LIBSSL
 int adm_trust(struct link_client *ic, struct line *line);
 #endif

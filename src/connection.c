@@ -209,7 +209,7 @@ static int _write_socket_SSL(connection_t *cn, char* message)
 	if (count != size) {
 		/* abnormal : openssl keeps writing until message is not fully
 		 * sent */
-		mylog(LOG_WARN, "only %d written while message length is %d",
+		mylog(LOG_DEBUG, "only %d written while message length is %d",
 				count,size);
 	}
 
@@ -995,7 +995,6 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	conn->ssl_ctx_h = NULL;
 	conn->ssl_h = NULL;
 	conn->cert = NULL;
-	conn->ssl_check_store = NULL;
 	conn->ssl_check_mode = SSL_CHECK_NONE;
 #endif
 	conn->connected = CONN_NEW;
@@ -1300,7 +1299,6 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 	}
 	conn->cert = NULL;
 	conn->ssl_check_mode = check_mode;
-	conn->ssl_check_store = check_store;
 
 	switch (conn->ssl_check_mode) {
 	case SSL_CHECK_BASIC:

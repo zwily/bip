@@ -85,7 +85,6 @@ typedef struct connection {
 	SSL_CTX *ssl_ctx_h;
 	SSL *ssl_h;
 	int ssl_check_mode;
-	char *ssl_check_store;
 	X509 *cert;
 #endif
 } connection_t;

@@ -2007,7 +2007,7 @@ connection_t *irc_server_connect(struct link *link)
 				link->vhost, link->bind_port,
 #ifdef HAVE_LIBSSL
 				link->network->ssl, link->ssl_check_mode,
-				link->ssl_check_store,
+				link->user->ssl_check_store,
 #else
 				0, 0, NULL,
 #endif
@@ -2470,7 +2470,6 @@ void link_kill(bip_t *bip, struct link *link)
 	MAYFREE(link->connect_nick);
 	MAYFREE(link->vhost);
 #ifdef HAVE_LIBSSL
-	MAYFREE(link->ssl_check_store);
 	sk_X509_free(link->untrusted_certs);
 #endif
 }

@@ -272,9 +272,7 @@ bip_t *_bip;
 void rlimit_cpu_reached(int i)
 {
 	mylog(LOG_WARN, "This process has reached the CPU time usage limit. "
-		"It means bip'll be killed by the Operating System in a short "
-		"notice. We advise you to use a crontab to restart bip "
-		"whenever this happens.");
+		"It means bip will be killed by the Operating System soon.");
 }
 
 void rlimit_bigfile_reached(int i)
@@ -375,7 +373,6 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		l->log = log_new(user, name);
 #ifdef HAVE_LIBSSL
 		l->ssl_check_mode = user->ssl_check_mode;
-		l->ssl_check_store = user->ssl_check_store;
 		l->untrusted_certs = sk_X509_new_null();
 #endif
 	} else {
@@ -752,7 +749,8 @@ static void log_file_setup(void)
 	}
 }
 
-void check_rlimits() {
+void check_rlimits()
+{
 	int r, cklim;
 	struct rlimit lt;
 
@@ -1390,7 +1388,7 @@ int adm_trust(struct link_client *ic, struct line *line)
 
 	if (!strcasecmp(line->elemv[2], "OK")) {
 		/* OK, attempt to trust the cert! */
-		BIO *bio = BIO_new_file(LINK(ic)->ssl_check_store, "a+");
+		BIO *bio = BIO_new_file(LINK(ic)->user->ssl_check_store, "a+");
 		X509 *trustcert = sk_X509_shift(LINK(ic)->untrusted_certs);
 
 		if(!bio || !trustcert ||
