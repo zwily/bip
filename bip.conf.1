@@ -188,6 +188,11 @@ This section allows you to define the users allowed to connect to BIP and their
 options. It may appear more than once in the configuration file.
 
 .TP
+\fBadmin\fP (default: \fBfalse\fP)
+If a user has admin set to true, he'll become a bip administrator, which allows
+him for example to RELOAD bip from IRC or to see the user configuration.
+
+.TP
 \fBbip_use_notice\fP (default: \fBfalse\fP)
 If \fBbip_use_notice\fP is true, bip's notifications to the clients will be
 send as notices instead of private messages. For example, this setting applies
@@ -215,11 +220,6 @@ The user name. It'll be used to authenticate to bip and in \fBlog_format\fP.
 .TP
 \fBpassword\fP
 The password. It \fBMUST\fP be generated with \fBbimkpw\fP or it'll not work.
-
-.TP
-\fBadmin\fP (default: \fBfalse\fP)
-If a user has admin set to true, he'll become a bip administrator, which allows
-him for example to RELOAD bip from IRC or to see the user configuration.
 
 .TP
 \fBssl_check_mode\fP (default: \fBnone\fP)
