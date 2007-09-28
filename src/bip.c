@@ -1035,7 +1035,7 @@ void adm_print_connection(struct link_client *ic, struct link *lnk, struct user 
 	t_wrote = snprintf(buf, 4095, "  Channels:");
 	for (hash_it_init(&lnk->chan_infos, &lit); hash_it_item(&lit);
 			hash_it_next(&lit)) {
-		struct channel *ch = hash_it_item(&lit);
+		struct chan_info *ch = hash_it_item(&lit);
 
 		if (ch->key) {
 			t_wrote += snprintf(buf + t_wrote, 4095
