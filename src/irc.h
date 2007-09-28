@@ -69,6 +69,7 @@ struct user {
 	unsigned char *password;
 	unsigned int seed;
 	int admin;
+	int bip_use_notice;
 
 	/* common link options */
 

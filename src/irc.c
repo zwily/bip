@@ -1091,7 +1091,9 @@ static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 				LINK(ic)->l_server->nick)
 			write_line(CONN(LINK(ic)->l_server), str);
 		else if (LINK(ic)->l_server->nick)
-			WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG",
+			WRITE_LINE2(CONN(ic), P_IRCMASK,
+					(LINK(ic)->user->bip_use_notice ?
+					 	"NOTICE" : "PRIVMSG"),
 					LINK(ic)->l_server->nick,
 					":Not connected please try again "
 					"later...\r\n");

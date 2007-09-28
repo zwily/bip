@@ -517,6 +517,7 @@ static int add_user(bip_t *bip, list_t *data)
 		u->backlog_lines = DEFAULT_BACKLOG_LINES;
 		u->backlog_no_timestamp = DEFAULT_BACKLOG_NO_TIMESTAMP;
 		u->blreset_on_talk = DEFAULT_BLRESET_ON_TALK;
+		u->bip_use_notice = DEFAULT_BIP_USE_NOTICE;
 	} else {
 		FREE(u->name);
 		FREE(u->password);
@@ -567,7 +568,9 @@ static int add_user(bip_t *bip, list_t *data)
 		case LEX_BLRESET_ON_TALK:
 			u->blreset_on_talk = t->ndata;
 			break;
-
+		case LEX_BIP_USE_NOTICE:
+			u->bip_use_notice = t->ndata;
+			break;
 		case LEX_CONNECTION:
 			r = add_connection(bip, u, t->pdata);
 			free(t->pdata);
@@ -1418,9 +1421,10 @@ void _bip_notify(struct link_client *ic, char *fmt, va_list ap)
 	else
 		nick = LINK(ic)->prev_nick;
 
-	snprintf(str, 4095, fmt, ap);
+	vsnprintf(str, 4095, fmt, ap);
 	str[4095] = 0;
-	WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", nick, str);
+	WRITE_LINE2(CONN(ic), P_IRCMASK, (LINK(ic)->user->bip_use_notice ?
+				"NOTICE" : "PRIVMSG"), nick, str);
 }
 
 void bip_notify(struct link_client *ic, char *fmt, ...)

@@ -77,7 +77,7 @@ syn keyword	bipUKeyword	contained nextgroup=bipNumericV backlog_lines
 syn keyword	bipUKeyword	contained nextgroup=bipBoolV admin
 	\ no_backlog always_backlog bl_msg_only blreset_on_talk
 	\ backlog_no_timestamp backlog log_system backlog_reset_on_talk
-	\ backlog_msg_only backlog_always
+	\ backlog_msg_only backlog_always bip_use_notice
 
 " Connection block (level 2)
 syn region	bipConnection	contained matchgroup=Macro

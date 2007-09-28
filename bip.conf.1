@@ -188,6 +188,12 @@ This section allows you to define the users allowed to connect to BIP and their
 options. It may appear more than once in the configuration file.
 
 .TP
+\fBbip_use_notice\fP (default: \fBfalse\fP)
+If \fBbip_use_notice\fP is true, bip's notifications to the clients will be
+send as notices instead of private messages. For example, this setting applies
+to disconnection notifications or /BIP command replies.
+
+.TP
 \fBdefault_nick\fP
 The default nick option for each \fBconnection section\fP where no \fBnick\fP
 is defined. See \fBCONNECTION SECTION\fP for more details.
