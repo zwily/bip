@@ -939,8 +939,7 @@ static void irc_notify_disconnection(struct link_server *is)
 					c->name, is->nick,
 					"Server disconnected, reconnecting");
 		}
-		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", is->nick,
-					"Server disconnected, reconnecting");
+		bip_notify(ic, "Server disconnected, reconnecting");
 	}
 }
 
