@@ -271,12 +271,14 @@ bip_t *_bip;
 
 void rlimit_cpu_reached(int i)
 {
+	(void)i;
 	mylog(LOG_WARN, "This process has reached the CPU time usage limit. "
 		"It means bip will be killed by the Operating System soon.");
 }
 
 void rlimit_bigfile_reached(int i)
 {
+	(void)i;
 	mylog(LOG_WARN, "A file has reached the max size this process is "
 		"allowed to create. The file will not be written correctly, "
 		"an error message should follow. This is not fatal.");
@@ -475,12 +477,12 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		l->connect_nick = strdup(user->default_nick);
 	}
 	if (!l->username) {
-		if (!user->username)
+		if (!user->default_username)
 			conf_die("No username set and no default username.");
 		l->username = strdup(user->default_username);
 	}
 	if (!l->realname) {
-		if (!user->realname)
+		if (!user->default_realname)
 			conf_die("No realname set and no default realname.");
 		l->realname = strdup(user->default_realname);
 	}
@@ -633,12 +635,14 @@ static int validate_config(bip_t *bip)
 						 !user->default_realname))
 					link_kill(bip, link);
 
+#ifdef HAVE_LIBSSL
 				if (link->network->ssl &&
 						!link->ssl_check_mode)
 					conf_die("user %s, connection %s: you "
 						"should define a "
 						"ssl_check_mode.", user->name,
 						link->name);
+#endif
 
 				//conf_die("user: ... net: ... can i has nick/user/rael");
 				r = 0;
@@ -1328,16 +1332,20 @@ void adm_list_networks(struct link_client *ic)
 		int i;
 
 		buf[RET_STR_LEN] = 0;
+#ifdef HAVE_LIBSSL
 		if (n->ssl) {
 			t_wrote += snprintf(buf, RET_STR_LEN, "- %s*:",
 					n->name);
 			if (t_wrote >= RET_STR_LEN)
 				goto noroom;
 		} else {
+#endif
 			t_wrote += snprintf(buf, RET_STR_LEN, "- %s:", n->name);
 			if (t_wrote >= RET_STR_LEN)
 				goto noroom;
+#ifdef HAVE_LIBSSL
 		}
+#endif
 		for (i = 0; i < n->serverc; i++) {
 			struct server *serv = i+n->serverv;
 			t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
