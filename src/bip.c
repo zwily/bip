@@ -450,9 +450,9 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			break;
 #ifdef HAVE_LIBSSL
 		case LEX_SSL_CHECK_MODE:
-			if (!strncmp(t->pdata, "basic", 5))
+			if (strcmp(t->pdata, "basic") == 0)
 				l->ssl_check_mode = SSL_CHECK_BASIC;
-			if (!strncmp(t->pdata, "ca", 2))
+			if (strcmp(t->pdata, "ca") == 0)
 				l->ssl_check_mode = SSL_CHECK_CA;
 			free(t->pdata);
 			break;
@@ -469,12 +469,21 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 	/* checks that can only be here, or must */
 	if (!l->network)
 		conf_die("Missing network in connection block");
-	if (!l->connect_nick)
+	if (!l->connect_nick) {
+		if (!user->default_nick)
+			conf_die("No nick set and no default nick.");
 		l->connect_nick = strdup(user->default_nick);
-	if (!l->username)
+	}
+	if (!l->username) {
+		if (!user->username)
+			conf_die("No username set and no default username.");
 		l->username = strdup(user->default_username);
-	if (!l->realname)
+	}
+	if (!l->realname) {
+		if (!user->realname)
+			conf_die("No realname set and no default realname.");
 		l->realname = strdup(user->default_realname);
+	}
 	return 1;
 }
 
@@ -654,16 +663,6 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
-#warning CODE ME -> DONE BY KYOSHIRO ?
-#if 0
-	if (conf_backlog && !conf_log) {
-		if (conf_backlog_lines == 0) {
-			conf_die("You must set conf_backlog_lines if "
-					"conf_log = false and "
-					"conf_backlog = true");
-		}
-	}
-#endif
 	return r;
 }
 
@@ -718,6 +717,32 @@ int fireup(bip_t *bip, FILE *conf)
 			add_user(bip, t->pdata);
 			list_free(t->pdata);
 			break;
+
+#warning deprecated but we still need to support these
+#if 0
+               case LEX_ALWAYS_BACKLOG:
+                       conf_always_backlog = t->ndata;
+                       break;
+               case LEX_BACKLOG:
+                       conf_backlog = t->ndata;
+                       break;
+               case LEX_BL_MSG_ONLY:
+                       conf_bl_msg_only = t->ndata;
+                       break;
+               case LEX_BACKLOG_LINES:
+                       conf_backlog_lines = t->ndata;
+                       break;
+               case LEX_BACKLOG_NO_TIMESTAMP:
+                       conf_backlog_no_timestamp = t->ndata;
+                       break;
+               case LEX_BLRESET_ON_TALK:
+                       conf_blreset_on_talk = t->ndata;
+                       break;
+	       /* end of deprectated */
+#endif
+
+
+
 		default:
 			conf_die("Config error in base config (%d)", t->type);
 		}
@@ -758,18 +783,20 @@ void check_rlimits()
 
 	r = getrlimit(RLIMIT_AS, &lt);
 	if (r) {
-		mylog(LOG_ERROR, "getrlimit(): failed with %s", strerror(errno));
+		mylog(LOG_ERROR, "getrlimit(): failed with %s",
+				strerror(errno));
 	} else {
 		if (lt.rlim_max != RLIM_INFINITY) {
-			mylog(LOG_WARN, "virtual memory rlimit active"
-				", bip may be KILLED by the system");
+			mylog(LOG_WARN, "virtual memory rlimit active, "
+				"bip may be KILLED by the system");
 			cklim = 1;
 		}
 	}
 
 	r = getrlimit(RLIMIT_CPU, &lt);
 	if (r) {
-		mylog(LOG_ERROR, "getrlimit(): failed with %s", strerror(errno));
+		mylog(LOG_ERROR, "getrlimit(): failed with %s",
+				strerror(errno));
 	} else {
 		if (lt.rlim_max != RLIM_INFINITY) {
 			mylog(LOG_WARN, "CPU rlimit active, bip may "
@@ -780,11 +807,12 @@ void check_rlimits()
 
 	r = getrlimit(RLIMIT_FSIZE, &lt);
 	if (r) {
-		mylog(LOG_ERROR, "getrlimit(): failed with %s", strerror(errno));
+		mylog(LOG_ERROR, "getrlimit(): failed with %s",
+				strerror(errno));
 	} else {
 		if (lt.rlim_max != RLIM_INFINITY) {
-			mylog(LOG_WARN, "FSIZE rlimit active, bip'll"
-				" fail to create files of size greater than "
+			mylog(LOG_WARN, "FSIZE rlimit active, bip will "
+				"fail to create files of size greater than "
 				"%d bytes.", (int)lt.rlim_max);
 			cklim = 1;
 		}
@@ -792,23 +820,25 @@ void check_rlimits()
 
 	r = getrlimit(RLIMIT_NOFILE, &lt);
 	if (r) {
-		mylog(LOG_ERROR, "getrlimit(): failed with %s", strerror(errno));
+		mylog(LOG_ERROR, "getrlimit(): failed with %s",
+				strerror(errno));
 	} else {
 		if (lt.rlim_max != RLIM_INFINITY) {
 			mylog(LOG_WARN, "opened files count rlimit "
-				"active, bip'll not be allowed to open more"
-				" than %d files at a time", (int)lt.rlim_max);
+				"active, bip will not be allowed to open more "
+				"than %d files at a time", (int)lt.rlim_max);
 			cklim = 1;
 		}
 	}
 
 	r = getrlimit(RLIMIT_STACK, &lt);
 	if (r) {
-		mylog(LOG_ERROR, "getrlimit(): failed with %s", strerror(errno));
+		mylog(LOG_ERROR, "getrlimit(): failed with %s",
+				strerror(errno));
 	} else {
 		if (lt.rlim_max != RLIM_INFINITY) {
-			mylog(LOG_WARN, "stack rlimit active"
-				", bip may be KILLED by the system");
+			mylog(LOG_WARN, "stack rlimit active, "
+				"bip may be KILLED by the system");
 			cklim = 1;
 		}
 	}
@@ -981,120 +1011,168 @@ int main(int argc, char **argv)
 	return 1;
 }
 
-void adm_print_connection(struct link_client *ic, struct link *lnk, struct user *bu)
+#define RET_STR_LEN 256
+#define LINE_SIZE_LIM 70
+void adm_print_connection(struct link_client *ic, struct link *lnk,
+		struct user *bu)
 {
 	hash_iterator_t lit;
-	char buf[4096];
+	char buf[RET_STR_LEN + 1];
 	int t_wrote = 0;
-	int t_max_len = 70;
 
 	if (!bu) {
 		bu = lnk->user;
-		snprintf(buf, 4095, "%s's links:", bu->name);
-		buf[4095] = 0;
+		snprintf(buf, RET_STR_LEN, "%s's links:", bu->name);
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
 	}
 
-	snprintf(buf, 4095, "* %s to %s as \"%s\" (%s!%s) :",
-		lnk->name, lnk->network->name, 
+	snprintf(buf, RET_STR_LEN, "* %s to %s as \"%s\" (%s!%s) :",
+		lnk->name, lnk->network->name,
 		(lnk->realname ? lnk->realname : bu->default_realname),
 		(lnk->connect_nick ? lnk->connect_nick : bu->default_nick),
 		(lnk->username ? lnk->username : bu->default_username)
 	);
-	buf[4095] = 0;
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 
-	t_wrote += snprintf(buf, 4095, "  Options:");
-	if (lnk->follow_nick)
+	t_wrote = snprintf(buf, RET_STR_LEN, "  Options:");
+	if (t_wrote >= RET_STR_LEN)
+		goto noroom;
+	if (lnk->follow_nick) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " follow_nick");
-	if (lnk->ignore_first_nick)
+			RET_STR_LEN - t_wrote, " follow_nick");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+	if (lnk->ignore_first_nick) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " ignore_first_nick");
-	if (lnk->away_nick)
+			RET_STR_LEN - t_wrote, " ignore_first_nick");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+	if (lnk->away_nick) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " away_nick=%s",
+			RET_STR_LEN - t_wrote, " away_nick=%s",
 			lnk->away_nick);
-	if (lnk->no_client_away_msg)
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+	if (lnk->no_client_away_msg) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " no_client_away_msg=%s",
+			RET_STR_LEN - t_wrote, " no_client_away_msg=%s",
 			lnk->no_client_away_msg);
-	if (lnk->vhost)
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+	if (lnk->vhost) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " vhost=%s",
+			RET_STR_LEN - t_wrote, " vhost=%s",
 			lnk->vhost);
-	if (lnk->bind_port)
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+	if (lnk->bind_port) {
 		t_wrote += snprintf(buf + t_wrote,
-			4095 - t_wrote, " bind_port=%u",
+			RET_STR_LEN - t_wrote, " bind_port=%u",
 			lnk->bind_port);
-	buf[4095] = 0;
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+noroom: /* that means the line is larger that RET_STR_LEN. We're not likely to
+	   even read such a long line */
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 
 	// TODO: on_connect_send
 
 	// TODO : check channels struct
-	t_wrote = snprintf(buf, 4095, "  Channels:");
+	t_wrote = snprintf(buf, RET_STR_LEN, "  Channels:");
+	if (t_wrote >= RET_STR_LEN)
+		goto noroomchan;
 	for (hash_it_init(&lnk->chan_infos, &lit); hash_it_item(&lit);
 			hash_it_next(&lit)) {
 		struct channel *ch = hash_it_item(&lit);
 
 		if (ch->key) {
-			t_wrote += snprintf(buf + t_wrote, 4095
+			t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
 				- t_wrote, " *%s", ch->name);
+			if (t_wrote >= RET_STR_LEN)
+				goto noroomchan;
 		} else {
-			t_wrote += snprintf(buf + t_wrote, 4095
+			t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
 				- t_wrote, " %s", ch->name);
+			if (t_wrote >= RET_STR_LEN)
+				goto noroomchan;
 		}
-		if (t_wrote > t_max_len) {
-			buf[4095] = 0;
+		if (t_wrote > LINE_SIZE_LIM) {
+			buf[RET_STR_LEN] = 0;
 			adm_reply(ic, buf);
 			t_wrote = 0;
 		}
 	}
-	buf[4095] = 0;
+noroomchan:
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 
-	t_wrote = snprintf(buf, 4095, "  Status: ");
+	t_wrote = snprintf(buf, RET_STR_LEN, "  Status: ");
+	if (t_wrote >= RET_STR_LEN)
+		goto noroomstatus;
 	switch (lnk->s_state) {
 	case  IRCS_NONE:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"not started");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	case  IRCS_CONNECTING:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"connecting... attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	case  IRCS_CONNECTED:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"connected !");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	case  IRCS_WAS_CONNECTED:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"disconnected, attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	case  IRCS_RECONNECTING:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"reconnecting... attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	case  IRCS_TIMER_WAIT:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"waiting to reconnect, attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 	default:
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
 			"unknown");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroomstatus;
 		break;
 		// s_conn_attempt recon_timer last_connection_attempt
 	}
-	buf[4095] = 0;
+noroomstatus:
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 }
 
@@ -1123,7 +1201,7 @@ void adm_list_all_connections(struct link_client *ic)
 void adm_info_user(struct link_client *ic, char *name)
 {
 	struct user *u;
-	char buf[4096];
+	char buf[RET_STR_LEN + 1];
 	int t_wrote = 0;
 
 	u = hash_get(&_bip->users, name);
@@ -1132,40 +1210,50 @@ void adm_info_user(struct link_client *ic, char *name)
 		return;
 	}
 
-	//t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote, "");
-	//buf[4095] = 0;
+	//t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote, "");
+	//buf[RET_STR_LEN] = 0;
 	//adm_reply(ic, buf);
 	//t_wrote = 0;
-	
-	t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote, "user: %s", u->name);
-	if (u->admin)
-		t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote, ", is bip admin");
 
-	buf[4095] = 0;
+	t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote, "user: %s",
+			u->name);
+	if (t_wrote >= RET_STR_LEN)
+		goto noroom;
+	if (u->admin) {
+		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+				", is bip admin");
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
+	}
+
+noroom:
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 	t_wrote = 0;
 
 #ifdef HAVE_LIBSSL
-	snprintf(buf, 4095, "SSL check mode '%s', stored into '%s'",
+	snprintf(buf, RET_STR_LEN, "SSL check mode '%s', stored into '%s'",
 		checkmode2text(u->ssl_check_mode), u->ssl_check_store);
-	buf[4095] = 0;
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 #endif
-	snprintf(buf, 4095, "Defaults nick: %s, user: %s, realname: %s",
+	snprintf(buf, RET_STR_LEN, "Defaults nick: %s, user: %s, realname: %s",
 		u->default_nick, u->default_username, u->default_realname);
-	buf[4095] = 0;
+	buf[RET_STR_LEN] = 0;
 	adm_reply(ic, buf);
 	if (u->backlog) {
-		snprintf(buf, 4095, "Backlog enabled, lines: %d, no timestamp: "
-			"%s, messages only: %s", u->backlog_lines,
-			bool2text(u->backlog_no_timestamp),
-			bool2text(u->bl_msg_only));
-		buf[4095] = 0;
+		snprintf(buf, RET_STR_LEN, "Backlog enabled, lines: %d, "
+				"no timestamp: %s, messages only: %s",
+				u->backlog_lines,
+				bool2text(u->backlog_no_timestamp),
+				bool2text(u->bl_msg_only));
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
-		snprintf(buf, 4095, "always backlog: %s, reset on talk: %s",
-			bool2text(u->always_backlog),
-			bool2text(u->blreset_on_talk));
-		buf[4095] = 0;
+		snprintf(buf, RET_STR_LEN, "always backlog: %s, "
+				"reset on talk: %s",
+				bool2text(u->always_backlog),
+				bool2text(u->blreset_on_talk));
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
 	} else {
 		adm_reply(ic, "Backlog disabled");
@@ -1177,7 +1265,7 @@ void adm_list_users(struct link_client *ic)
 {
 	hash_iterator_t it;
 	hash_iterator_t lit;
-	char buf[4096];
+	char buf[RET_STR_LEN + 1];
 	connection_t *c;
 
 	c = CONN(ic);
@@ -1186,31 +1274,39 @@ void adm_list_users(struct link_client *ic)
 	for (hash_it_init(&_bip->users, &it); hash_it_item(&it);
 			hash_it_next(&it)) {
 		struct user *u = hash_it_item(&it);
-		int t_max_len = 60;
 		int first = 1;
 		int t_wrote = 0;
 
-		buf[4095] = 0;
-		t_wrote += snprintf(buf, 4095, "* %s%s:", u->name, (u->admin ?
-				"": "(admin)"));
+		buf[RET_STR_LEN] = 0;
+		t_wrote += snprintf(buf, RET_STR_LEN, "* %s%s:", u->name,
+				(u->admin ? "": "(admin)"));
+		if (t_wrote >= RET_STR_LEN)
+			goto noroom;
 		for (hash_it_init(&u->connections, &lit); hash_it_item(&lit);
 				hash_it_next(&lit)) {
 			struct link *lnk = hash_it_item(&lit);
-			if (first)
+			if (first) {
 				first = 0;
-			else
-				t_wrote += snprintf(buf + t_wrote, 4095
+			}else {
+				t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
 					- t_wrote, ",");
-				
-			t_wrote += snprintf(buf + t_wrote, 4095 - t_wrote,
-				" %s", lnk->name);
-			if (t_wrote > t_max_len) {
-				buf[4095] = 0;
+				if (t_wrote >= RET_STR_LEN)
+					goto noroom;
+			}
+
+			t_wrote += snprintf(buf + t_wrote,
+					RET_STR_LEN - t_wrote,
+					" %s", lnk->name);
+			if (t_wrote >= RET_STR_LEN)
+				goto noroom;
+			if (t_wrote > LINE_SIZE_LIM) {
+				buf[RET_STR_LEN] = 0;
 				adm_reply(ic, buf);
 				t_wrote = 0;
 			}
 		}
-		buf[4095] = 0;
+noroom:
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
 	}
 	adm_reply(ic, "End of bip user list");
@@ -1219,7 +1315,7 @@ void adm_list_users(struct link_client *ic)
 void adm_list_networks(struct link_client *ic)
 {
 	hash_iterator_t it;
-	char buf[4096];
+	char buf[RET_STR_LEN + 1];
 	connection_t *c;
 
 	c = CONN(ic);
@@ -1228,28 +1324,35 @@ void adm_list_networks(struct link_client *ic)
 	for (hash_it_init(&_bip->networks, &it); hash_it_item(&it);
 			hash_it_next(&it)) {
 		struct network *n = hash_it_item(&it);
-		int t_max_len = 60;
 		int t_wrote = 0;
 		int i;
 
-		buf[4095] = 0;
+		buf[RET_STR_LEN] = 0;
 		if (n->ssl) {
-			t_wrote += snprintf(buf, 4095, "- %s*:", n->name);
+			t_wrote += snprintf(buf, RET_STR_LEN, "- %s*:",
+					n->name);
+			if (t_wrote >= RET_STR_LEN)
+				goto noroom;
 		} else {
-			t_wrote += snprintf(buf, 4095, "- %s:", n->name);
+			t_wrote += snprintf(buf, RET_STR_LEN, "- %s:", n->name);
+			if (t_wrote >= RET_STR_LEN)
+				goto noroom;
 		}
 		for (i = 0; i < n->serverc; i++) {
 			struct server *serv = i+n->serverv;
-			t_wrote += snprintf(buf + t_wrote, 4095
+			t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
 				- t_wrote, " %s:%d", serv->host,
 				serv->port);
-			if (t_wrote > t_max_len) {
-				buf[4095] = 0;
+			if (t_wrote >= RET_STR_LEN)
+				goto noroom;
+			if (t_wrote > LINE_SIZE_LIM) {
+				buf[RET_STR_LEN] = 0;
 				adm_reply(ic, buf);
 				t_wrote = 0;
 			}
 		}
-		buf[4095] = 0;
+noroom:
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
 	}
 	adm_reply(ic, "End of bip network list");
@@ -1258,7 +1361,7 @@ void adm_list_networks(struct link_client *ic)
 void adm_list_connections(struct link_client *ic, struct user *bu)
 {
 	hash_iterator_t it;
-	char buf[4096];
+	char buf[RET_STR_LEN + 1];
 	connection_t *c;
 
 	c = CONN(ic);
@@ -1266,8 +1369,8 @@ void adm_list_connections(struct link_client *ic, struct user *bu)
 		adm_reply(ic, "Your connections:");
 		bu = LINK(ic)->user;
 	} else {
-		snprintf(buf, 4095, "%s's connections:", bu->name);
-		buf[4095] = 0;
+		snprintf(buf, RET_STR_LEN, "%s's connections:", bu->name);
+		buf[RET_STR_LEN] = 0;
 		adm_reply(ic, buf);
 	}
 
@@ -1505,9 +1608,9 @@ void adm_bip_help(struct link_client *ic, int admin)
 			"configuration");
 		adm_reply(ic, "/BIP LIST networks|users|connections|all_links"
 			"|all_connections");
- 	} else {
+	} else {
 		adm_reply(ic, "/BIP LIST networks|connections");
- 	}
+	}
 	adm_reply(ic, "/BIP JUMP # jump to next server (in same network)");
 	adm_reply(ic, "/BIP BLRESET # reset backlog (this connection only)");
 #ifdef HAVE_LIBSSL
@@ -1537,7 +1640,7 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 			adm_reply(ic, "You're not allowed to reload bip");
 			return OK_FORGET;
 		}
-		adm_reply(ic, "Bip has been set to reload shortly");
+		adm_reply(ic, "Reloading...");
 		reloading_client = ic;
 		sighup = 1;
 	} else if (strcasecmp(line->elemv[privmsg + 1], "LIST") == 0) {
@@ -1546,27 +1649,28 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 			return OK_FORGET;
 		}
 
-		if (admin && strncasecmp(line->elemv[privmsg + 2],
-					"users", 5) == 0) {
+		if (admin && strcasecmp(line->elemv[privmsg + 2],
+					"users") == 0) {
 			adm_list_users(ic);
-		} else if (strncasecmp(line->elemv[privmsg + 2],
-					"networks", 8) == 0) {
+		} else if (strcasecmp(line->elemv[privmsg + 2],
+					"networks") == 0) {
 			adm_list_networks(ic);
-		} else if (strncasecmp(line->elemv[privmsg + 2],
-					"connections", 11) == 0) {
+		} else if (strcasecmp(line->elemv[privmsg + 2],
+					"connections") == 0) {
 			adm_list_connections(ic, NULL);
-		} else if (admin && strncasecmp(line->elemv[privmsg + 2],
-					"all_connections", 15) == 0) {
+		} else if (admin && strcasecmp(line->elemv[privmsg + 2],
+					"all_connections") == 0) {
 			adm_list_all_connections(ic);
-		} else if (admin && strncasecmp(line->elemv[privmsg + 2],
-					"all_links", 9) == 0) {
+		} else if (admin && strcasecmp(line->elemv[privmsg + 2],
+					"all_links") == 0) {
 			adm_list_all_links(ic);
 		} else {
 			adm_reply(ic, "Invalid LIST request");
 		}
 	} else if (strcasecmp(line->elemv[privmsg + 1], "INFO") == 0) {
 		if (line->elemc < privmsg + 3) {
-			adm_reply(ic, "INFO command needs at least one argument");
+			adm_reply(ic, "INFO command needs at least one "
+					"argument");
 			return OK_FORGET;
 		}
 
@@ -1578,14 +1682,17 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 				adm_reply(ic, "/BIP INFO user needs one "
 					"argument");
 			}
-		/*TODO } else if (strncasecmp(line->elemv[privmsg + 2],
+#if 0
+			TODO
+		} else if (strncasecmp(line->elemv[privmsg + 2],
 					"network", 8) == 0) {
 			if (line->elemc == privmsg + 4) {
 				adm_info_network(ic, line->elemv[privmsg + 3]);
 			} else {
 				adm_reply(ic, "/BIP INFO network needs one "
 					"argument");
-			}*/
+			}
+#endif
 		} else {
 			adm_reply(ic, "Invalid INFO request");
 		}
@@ -1609,7 +1716,8 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 	} else if (strcasecmp(line->elemv[privmsg + 1],
 				"IGNORE_FIRST_NICK") == 0) {
 		if (line->elemc != privmsg + 3) {
-			adm_reply(ic, "IGNORE_FIRST_NICK command needs one argument");
+			adm_reply(ic, "IGNORE_FIRST_NICK command needs one "
+					"argument");
 			return OK_FORGET;
 		}
 		adm_ignore_first_nick(ic, line->elemv[privmsg + 2]);
@@ -1639,12 +1747,7 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		return adm_trust(ic, line);
 #endif
 	} else {
-		char buf[4096];
-
-		buf[4095] = 0;
-		snprintf(buf, 4095, "Unknown command %s",
-				line->elemv[privmsg + 1]);
-		adm_reply(ic, buf);
+		adm_reply(ic, "Unknown command.");
 	}
 	return OK_FORGET;
 }
