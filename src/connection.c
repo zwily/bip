@@ -1011,8 +1011,10 @@ connection_t *accept_new(connection_t *cn)
 
 	mylog(LOG_DEBUG, "Trying to accept new client on %d", cn->handle);
 	err = accept(cn->handle, &sa, &sa_len);
-	if (err < 0)
+	if (err < 0) {
+		mylog(LOG_ERROR, "accept failed: %s", strerror(errno));
 		return NULL;
+	}
 	socket_set_nonblock(err);
 
 	conn = connection_init(cn->anti_flood, cn->ssl, cn->timeout, 0);

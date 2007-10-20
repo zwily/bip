@@ -414,7 +414,19 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			MOVE_STRING(l->vhost, t->pdata);
 			break;
 		case LEX_CHANNEL:
-			ci = calloc(sizeof(struct chan_info), 1);
+			name = get_tuple_value(t->pdata, LEX_NAME);
+			if (name == NULL) {
+				conf_die("Channel with no name");
+				return 0;
+			}
+
+			ci = hash_get(&l->chan_infos, name);
+			if (!ci) {
+				ci = calloc(sizeof(struct chan_info), 1);
+				hash_insert(&l->chan_infos, name, ci);
+				/* FIXME: this order is not reloaded */
+				list_add_last(&l->chan_infos_order, ci);
+			}
 			ci->backlog = 1;
 
 			while ((t2 = list_remove_first(t->pdata))) {
@@ -431,9 +443,6 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 				}
 			}
 			list_free(t->pdata);
-
-			hash_insert(&l->chan_infos, ci->name, ci);
-			list_add_last(&l->chan_infos_order, ci);
 			break;
 		case LEX_FOLLOW_NICK:
 			l->follow_nick = t->ndata;
@@ -542,9 +551,9 @@ static int add_user(bip_t *bip, list_t *data)
 		case LEX_NAME:
 			MOVE_STRING(u->name, t->pdata);
 			break;
- 		case LEX_ADMIN:
- 			u->admin = t->ndata;
- 			break;
+		case LEX_ADMIN:
+			u->admin = t->ndata;
+			break;
 		case LEX_PASSWORD:
 			hash_binary(t->pdata, &u->password, &u->seed);
 			free(t->pdata);

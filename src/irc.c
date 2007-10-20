@@ -2385,9 +2385,12 @@ void irc_main(bip_t *bip)
 {
 	int timeleft = 1000;
 
-	/* XXX: This one MUST be first */
-	/* TODO: maybe not anymore, check */
-	list_add_first(&bip->conn_list, bip->listener);
+	/*
+	 * If the list is empty, we are starting. Otherwise we are reloading,
+	 * and conn_list is kept accross reloads.
+	 */
+	if (list_is_empty(&bip->conn_list))
+		list_add_first(&bip->conn_list, bip->listener);
 
 	while (!sighup) {
 		connection_t *conn;
@@ -2412,8 +2415,6 @@ void irc_main(bip_t *bip)
 			bip_on_event(bip, conn);
 		list_free(ready);
 	}
-	while (list_remove_first(&bip->conn_list))
-		;
 	while (list_remove_first(&bip->link_list))
 		;
 	while (list_remove_first(&bip->connecting_client_list))

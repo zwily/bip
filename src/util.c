@@ -625,4 +625,3 @@ int ischannel(char p)
 {
 	return (p == '#' || p == '&' || p == '+' || p == '!');
 }
-
