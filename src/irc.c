@@ -2116,10 +2116,7 @@ void oidentd_dump(list_t *connl)
 		content = (char *)malloc(stats.st_size + 1);
 
 		if (content == NULL){
-			mylog(LOG_WARN, "oidentd_dump : malloc failed, "
-					"returning");
-			fclose(f);
-			free(filename);
+			fatal("out of memory");
 			return;
 		}
 
@@ -2165,6 +2162,7 @@ void oidentd_dump(list_t *connl)
 					content[stats.st_size - 1] != '\n')
 				fprintf(f, "\n");
 		}
+		free(content);
 	}
 
 	for (list_it_init(connl, &it); list_it_item(&it); list_it_next(&it)) {
