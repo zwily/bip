@@ -52,7 +52,7 @@ void connection_close(connection_t *cn)
 {
 	mylog(LOG_DEBUG, "Connection close asked. FD:%d ",
 			(long)cn->handle);
-	if (cn->connected != CONN_DISCONN) {
+	if (cn->connected != CONN_DISCONN && cn->connected != CONN_ERROR) {
 		cn->connected = CONN_DISCONN;
 		if (close(cn->handle) == -1)
 			mylog(LOG_WARN, "Error on socket close: %s",
@@ -873,7 +873,8 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 
 	err = getaddrinfo(dsthostname, dstport, &hint, &cdata->dst);
 	if (err) {
-		mylog(LOG_ERROR, "getaddrinfo(dst): %s", gai_strerror(err));
+		mylog(LOG_ERROR, "getaddrinfo(%s): %s", dsthostname,
+				gai_strerror(err));
 		connecting_data_free(cdata);
 		cdata = NULL;
 		return;

@@ -126,7 +126,7 @@ void _mylog(int level, char *fmt, va_list ap)
 			prefix = "FATAL: ";
 			break;
 		case LOG_DEBUGVERB:
-			prefix = "DEBUG: ";
+			prefix = "DEBUGVERB: ";
 			break;
 		case LOG_DEBUG:
 			prefix = "DEBUG: ";

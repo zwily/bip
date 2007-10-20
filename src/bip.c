@@ -765,7 +765,7 @@ static void log_file_setup(void)
 {
 	char buf[4096];
 
-	if (conf_log_system) {
+	if (conf_log_system && conf_daemonize) {
 		if (conf_global_log_file && conf_global_log_file != stderr)
 			fclose(conf_global_log_file);
 		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
@@ -1641,7 +1641,7 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 	if (line->elemc < privmsg + 2)
 		return OK_FORGET;
 
-	mylog(LOG_STD, "/BIP %s from %s", line->elemv[privmsg + 1],
+	mylog(LOG_INFO, "/BIP %s from %s", line->elemv[privmsg + 1],
 			LINK(ic)->user->name);
 	if (strcasecmp(line->elemv[privmsg + 1], "RELOAD") == 0) {
 		if (!admin) {

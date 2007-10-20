@@ -57,6 +57,7 @@ void write_user_list(connection_t *c, char *dest);
 static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 		struct line *line);
 static void irc_cli_make_join(struct link_client *ic);
+static void server_setup_reconnect_timer(struct link *link);
 
 #define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
@@ -1917,6 +1918,22 @@ void irc_client_close(struct link_client *ic)
 	}
 }
 
+static void server_setup_reconnect_timer(struct link *link)
+{
+	int timer = 0;
+
+	if (link->last_connection_attempt &&
+			time(NULL) - link->last_connection_attempt
+				< CONN_INTERVAL) {
+		timer = RECONN_TIMER * (link->s_conn_attempt);
+		if (timer > RECONN_TIMER_MAX)
+			timer = RECONN_TIMER_MAX;
+	}
+	mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds", link->name,
+			timer);
+	link->recon_timer = timer;
+}
+
 static void irc_close(struct link_any *l)
 {
 	if (CONN(l)) {
@@ -1925,28 +1942,16 @@ static void irc_close(struct link_any *l)
 	}
 	if (TYPE(l) == IRC_TYPE_SERVER) {
 		/* TODO: free link_server as a whole */
-		int timer = 0;
 		struct link_server *is = (struct link_server *)l;
 
 		if (LINK(is)->s_state == IRCS_CONNECTED)
 			irc_notify_disconnection(is);
-		else
-			LINK(is)->s_conn_attempt++;
 		irc_server_shutdown(is);
 		log_disconnected(LINK(is)->log);
 
 		server_next(LINK(is));
 		server_cleanup(is);
-		if (LINK(is)->last_connection_attempt &&
-				time(NULL) - LINK(is)->last_connection_attempt
-					< CONN_INTERVAL) {
-			timer = RECONN_TIMER * (LINK(is)->s_conn_attempt);
-			if (timer > RECONN_TIMER_MAX)
-				timer = RECONN_TIMER_MAX;
-		}
-		mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds",
-				LINK(l)->name, timer);
-		LINK(is)->recon_timer = timer;
+		server_setup_reconnect_timer(LINK(is));
 
 		LINK(is)->l_server = NULL;
 		irc_server_free((struct link_server *)is);
@@ -1998,6 +2003,8 @@ connection_t *irc_server_connect(struct link *link)
 	struct link_server *ls;
 	connection_t *conn;
 
+	link->s_conn_attempt++;
+
 	mylog(LOG_INFO, "Connecting user '%s' to network '%s' using server "
 		"%s:%d", link->user->name, link->name,
 		link->network->serverv[link->cur_server].host,
@@ -2014,6 +2021,11 @@ connection_t *irc_server_connect(struct link *link)
 				CONNECT_TIMEOUT);
 	if (!conn)
 		fatal("connection_new");
+	if (conn->handle == -1) {
+		mylog(LOG_INFO, "Cannot connect.");
+		connection_free(conn);
+		return NULL;
+	}
 
 	ls = irc_server_new(link, conn);
 	conn->user_data = ls;
@@ -2260,8 +2272,10 @@ void bip_tick(bip_t *bip)
 		} else {
 			if (link->recon_timer == 0) {
 				connection_t *conn;
-				conn = irc_server_connect(link);
 				link->last_connection_attempt = time(NULL);
+				conn = irc_server_connect(link);
+				if (!conn)
+					server_setup_reconnect_timer(link);
 			} else {
 				link->recon_timer--;
 			}
