@@ -19,9 +19,7 @@
 extern int yylex (void);
 extern char *yytext;
 extern int linec;
-extern int conf_error;
-#define ERRBUFSZ 80
-extern char conf_errstr[ERRBUFSZ];
+int conf_error;
 
 int yywrap()
 {
@@ -30,9 +28,7 @@ int yywrap()
 
 int yyerror()
 {
-	snprintf(conf_errstr, ERRBUFSZ, "Parse error near %s, line %d\n",
-			yytext, linec + 1);
-	conf_errstr[ERRBUFSZ - 1] = 0;
+	mylog(LOG_ERROR, "Parse error near %s, line %d\n", yytext, linec + 1);
 	conf_error = 1;
 	return 1;
 }

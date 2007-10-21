@@ -15,6 +15,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 /* Warning: must be in order, 0 = less output */
 #define LOG_STD -1
@@ -30,6 +31,7 @@
 #define HASH_DEFAULT 0
 
 void mylog(int level, char *fmt, ...);
+void _mylog(int level, char *fmt, va_list ap);
 void fatal(char *fmt, ...);
 char *timestamp(void);
 struct list_item;

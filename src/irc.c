@@ -49,8 +49,6 @@ void oidentd_dump(list_t *connl);
 
 void irc_client_free(struct link_client *cli);
 extern int conf_log_sync_interval;
-extern int conf_error;
-extern char conf_errstr[];
 
 void write_user_list(connection_t *c, char *dest);
 
@@ -1556,7 +1554,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 	log_mode(LINK(server)->log, line->origin, line->elemv[1],
 			line->elemv[2], line->elemv + 3, line->elemc - 3);
 
-	/*       
+	/*
 	 * MODE -a+b.. #channel args
 	 *         ^            ^
 	 *       mode         cur_arg

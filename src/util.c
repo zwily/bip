@@ -118,6 +118,9 @@ void _mylog(int level, char *fmt, va_list ap)
 {
 	char *prefix;
 
+	if (!conf_log_system)
+		return;
+
 	if (level > conf_log_level)
 		return;
 
@@ -156,9 +159,6 @@ void _mylog(int level, char *fmt, va_list ap)
 void mylog(int level, char *fmt, ...)
 {
 	va_list ap;
-
-	if (!conf_log_system)
-		return;
 
 	va_start(ap, fmt);
 	_mylog(level, fmt, ap);

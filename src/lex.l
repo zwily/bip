@@ -16,10 +16,10 @@
 int linec = 0;
 #define YY_NO_UNPUT
 #include "util.h"
-extern int conf_error;
 extern list_t *root_list;
 void yyparse(void);
 void free_conf(list_t*);
+extern int conf_error;
 
 #if 0
 /* SPANK ME WITH A SHOVEL */
@@ -30,15 +30,14 @@ void dummy_lex_FFS(void)
 }
 #endif
 
-list_t *parse_conf(FILE *file)
+list_t *parse_conf(FILE *file, int *err)
 {
 	YY_BUFFER_STATE in = yy_create_buffer(file, YY_BUF_SIZE);
 	yy_switch_to_buffer(in);
+	conf_error = 0;
 	yyparse();
-	if (conf_error) {
-		free_conf(root_list);
-		return NULL;
-	}
+	yy_delete_buffer(in);
+	*err = conf_error;
 	return root_list;
 }
 %}
@@ -112,6 +111,6 @@ list_t *parse_conf(FILE *file)
 "{"			{ return LEX_LBRA; }
 "}"			{ return LEX_RBRA; }
 ";"			{ return LEX_SEMICOLON; }
-.			{ printf("Parse error line %d, unknown character '%s'\n", linec + 1, yytext);
+.			{ mylog(LOG_ERROR, "Parse error in config file line %d, unknown character '%s'\n", linec + 1, yytext);
 			return LEX_BUNCH; }
 %%
