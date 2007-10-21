@@ -377,7 +377,6 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		l->untrusted_certs = sk_X509_new_null();
 #endif
 	} else {
-#warning "CODEME (user switch..)"
 		l->network = NULL;
 		log_reinit_all(l->log);
 	}
@@ -497,6 +496,8 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			conf_die("No realname set and no default realname.");
 		l->realname = strdup(user->default_realname);
 	}
+
+	l->in_use = 1;
 	return 1;
 }
 
@@ -644,6 +645,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 		return 0;
 	}
 
+	u->in_use = 1;
 	return 1;
 }
 
@@ -705,6 +707,61 @@ static int validate_config(bip_t *bip)
 	return r;
 }
 
+void clear_marks(bip_t *bip)
+{
+	list_iterator_t lit;
+	hash_iterator_t hit;
+
+	for (list_it_init(&bip->link_list, &lit); list_it_item(&lit);
+			list_it_next(&lit))
+		((struct link *)list_it_item(&lit))->in_use = 0;
+	for (hash_it_init(&bip->users, &hit); hash_it_item(&hit);
+			hash_it_next(&hit))
+		((struct user *)hash_it_item(&hit))->in_use = 0;
+}
+
+void user_kill(bip_t *bip, struct user *user)
+{
+	if (!hash_is_empty(&user->connections))
+		fatal("user_kill, user still has connections");
+	free(user->name);
+	free(user->password);
+	MAYFREE(user->default_nick);
+	MAYFREE(user->default_username);
+	MAYFREE(user->default_realname);
+
+#ifdef HAVE_LIBSSL
+	MAYFREE(ssl_check_store);
+#endif
+	free(user);
+}
+
+void sweep(bip_t *bip)
+{
+	list_iterator_t lit;
+	hash_iterator_t hit;
+
+	for (list_it_init(&bip->link_list, &lit); list_it_item(&lit);
+			list_it_next(&lit)) {
+		struct link *l = ((struct link *)list_it_item(&lit));
+		if (!l->in_use) {
+			mylog(LOG_INFO, "Administratively killing %s/%s",
+					l->user->name, l->name);
+			link_kill(bip, l);
+			list_remove_if_exists(&bip->conn_list, l);
+			list_it_remove(&lit);
+		}
+	}
+	for (hash_it_init(&bip->users, &hit); hash_it_item(&hit);
+			hash_it_next(&hit)) {
+		struct user *u = (struct user *)hash_it_item(&hit);
+		if (!u->in_use) {
+			hash_it_remove(&hit);
+			user_kill(bip, u);
+		}
+	}
+}
+
 int fireup(bip_t *bip, FILE *conf)
 {
 	int r;
@@ -712,6 +769,7 @@ int fireup(bip_t *bip, FILE *conf)
 	int err = 0;
 	struct historical_directives hds;
 
+	clear_marks(bip);
 	parse_conf(conf, &err);
 	if (err) {
 		free_conf(root_list);
@@ -790,6 +848,7 @@ int fireup(bip_t *bip, FILE *conf)
 	root_list = NULL;
 
 	validate_config(bip);
+	sweep(bip);
 	return 1;
 
 out_conf_error:

@@ -1423,11 +1423,6 @@ static void channel_free(struct channel *c)
 	if (c->create_ts)
 		free(c->create_ts);
 
-/*
-	char *l;
-	while ((l = (char *)list_remove_first(&c->bans)))
-		free(l);
-*/
 	hash_iterator_t hi;
 	for (hash_it_init(&c->nicks, &hi); hash_it_item(&hi); hash_it_next(&hi))
 		nick_free(hash_it_item(&hi));
@@ -1892,7 +1887,6 @@ void server_cleanup(struct link_server *server)
 		CONN(server) = NULL;
 	}
 	irc_lag_init(server);
-
 }
 
 void irc_client_close(struct link_client *ic)
@@ -1989,10 +1983,21 @@ struct link_server *irc_server_new(struct link *link, connection_t *conn)
 
 void irc_server_free(struct link_server *s)
 {
+	if (CONN(s))
+		connection_free(CONN(s));
 	if (s->nick)
 		free(s->nick);
 	if (s->user_mode)
 		free(s->user_mode);
+
+	hash_iterator_t hi;
+	for (hash_it_init(&s->channels, &hi); hash_it_item(&hi);
+			hash_it_next(&hi)) {
+		struct channel *chan = hash_it_item(&hi);
+		channel_free(chan);
+
+	}
+
 	free(s);
 }
 
@@ -2413,8 +2418,6 @@ void irc_main(bip_t *bip)
 			bip_on_event(bip, conn);
 		list_free(ready);
 	}
-	while (list_remove_first(&bip->link_list))
-		;
 	while (list_remove_first(&bip->connecting_client_list))
 		;
 	return;
@@ -2431,12 +2434,6 @@ void irc_client_free(struct link_client *cli)
 	free(cli);
 }
 
-/*
-void irc_server_free(struct link_server *is)
-{
-	free(is);
-}
-*/
 struct link *irc_link_new()
 {
 	struct link *link;
@@ -2453,11 +2450,18 @@ struct link *irc_link_new()
 
 void link_kill(bip_t *bip, struct link *link)
 {
+	list_remove(&bip->conn_list, CONN(link->l_server));
+	server_cleanup(link->l_server);
+	irc_server_free(link->l_server);
+	while (link->l_clientc) {
+		struct link_client *lc = link->l_clientv[0];
+		list_remove(&bip->conn_list, CONN(lc));
+		unbind_from_link(lc);
+		irc_client_free(lc);
+	}
+
 	hash_remove(&link->user->connections, link->name);
 	free(link->name);
-	irc_close((struct link_any *)link->l_server);
-	while (link->l_clientc)
-		irc_close((struct link_any *)link->l_clientv[0]);
 	log_free(link->log);
 	MAYFREE(link->prev_nick);
 	MAYFREE(link->cli_nick);
@@ -2483,5 +2487,6 @@ void link_kill(bip_t *bip, struct link *link)
 #ifdef HAVE_LIBSSL
 	sk_X509_free(link->untrusted_certs);
 #endif
+	free(link);
 }
 

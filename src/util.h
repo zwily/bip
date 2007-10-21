@@ -35,6 +35,7 @@ void _mylog(int level, char *fmt, va_list ap);
 void fatal(char *fmt, ...);
 char *timestamp(void);
 struct list_item;
+struct hash_item;
 
 typedef struct list {
 	struct list_item *first;
@@ -45,16 +46,17 @@ typedef struct list {
 typedef struct list_iterator {
 	list_t *list;
 	struct list_item *cur;
+	struct list_item *next;
 } list_iterator_t;
 
-/* our hash is also a list */
 typedef struct hash {
 	list_t lists[256];
 } hash_t;
 
 typedef struct hash_iterator {
 	int list;
-	struct list_item *cur;
+	list_iterator_t lit;
+	struct hash_item *cur;
 	hash_t *hash;
 } hash_iterator_t;
 
@@ -104,10 +106,12 @@ void hash_insert(hash_t *hash, char *key, void *ptr);
 void *hash_get(hash_t *, char *key);
 void *hash_remove(hash_t *hash, char *key);
 void *hash_remove_if_exists(hash_t *hash, char *key);
+int hash_is_empty(hash_t *h);
 void hash_it_init(hash_t *hash, hash_iterator_t *i);
 void hash_it_next(hash_iterator_t *hi);
 void *hash_it_item(hash_iterator_t *h);
 char *hash_it_key(hash_iterator_t *h);
+void *hash_it_remove(hash_iterator_t *li);
 
 int is_valid_nick(char *str);
 int is_valid_username(char *str);

@@ -1,3 +1,4 @@
+- check conn_list usage: esp wrt list_remove and closes
 - uid, gid
 - keep invites when detached ?
 - allow global (or per net ?) IP filtering
