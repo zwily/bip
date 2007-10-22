@@ -973,7 +973,7 @@ int main(int argc, char **argv)
 	signal(SIGXCPU, rlimit_cpu_reached);
 
 	conf_log_root = NULL;
-	conf_log_format = DEFAULT_LOG_FORMAT;
+	conf_log_format = strdup(DEFAULT_LOG_FORMAT);
 	conf_log_level = DEFAULT_LOG_LEVEL;
 	conf_daemonize = 1;
 	conf_global_log_file = stderr;
