@@ -731,7 +731,7 @@ void user_kill(bip_t *bip, struct user *user)
 	MAYFREE(user->default_realname);
 
 #ifdef HAVE_LIBSSL
-	MAYFREE(ssl_check_store);
+	MAYFREE(user->ssl_check_store);
 #endif
 	free(user);
 }
