@@ -1178,14 +1178,20 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
 			 err == X509_V_ERR_CERT_UNTRUSTED ||
 			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
-			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)) {
+			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
+			 err == X509_V_ERR_CERT_HAS_EXPIRED)) {
 
 		if (X509_STORE_get_by_subject(ctx, X509_LU_X509,
 				X509_get_subject_name(err_cert), &xobj) > 0 &&
 				!X509_cmp(xobj.data.x509, err_cert)) {
 
-			mylog(LOG_INFO, "Basic mode; peer certificate found "
-					"in store, accepting it!");
+			if (err == X509_V_ERR_CERT_HAS_EXPIRED)
+				mylog(LOG_INFO, "Basic mode; Accepting "
+						"*expired* peer certificate "
+						"found in store.");
+			else
+				mylog(LOG_INFO, "Basic mode; Accepting peer "
+					"certificate found in store.");
 
 			result = 1;
 			err = X509_V_OK;
