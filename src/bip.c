@@ -824,6 +824,24 @@ int fireup(bip_t *bip, FILE *conf)
 		case LEX_PID_FILE:
 			MOVE_STRING(conf_pid_file, t->pdata);
 			break;
+		case LEX_ALWAYS_BACKLOG:
+			hds.always_backlog = t->ndata;
+			break;
+		case LEX_BACKLOG:
+			hds.backlog = t->ndata;
+			break;
+		case LEX_BL_MSG_ONLY:
+			hds.bl_msg_only = t->ndata;
+			break;
+		case LEX_BACKLOG_LINES:
+			hds.backlog_lines = t->ndata;
+			break;
+		case LEX_BACKLOG_NO_TIMESTAMP:
+			hds.backlog_no_timestamp = t->ndata;
+			break;
+		case LEX_BLRESET_ON_TALK:
+			hds.blreset_on_talk = t->ndata;
+			break;
 		case LEX_NETWORK:
 			r = add_network(bip, t->pdata);
 			list_free(t->pdata);
