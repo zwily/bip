@@ -42,7 +42,7 @@ int is_valid_nick(char *str)
 	while (*tmp != '\0' && (isalnum(*tmp) || *tmp == '-' || *tmp == '[' ||
 			*tmp == ']' || *tmp == '\\' || *tmp == '`' ||
 			*tmp == '^' || *tmp == '{' || *tmp == '}' ||
-			*tmp == '|'))
+			*tmp == '|' || *tmp == '_' ))
 		tmp++;
 	return (*tmp == '\0');
 }

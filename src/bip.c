@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include "irc.h"
@@ -704,6 +705,9 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
+	if (strstr(conf_log_format, "\%u") == NULL)
+		mylog(LOG_WARN, "log_format doesn't contain \%u, all users'"
+			" logs will be mixed !");
 	return r;
 }
 
