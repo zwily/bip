@@ -376,11 +376,16 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 			size_t nicklen = strlen(server->nick);
 			char *newnick = malloc(nicklen + 2);
 			strcpy(newnick, server->nick);
-			if (strlen(server->nick) < 9)
+			if (strlen(server->nick) < 9) {
 				strcat(newnick, "`");
-			else if (newnick[8] != '`') {
-				newnick[8] = '`';
-				newnick[9] = 0;
+			} else if (newnick[7] != '`') {
+				if (newnick[8] != '`') {
+					newnick[8] = '`';
+					newnick[9] = 0;
+				} else {
+					newnick[7] = '`';
+					newnick[9] = 0;
+				}
 			} else {
 				newnick[8] = rand() * ('z' - 'a') / RAND_MAX +
 					'a';
