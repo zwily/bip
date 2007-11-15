@@ -468,7 +468,6 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 				l->ssl_check_mode = SSL_CHECK_BASIC;
 			if (strcmp(t->pdata, "ca") == 0)
 				l->ssl_check_mode = SSL_CHECK_CA;
-			free(t->pdata);
 			break;
 #endif
 		default:
