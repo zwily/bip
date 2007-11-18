@@ -362,6 +362,8 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 
 /*
  * Da log routines
+ * There are a lot of snprintf's here without enforcing the last \0 in the
+ * buffer, but _log_write takes care of this for us.
  */
 void log_join(log_t *logdata, char *ircmask, char *channel)
 {
@@ -374,9 +376,14 @@ void log_join(log_t *logdata, char *ircmask, char *channel)
 void log_part(log_t *logdata, char *ircmask, char *channel,
 		char *message)
 {
-	snprintf(logdata->buffer, LOGLINE_MAXLEN,
+	if (message)
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- %s has left %s [%s]", timestamp(), ircmask,
 			channel, message);
+	else
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
+			"%s -!- %s has left %s", timestamp(), ircmask,
+			channel);
 	log_write(logdata, channel, logdata->buffer);
 }
 
@@ -424,7 +431,7 @@ static void _log_privmsg(log_t *logdata, char *ircmask, int src,
 		char *real_message = message;
 
 		if (*message == '+' || *message == '-')
-			real_message++; 
+			real_message++;
 
 		if (strncmp(real_message, "\001ACTION ", 8) != 0)
 			return;

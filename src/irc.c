@@ -1473,7 +1473,7 @@ static int irc_part(struct link_server *server, struct line *line)
 	free(s_nick);
 
 	log_part(LINK(server)->log, line->origin, s_chan,
-			line->elemc == 3 ? line->elemv[2]:NULL);
+			line->elemc == 3 ? line->elemv[2] : NULL);
 
 	nick_free(nick);
 	return OK_COPY;
