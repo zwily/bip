@@ -1731,7 +1731,7 @@ void adm_bip_help(struct link_client *ic, int admin)
 		adm_reply(ic, "/BIP LIST networks|connections");
 	}
 	adm_reply(ic, "/BIP JUMP # jump to next server (in same network)");
-	adm_reply(ic, "/BIP BLRESET # reset backlog (this connection only)");
+	adm_reply(ic, "/BIP BLRESET [-q] # reset backlog (this connection only). Add -q flag and the operation is quiet.");
 #ifdef HAVE_LIBSSL
 	adm_reply(ic, "/BIP TRUST # trust this server certificate");
 #endif
@@ -1823,7 +1823,12 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		}
 		adm_reply(ic, "Jumping to next server");
 	} else if (strcasecmp(line->elemv[privmsg + 1], "BLRESET") == 0) {
-		adm_blreset(ic);
+		if (line->elemc == privmsg + 3 &&
+				strccmp(line->elemv[privmsg + 2], "-q") == 0) {
+			log_reinit_all(LINK(ic)->log);
+		} else {
+			adm_blreset(ic);
+		}
 	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
 		adm_bip_help(ic, admin);
 	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
