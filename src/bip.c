@@ -1824,7 +1824,7 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		adm_reply(ic, "Jumping to next server");
 	} else if (strcasecmp(line->elemv[privmsg + 1], "BLRESET") == 0) {
 		if (line->elemc == privmsg + 3 &&
-				strccmp(line->elemv[privmsg + 2], "-q") == 0) {
+				strcmp(line->elemv[privmsg + 2], "-q") == 0) {
 			log_reinit_all(LINK(ic)->log);
 		} else {
 			adm_blreset(ic);
