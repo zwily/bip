@@ -17,7 +17,8 @@
 #ifdef HAVE_LIBSSL
 int adm_trust(struct link_client *ic, struct line *line);
 #endif
-int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg);
+int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
+		unsigned int privmsg);
 int ssl_check_trust(struct link_client *ic);
 void adm_blreset(struct link_client *ic);
 

@@ -56,6 +56,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 		struct line *line);
 static void irc_cli_make_join(struct link_client *ic);
 static void server_setup_reconnect_timer(struct link *link);
+int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line);
 
 #define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
@@ -605,9 +606,9 @@ void unbind_from_link(struct link_client *ic)
 		fatal("realloc");
 }
 
-int irc_cli_bip(struct link_client *ic, struct line *line)
+int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line)
 {
-	return adm_bip(ic, line, 0);
+	return adm_bip(bip, ic, line, 0);
 }
 
 #define PASS_SEP ':'
@@ -857,13 +858,14 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 	return OK_CLOSE;
 }
 
-static int irc_cli_privmsg(struct link_client *ic, struct line *line)
+static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
+		struct line *line)
 {
 	if (line->elemc >= 3)
 		log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
 	if (strcmp(line->elemv[1], "-bip") == 0)
-		return adm_bip(ic, line, 1);
+		return adm_bip(bip, ic, line, 1);
 
 	if (LINK(ic)->user->blreset_on_talk)
 		log_reinit_all(LINK(ic)->log);
@@ -1052,7 +1054,6 @@ static int irc_dispatch_trust_client(struct link_client *ic, struct line *line)
 }
 #endif
 
-int irc_cli_bip(struct link_client *ic, struct line *line);
 static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 		struct line *line)
 {
@@ -1071,7 +1072,7 @@ static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 				"before sending commands\r\n");
 		r = OK_FORGET;
 	} else if (strcasecmp(line->elemv[0], "BIP") == 0) {
-		r = irc_cli_bip(ic, line);
+		r = irc_cli_bip(bip, ic, line);
 	} else if (strcmp(line->elemv[0], "JOIN") == 0) {
 		r = irc_cli_join(ic, line);
 	} else if (strcmp(line->elemv[0], "PART") == 0) {
@@ -1081,7 +1082,7 @@ static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 	} else if (strcmp(line->elemv[0], "QUIT") == 0) {
 		r = irc_cli_quit(ic, line);
 	} else if (strcmp(line->elemv[0], "PRIVMSG") == 0) {
-		r = irc_cli_privmsg(ic, line);
+		r = irc_cli_privmsg(bip, ic, line);
 	} else if (strcmp(line->elemv[0], "NOTICE") == 0) {
 		r = irc_cli_notice(ic, line);
 	} else if (strcmp(line->elemv[0], "WHO") == 0) {

@@ -355,6 +355,74 @@ static int add_network(bip_t *bip, list_t *data)
 	return 1;
 }
 
+void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
+{
+	struct user *user = LINK(ic)->user;
+	struct link *l;
+
+	if (!hash_get(&user->connections, conn_name)) {
+		adm_reply(ic, "cannot find this connection");
+		return;
+	}
+
+	l = hash_get(&user->connections, conn_name);
+	link_kill(bip, l);
+	adm_reply(ic, "deleted");
+}
+
+void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
+		char *network_name)
+{
+	struct user *user = LINK(ic)->user;
+	struct network *network;
+
+	/* check name uniqueness */
+	if (hash_get(&user->connections, conn_name)) {
+		adm_reply(ic, "connection name already exists for this user.");
+		return;
+	}
+
+	/* check we know about this network */
+	network = hash_get(&bip->networks, network_name);
+	if (!network) {
+		adm_reply(ic, "no such network name");
+		return;
+	}
+
+	struct link *l;
+	l = irc_link_new();
+	l->name = strdup(conn_name);
+	hash_insert(&user->connections, conn_name, l);
+	list_add_last(&bip->link_list, l);
+	l->user = user;
+	l->network = network;
+	l->log = log_new(user, conn_name);
+#ifdef HAVE_LIBSSL
+	l->ssl_check_mode = user->ssl_check_mode;
+	l->untrusted_certs = sk_X509_new_null();
+#endif
+
+
+#define SCOPY(member) l->member = (LINK(ic)->member ? strdup(LINK(ic)->member) : NULL)
+#define ICOPY(member) l->member = LINK(ic)->member
+
+	SCOPY(connect_nick);
+	SCOPY(username);
+	SCOPY(realname);
+	/* we don't copy server password */
+	SCOPY(vhost);
+	ICOPY(follow_nick);
+	ICOPY(ignore_first_nick);
+	SCOPY(away_nick);
+	SCOPY(no_client_away_msg);
+	/* we don't copy on_connect_send */
+#ifdef HAVE_LIBSSL
+	ICOPY(ssl_check_mode);
+#endif
+#undef SCOPY
+#undef ICOPY
+}
+
 static int add_connection(bip_t *bip, struct user *user, list_t *data)
 {
 	struct tuple *t, *t2;
@@ -725,6 +793,7 @@ void clear_marks(bip_t *bip)
 
 void user_kill(bip_t *bip, struct user *user)
 {
+	(void)bip;
 	if (!hash_is_empty(&user->connections))
 		fatal("user_kill, user still has connections");
 	free(user->name);
@@ -1745,7 +1814,8 @@ void adm_bip_help(struct link_client *ic, int admin)
 	adm_reply(ic, "/BIP AWAY_NICK # clear away nick");
 }
 
-int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
+int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
+		unsigned int privmsg)
 {
 	int admin = LINK(ic)->user->admin;
 
@@ -1850,7 +1920,8 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		if (line->elemc == privmsg + 2) {
 			adm_on_connect_send(ic, NULL);
 		} else if (line->elemc == privmsg + 3) {
-			// TODO: on connect send should not be limited to one word
+			// TODO: on connect send should not be limited to one
+			// word
 			adm_on_connect_send(ic, line->elemv[privmsg + 2]);
 		} else {
 			adm_reply(ic, "/BIP ON_CONNECT_SEND needs zero or one "
@@ -1864,6 +1935,22 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		} else {
 			adm_reply(ic, "/BIP AWAY_NICK needs zero or one "
 				"argument");
+		}
+	} else if (admin &&
+			strcasecmp(line->elemv[privmsg + 1], "ADD_CONN") == 0) {
+		if (line->elemc != privmsg + 4) {
+			adm_reply(ic, "/BIP ADD_CONN <connection name> "
+					"<network name>");
+		} else {
+			adm_bip_addconn(bip, ic, line->elemv[privmsg + 2],
+					line->elemv[privmsg + 3]);
+		}
+	} else if (admin &&
+			strcasecmp(line->elemv[privmsg + 1], "DEL_CONN") == 0) {
+		if (line->elemc != privmsg + 3) {
+			adm_reply(ic, "/BIP DEL_CONN <connection name>");
+		} else {
+			adm_bip_delconn(bip, ic, line->elemv[privmsg + 2]);
 		}
 #ifdef HAVE_LIBSSL
 	} else if (strcasecmp(line->elemv[privmsg + 1], "TRUST") == 0) {
