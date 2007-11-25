@@ -489,12 +489,12 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 
 			ci = hash_get(&l->chan_infos, name);
 			if (!ci) {
-				ci = calloc(sizeof(struct chan_info), 1);
+				ci = chan_info_new();
 				hash_insert(&l->chan_infos, name, ci);
 				/* FIXME: this order is not reloaded */
 				list_add_last(&l->chan_infos_order, ci);
+				ci->backlog = 1;
 			}
-			ci->backlog = 1;
 
 			while ((t2 = list_remove_first(t->pdata))) {
 				switch (t2->type) {

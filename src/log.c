@@ -288,6 +288,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 	char *filename = NULL;
 	time_t t;
 	struct tm *ltime;
+	struct link *l;
 
 	if (!ischannel(*destination))
 		destination = "privates";
@@ -312,6 +313,24 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 		lfg = hash_get(&logdata->logfgs, destination);
 		if (!lfg)
 			fatal("internal log_find_file");
+		/* ok we are allocating a new lfg now, let's set it up for
+		 * backlogging if applicable */
+		if (!logdata->user)
+			fatal("log_find_file: no user associated to logdata");
+		if (!logdata->network)
+			fatal("log_find_file: no network id associated to "
+					"logdata");
+		l = hash_get(&logdata->user->connections, logdata->network);
+		if (!l)
+			fatal("log_beautify: no connection associated to "
+					"logdata");
+		struct chan_info *ci = hash_get(&l->chan_infos, destination);
+		if (ci && !ci->backlog) {
+			lfg->track_backlog = 0;
+		} else {
+			lfg->track_backlog = 1;
+		}
+
 		if (filename)
 			free(filename);
 		return lfg;
@@ -641,7 +660,10 @@ void log_client_connected(log_t *logdata)
 void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 {
 	int c;
-	(void)ld;
+
+	if (!lfg->track_backlog)
+		return;
+
 	if (!ld->user->backlog || ld->user->backlog_lines == 0)
 		return;
 
@@ -741,20 +763,6 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 		return _log_wrap(dest, buf);
 	lots = p - sots;
 	p++;
-
-	if (!logdata->user)
-		fatal("log_beautify: no user associated to logdata");
-	if (!logdata->network)
-		fatal("log_beautify: no network id associated to logdata");
-	l = hash_get(&logdata->user->connections, logdata->network);
-	if (!l)
-		fatal("log_beautify: no connection associated to logdata");
-	ci = hash_get(&l->chan_infos, dest);
-	if (ci && !ci->backlog) {
-		mylog(LOG_DEBUG, "Skipping unwanted channel %s for backlog",
-				dest);
-		return NULL;
-	}
 
 	if (strncmp(p, "-!-", 3) == 0) {
 		if (logdata->user->bl_msg_only)
@@ -905,6 +913,9 @@ char *log_backread(log_t *logdata, char *destination, int *skip)
 
 	lfg = hash_get(&logdata->logfgs, destination);
 	if (!lfg)
+		return NULL;
+
+	if (!lfg->track_backlog)
 		return NULL;
 
 	if (!logdata->backlogging) {
