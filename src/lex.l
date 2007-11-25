@@ -99,6 +99,7 @@ list_t *parse_conf(FILE *file)
 "on_connect_send"	{ return LEX_ON_CONNECT_SEND; }
 "no_client_away_msg"	{ return LEX_NO_CLIENT_AWAY_MSG; }
 "pid_file"		{ return LEX_PID_FILE; }
+"bip_use_notice"	{ return LEX_BIP_USE_NOTICE; }
 \"[^"]*\" 		{
 				size_t len = strlen(yytext) - 2;
 				yylval.string = malloc(len + 1);

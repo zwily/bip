@@ -46,4 +46,5 @@ FAQ:
 - why is my vhost not used when I connect (one IP)
 
 
-backlog_no_private
+- backlog_no_private
+- biplog.vim syntax file
