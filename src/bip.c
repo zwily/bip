@@ -1214,7 +1214,7 @@ void adm_print_connection(struct link_client *ic, struct link *lnk,
 {
 	hash_iterator_t lit;
 	char buf[RET_STR_LEN + 1];
-	int t_wrote = 0;
+	int t_written = 0;
 
 	if (!bu)
 		bu = lnk->user;
@@ -1225,47 +1225,47 @@ void adm_print_connection(struct link_client *ic, struct link *lnk,
 		(lnk->connect_nick ? lnk->connect_nick : bu->default_nick),
 		(lnk->username ? lnk->username : bu->default_username));
 
-	t_wrote = snprintf(buf, RET_STR_LEN, "  Options:");
-	if (t_wrote >= RET_STR_LEN)
+	t_written = snprintf(buf, RET_STR_LEN, "  Options:");
+	if (t_written >= RET_STR_LEN)
 		goto noroom;
 	if (lnk->follow_nick) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " follow_nick");
-		if (t_wrote >= RET_STR_LEN)
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " follow_nick");
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 	if (lnk->ignore_first_nick) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " ignore_first_nick");
-		if (t_wrote >= RET_STR_LEN)
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " ignore_first_nick");
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 	if (lnk->away_nick) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " away_nick=%s",
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " away_nick=%s",
 			lnk->away_nick);
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 	if (lnk->no_client_away_msg) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " no_client_away_msg=%s",
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " no_client_away_msg=%s",
 			lnk->no_client_away_msg);
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 	if (lnk->vhost) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " vhost=%s",
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " vhost=%s",
 			lnk->vhost);
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 	if (lnk->bind_port) {
-		t_wrote += snprintf(buf + t_wrote,
-			RET_STR_LEN - t_wrote, " bind_port=%u",
+		t_written += snprintf(buf + t_written,
+			RET_STR_LEN - t_written, " bind_port=%u",
 			lnk->bind_port);
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 noroom: /* that means the line is larger that RET_STR_LEN. We're not likely to
@@ -1276,78 +1276,78 @@ noroom: /* that means the line is larger that RET_STR_LEN. We're not likely to
 	// TODO: on_connect_send
 
 	// TODO : check channels struct
-	t_wrote = snprintf(buf, RET_STR_LEN, "  Channels (* with key, ` no backlog)");
-	if (t_wrote >= RET_STR_LEN)
+	t_written = snprintf(buf, RET_STR_LEN, "  Channels (* with key, ` no backlog)");
+	if (t_written >= RET_STR_LEN)
 		goto noroomchan;
 	for (hash_it_init(&lnk->chan_infos, &lit); hash_it_item(&lit);
 			hash_it_next(&lit)) {
 		struct chan_info *ch = hash_it_item(&lit);
 
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote, " %s%s%s",
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, " %s%s%s",
 			ch->name, (ch->key ? "*" : ""),
 			(ch->backlog ? "" : "`"));
-		if (t_wrote > LINE_SIZE_LIM) {
+		if (t_written > LINE_SIZE_LIM) {
 			buf[RET_STR_LEN] = 0;
 			bip_notify(ic, buf);
-			t_wrote = 0;
+			t_written = 0;
 		}
 	}
 noroomchan:
 	buf[RET_STR_LEN] = 0;
 	bip_notify(ic, buf);
 
-	t_wrote = snprintf(buf, RET_STR_LEN, "  Status: ");
-	if (t_wrote >= RET_STR_LEN)
+	t_written = snprintf(buf, RET_STR_LEN, "  Status: ");
+	if (t_written >= RET_STR_LEN)
 		goto noroomstatus;
 	switch (lnk->s_state) {
 	case  IRCS_NONE:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"not started");
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	case  IRCS_CONNECTING:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"connecting... attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	case  IRCS_CONNECTED:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"connected !");
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	case  IRCS_WAS_CONNECTED:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"disconnected, attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	case  IRCS_RECONNECTING:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"reconnecting... attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	case  IRCS_TIMER_WAIT:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"waiting to reconnect, attempts: %d, last: %s",
 			lnk->s_conn_attempt,
 			hrtime(lnk->last_connection_attempt));
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 	default:
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 			"unknown");
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroomstatus;
 		break;
 		// s_conn_attempt recon_timer last_connection_attempt
@@ -1389,7 +1389,7 @@ void adm_info_user(struct link_client *ic, char *name)
 {
 	struct user *u;
 	char buf[RET_STR_LEN + 1];
-	int t_wrote = 0;
+	int t_written = 0;
 
 	bip_notify(ic, "-- User '%s' info", name);
 	u = hash_get(&_bip->users, name);
@@ -1398,26 +1398,26 @@ void adm_info_user(struct link_client *ic, char *name)
 		return;
 	}
 
-	//t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote, "");
+	//t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "");
 	//buf[RET_STR_LEN] = 0;
 	//bip_notify(ic, buf);
-	//t_wrote = 0;
+	//t_written = 0;
 
-	t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote, "user: %s",
+	t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "user: %s",
 			u->name);
-	if (t_wrote >= RET_STR_LEN)
+	if (t_written >= RET_STR_LEN)
 		goto noroom;
 	if (u->admin) {
-		t_wrote += snprintf(buf + t_wrote, RET_STR_LEN - t_wrote,
+		t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
 				", is bip admin");
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 	}
 
 noroom:
 	buf[RET_STR_LEN] = 0;
 	bip_notify(ic, buf);
-	t_wrote = 0;
+	t_written = 0;
 
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",
@@ -1454,12 +1454,12 @@ void adm_list_users(struct link_client *ic)
 			hash_it_next(&it)) {
 		struct user *u = hash_it_item(&it);
 		int first = 1;
-		int t_wrote = 0;
+		int t_written = 0;
 
 		buf[RET_STR_LEN] = 0;
-		t_wrote += snprintf(buf, RET_STR_LEN, "* %s%s:", u->name,
+		t_written += snprintf(buf, RET_STR_LEN, "* %s%s:", u->name,
 				(u->admin ? "": "(admin)"));
-		if (t_wrote >= RET_STR_LEN)
+		if (t_written >= RET_STR_LEN)
 			goto noroom;
 		for (hash_it_init(&u->connections, &lit); hash_it_item(&lit);
 				hash_it_next(&lit)) {
@@ -1467,21 +1467,21 @@ void adm_list_users(struct link_client *ic)
 			if (first) {
 				first = 0;
 			} else {
-				t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
-					- t_wrote, ",");
-				if (t_wrote >= RET_STR_LEN)
+				t_written += snprintf(buf + t_written, RET_STR_LEN
+					- t_written, ",");
+				if (t_written >= RET_STR_LEN)
 					goto noroom;
 			}
 
-			t_wrote += snprintf(buf + t_wrote,
-					RET_STR_LEN - t_wrote,
+			t_written += snprintf(buf + t_written,
+					RET_STR_LEN - t_written,
 					" %s", lnk->name);
-			if (t_wrote >= RET_STR_LEN)
+			if (t_written >= RET_STR_LEN)
 				goto noroom;
-			if (t_wrote > LINE_SIZE_LIM) {
+			if (t_written > LINE_SIZE_LIM) {
 				buf[RET_STR_LEN] = 0;
 				bip_notify(ic, buf);
-				t_wrote = 0;
+				t_written = 0;
 			}
 		}
 noroom:
@@ -1503,35 +1503,35 @@ void adm_list_networks(struct link_client *ic)
 	for (hash_it_init(&_bip->networks, &it); hash_it_item(&it);
 			hash_it_next(&it)) {
 		struct network *n = hash_it_item(&it);
-		int t_wrote = 0;
+		int t_written = 0;
 		int i;
 
 		buf[RET_STR_LEN] = 0;
 #ifdef HAVE_LIBSSL
 		if (n->ssl) {
-			t_wrote += snprintf(buf, RET_STR_LEN, "- %s*:",
+			t_written += snprintf(buf, RET_STR_LEN, "- %s*:",
 					n->name);
-			if (t_wrote >= RET_STR_LEN)
+			if (t_written >= RET_STR_LEN)
 				goto noroom;
 		} else {
 #endif
-			t_wrote += snprintf(buf, RET_STR_LEN, "- %s:", n->name);
-			if (t_wrote >= RET_STR_LEN)
+			t_written += snprintf(buf, RET_STR_LEN, "- %s:", n->name);
+			if (t_written >= RET_STR_LEN)
 				goto noroom;
 #ifdef HAVE_LIBSSL
 		}
 #endif
 		for (i = 0; i < n->serverc; i++) {
 			struct server *serv = i+n->serverv;
-			t_wrote += snprintf(buf + t_wrote, RET_STR_LEN
-				- t_wrote, " %s:%d", serv->host,
+			t_written += snprintf(buf + t_written, RET_STR_LEN
+				- t_written, " %s:%d", serv->host,
 				serv->port);
-			if (t_wrote >= RET_STR_LEN)
+			if (t_written >= RET_STR_LEN)
 				goto noroom;
-			if (t_wrote > LINE_SIZE_LIM) {
+			if (t_written > LINE_SIZE_LIM) {
 				buf[RET_STR_LEN] = 0;
 				bip_notify(ic, buf);
-				t_wrote = 0;
+				t_written = 0;
 			}
 		}
 noroom:
@@ -1783,7 +1783,7 @@ void adm_on_connect_send(struct link_client *ic, struct line *line,
 		unsigned int privmsg)
 {
 	char buf[ON_CONNECT_MAX_STRSIZE];
-	int t_wrote = 0;
+	int t_written = 0;
 	unsigned int i;
 
 	if (!line) {
@@ -1795,16 +1795,16 @@ void adm_on_connect_send(struct link_client *ic, struct line *line,
 		return;
 
 	for (i = privmsg + 2; i < line->elemc; i++) {
-		if (t_wrote) {
-			t_wrote += snprintf(buf,
-					ON_CONNECT_MAX_STRSIZE - 1 - t_wrote,
+		if (t_written) {
+			t_written += snprintf(buf,
+					ON_CONNECT_MAX_STRSIZE - 1 - t_written,
 					" %s", line->elemv[i]);
-			if (t_wrote >= ON_CONNECT_MAX_STRSIZE)
+			if (t_written >= ON_CONNECT_MAX_STRSIZE)
 				goto noroom;
 		} else {
-			t_wrote = snprintf(buf, ON_CONNECT_MAX_STRSIZE - 1,
+			t_written = snprintf(buf, ON_CONNECT_MAX_STRSIZE - 1,
 					"%s", line->elemv[i]);
-			if (t_wrote >= ON_CONNECT_MAX_STRSIZE)
+			if (t_written >= ON_CONNECT_MAX_STRSIZE)
 				goto noroom;
 		}
 	}
