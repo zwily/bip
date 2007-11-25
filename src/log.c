@@ -712,6 +712,9 @@ int log_has_backlog(log_t *logdata, char *destination)
 	if (lfg->memlog)
 		return !list_is_empty(lfg->memlog);
 
+	if (!lfg->track_backlog)
+		return 0;
+
 	logfile_t *lf;
 	lf = list_get_first(&lfg->file_group);
 	if (lf != list_get_last(&lfg->file_group))
