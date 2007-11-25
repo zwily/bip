@@ -288,6 +288,7 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 	char *filename = NULL;
 	time_t t;
 	struct tm *ltime;
+	struct link *l;
 
 	if (!ischannel(*destination))
 		destination = "privates";
@@ -312,6 +313,24 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 		lfg = hash_get(&logdata->logfgs, destination);
 		if (!lfg)
 			fatal("internal log_find_file");
+		/* ok we are allocating a new lfg now, let's set it up for
+		 * backlogging if applicable */
+		if (!logdata->user)
+			fatal("log_find_file: no user associated to logdata");
+		if (!logdata->network)
+			fatal("log_find_file: no network id associated to "
+					"logdata");
+		l = hash_get(&logdata->user->connections, logdata->network);
+		if (!l)
+			fatal("log_beautify: no connection associated to "
+					"logdata");
+		struct chan_info *ci = hash_get(&l->chan_infos, destination);
+		if (ci && !ci->backlog) {
+			lfg->track_backlog = 0;
+		} else {
+			lfg->track_backlog = 1;
+		}
+
 		if (filename)
 			free(filename);
 		return lfg;
@@ -362,6 +381,8 @@ logfilegroup_t *log_find_file(log_t *logdata, char *destination)
 
 /*
  * Da log routines
+ * There are a lot of snprintf's here without enforcing the last \0 in the
+ * buffer, but _log_write takes care of this for us.
  */
 void log_join(log_t *logdata, char *ircmask, char *channel)
 {
@@ -374,9 +395,14 @@ void log_join(log_t *logdata, char *ircmask, char *channel)
 void log_part(log_t *logdata, char *ircmask, char *channel,
 		char *message)
 {
-	snprintf(logdata->buffer, LOGLINE_MAXLEN,
+	if (message)
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- %s has left %s [%s]", timestamp(), ircmask,
 			channel, message);
+	else
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
+			"%s -!- %s has left %s", timestamp(), ircmask,
+			channel);
 	log_write(logdata, channel, logdata->buffer);
 }
 
@@ -424,7 +450,7 @@ static void _log_privmsg(log_t *logdata, char *ircmask, int src,
 		char *real_message = message;
 
 		if (*message == '+' || *message == '-')
-			real_message++; 
+			real_message++;
 
 		if (strncmp(real_message, "\001ACTION ", 8) != 0)
 			return;
@@ -634,7 +660,10 @@ void log_client_connected(log_t *logdata)
 void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 {
 	int c;
-	(void)ld;
+
+	if (!lfg->track_backlog)
+		return;
+
 	if (!ld->user->backlog || ld->user->backlog_lines == 0)
 		return;
 
@@ -682,6 +711,9 @@ int log_has_backlog(log_t *logdata, char *destination)
 
 	if (lfg->memlog)
 		return !list_is_empty(lfg->memlog);
+
+	if (!lfg->track_backlog)
+		return 0;
 
 	logfile_t *lf;
 	lf = list_get_first(&lfg->file_group);
@@ -734,20 +766,6 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 		return _log_wrap(dest, buf);
 	lots = p - sots;
 	p++;
-
-	if (!logdata->user)
-		fatal("log_beautify: no user associated to logdata");
-	if (!logdata->network)
-		fatal("log_beautify: no network id associated to logdata");
-	l = hash_get(&logdata->user->connections, logdata->network);
-	if (!l)
-		fatal("log_beautify: no connection associated to logdata");
-	ci = hash_get(&l->chan_infos, dest);
-	if (ci && !ci->backlog) {
-		mylog(LOG_DEBUG, "Skipping unwanted channel %s for backlog",
-				dest);
-		return NULL;
-	}
 
 	if (strncmp(p, "-!-", 3) == 0) {
 		if (logdata->user->bl_msg_only)
@@ -898,6 +916,9 @@ char *log_backread(log_t *logdata, char *destination, int *skip)
 
 	lfg = hash_get(&logdata->logfgs, destination);
 	if (!lfg)
+		return NULL;
+
+	if (!lfg->track_backlog)
 		return NULL;
 
 	if (!logdata->backlogging) {
@@ -1171,7 +1192,7 @@ log_t *log_new(struct user *user, char *network)
 		fatal("out of memory");
 	logdata->connected = 0;
 	if (!log_all_logs)
-		log_all_logs = list_new(NULL);
+		log_all_logs = list_new(list_ptr_cmp);
 	list_add_last(log_all_logs, logdata);
 	return logdata;
 }
@@ -1182,12 +1203,16 @@ void log_free(log_t *log)
 	logfilegroup_t *lfg;
 	logfile_t *lf;
 
+	list_remove(log_all_logs, log);
+
+	free(log->network);
+	free(log->buffer);
+
 	for (hash_it_init(&log->logfgs, &it); (lfg = hash_it_item(&it));
 			hash_it_next(&it)) {
 		log_reset(lfg);
 		if ((lf = list_remove_first(&lfg->file_group)))
 			logfile_free(lf);
-		free(lf);
 	}
 	hash_clean(&log->logfgs);
 	free(log);

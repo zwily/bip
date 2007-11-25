@@ -46,6 +46,7 @@ typedef struct logfilegroup
 	list_t *memlog;
 	int memc;
 	list_iterator_t backlog_it;
+	int track_backlog;
 } logfilegroup_t;
 
 typedef struct log {

@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include "irc.h"
@@ -48,7 +49,7 @@ int conf_log = DEFAULT_LOG;
 int conf_log_system = DEFAULT_LOG_SYSTEM;
 int conf_log_sync_interval = DEFAULT_LOG_SYNC_INTERVAL;
 
-list_t *parse_conf(FILE *file);
+list_t *parse_conf(FILE *file, int *err);
 static void conf_die(char *fmt, ...);
 #ifdef HAVE_LIBSSL
 int adm_trust(struct link_client *ic, struct line *line);
@@ -56,6 +57,7 @@ int adm_trust(struct link_client *ic, struct line *line);
 static char *get_tuple_value(list_t *tuple_l, int lex);
 void bip_notify(struct link_client *ic, char *fmt, ...);
 void adm_list_connections(struct link_client *ic, struct user *bu);
+void free_conf(list_t *l);
 
 static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 {
@@ -94,7 +96,7 @@ static int add_server(struct server *s, list_t *data)
 	while ((t = list_remove_first(data))) {
 		switch (t->type) {
 		case LEX_HOST:
-			s->host = t->pdata;
+			MOVE_STRING(s->host, t->pdata);
 			break;
 		case LEX_PORT:
 			s->port = t->ndata;
@@ -102,6 +104,9 @@ static int add_server(struct server *s, list_t *data)
 		default:
 			fatal("Config error in server block (%d)", t->type);
 		}
+		if (t->tuple_type == TUPLE_STR && t->pdata)
+			free(t->pdata);
+		free(t);
 	}
 	if (!s->host) {
 		free(s);
@@ -115,23 +120,12 @@ static int add_server(struct server *s, list_t *data)
 
 extern list_t *root_list;
 int yyparse();
-int conf_error;
-char conf_errstr[ERRBUFSZ];
-
-static void conf_start(void)
-{
-	conf_error = 0;
-}
 
 static void conf_die(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-
-	vsnprintf(conf_errstr, ERRBUFSZ, fmt, ap);
-	conf_errstr[ERRBUFSZ - 1] = 0;
-	conf_error = 1;
-
+	_mylog(LOG_ERROR, fmt, ap);
 	va_end(ap);
 }
 
@@ -307,8 +301,9 @@ static int add_network(bip_t *bip, list_t *data)
 	struct tuple *t;
 	struct network *n;
 	int i;
+	int r;
 
-	char *name = get_tuple_value(data, LEX_NAME);
+	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
 		conf_die("Network with no name");
@@ -340,21 +335,95 @@ static int add_network(bip_t *bip, list_t *data)
 			n->serverv = realloc(n->serverv, (n->serverc + 1)
 						* sizeof(struct server));
 			n->serverc++;
-			add_server(&n->serverv[n->serverc - 1], t->pdata);
+			memset(&n->serverv[n->serverc - 1], 0,
+					sizeof(struct server));
+			r = add_server(&n->serverv[n->serverc - 1], t->pdata);
+			if (!r) {
+				n->serverc--;
+				return 0;
+			}
 			free(t->pdata);
 			t->pdata = NULL;
 			break;
 		default:
 			conf_die("unknown keyword in network statement");
-			if (t->type == TUPLE_STR)
-				free(t->pdata);
+			return 0;
 			break;
 		}
-		if (t->type == TUPLE_STR && t->pdata)
+		if (t->tuple_type == TUPLE_STR && t->pdata)
 			free(t->pdata);
 		free(t);
 	}
 	return 1;
+}
+
+void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
+{
+	struct user *user = LINK(ic)->user;
+	struct link *l;
+
+	if (!hash_get(&user->connections, conn_name)) {
+		adm_reply(ic, "cannot find this connection");
+		return;
+	}
+
+	l = hash_get(&user->connections, conn_name);
+	link_kill(bip, l);
+	adm_reply(ic, "deleted");
+}
+
+void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
+		char *network_name)
+{
+	struct user *user = LINK(ic)->user;
+	struct network *network;
+
+	/* check name uniqueness */
+	if (hash_get(&user->connections, conn_name)) {
+		adm_reply(ic, "connection name already exists for this user.");
+		return;
+	}
+
+	/* check we know about this network */
+	network = hash_get(&bip->networks, network_name);
+	if (!network) {
+		adm_reply(ic, "no such network name");
+		return;
+	}
+
+	struct link *l;
+	l = irc_link_new();
+	l->name = strdup(conn_name);
+	hash_insert(&user->connections, conn_name, l);
+	list_add_last(&bip->link_list, l);
+	l->user = user;
+	l->network = network;
+	l->log = log_new(user, conn_name);
+#ifdef HAVE_LIBSSL
+	l->ssl_check_mode = user->ssl_check_mode;
+	l->untrusted_certs = sk_X509_new_null();
+#endif
+
+
+#define SCOPY(member) l->member = (LINK(ic)->member ? strdup(LINK(ic)->member) : NULL)
+#define ICOPY(member) l->member = LINK(ic)->member
+
+	SCOPY(connect_nick);
+	SCOPY(username);
+	SCOPY(realname);
+	/* we don't copy server password */
+	SCOPY(vhost);
+	ICOPY(follow_nick);
+	ICOPY(ignore_first_nick);
+	SCOPY(away_nick);
+	SCOPY(no_client_away_msg);
+	/* we don't copy on_connect_send */
+#ifdef HAVE_LIBSSL
+	ICOPY(ssl_check_mode);
+#endif
+#undef SCOPY
+#undef ICOPY
+	adm_reply(ic, "connection added, you should soon be able to connect");
 }
 
 static int add_connection(bip_t *bip, struct user *user, list_t *data)
@@ -362,7 +431,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 	struct tuple *t, *t2;
 	struct link *l;
 	struct chan_info *ci;
-	char *name = get_tuple_value(data, LEX_NAME);
+	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
 		conf_die("Connection with no name");
@@ -380,7 +449,6 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		l->untrusted_certs = sk_X509_new_null();
 #endif
 	} else {
-#warning "CODEME (user switch..)"
 		l->network = NULL;
 		log_reinit_all(l->log);
 	}
@@ -416,8 +484,20 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			MOVE_STRING(l->vhost, t->pdata);
 			break;
 		case LEX_CHANNEL:
-			ci = calloc(sizeof(struct chan_info), 1);
-			ci->backlog = 1;
+			name = get_tuple_pvalue(t->pdata, LEX_NAME);
+			if (name == NULL) {
+				conf_die("Channel with no name");
+				return 0;
+			}
+
+			ci = hash_get(&l->chan_infos, name);
+			if (!ci) {
+				ci = chan_info_new();
+				hash_insert(&l->chan_infos, name, ci);
+				/* FIXME: this order is not reloaded */
+				list_add_last(&l->chan_infos_order, ci);
+				ci->backlog = 1;
+			}
 
 			while ((t2 = list_remove_first(t->pdata))) {
 				switch (t2->type) {
@@ -431,11 +511,11 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 					ci->backlog = t2->ndata;
 					break;
 				}
+				if (t2->tuple_type == TUPLE_STR && t2->pdata)
+					free(t2->pdata);
+				free(t2);
 			}
 			list_free(t->pdata);
-
-			hash_insert(&l->chan_infos, ci->name, ci);
-			list_add_last(&l->chan_infos_order, ci);
 			break;
 		case LEX_FOLLOW_NICK:
 			l->follow_nick = t->ndata;
@@ -451,6 +531,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			break;
 		case LEX_ON_CONNECT_SEND:
 			list_add_last(&l->on_connect_send, t->pdata);
+			t->pdata = NULL;
 			break;
 #ifdef HAVE_LIBSSL
 		case LEX_SSL_CHECK_MODE:
@@ -458,15 +539,13 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 				l->ssl_check_mode = SSL_CHECK_BASIC;
 			if (strcmp(t->pdata, "ca") == 0)
 				l->ssl_check_mode = SSL_CHECK_CA;
-			free(t->pdata);
 			break;
 #endif
 		default:
 			conf_die("unknown keyword in connection statement");
-			if (t->type == TUPLE_STR)
-				free(t->pdata);
+			return 0;
 		}
-		if (t->type == TUPLE_STR && t->pdata)
+		if (t->tuple_type == TUPLE_STR && t->pdata)
 			free(t->pdata);
 		free(t);
 	}
@@ -488,10 +567,12 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			conf_die("No realname set and no default realname.");
 		l->realname = strdup(user->default_realname);
 	}
+
+	l->in_use = 1;
 	return 1;
 }
 
-static char *get_tuple_value(list_t *tuple_l, int lex)
+static char *get_tuple_pvalue(list_t *tuple_l, int lex)
 {
 	struct tuple *t;
 	list_iterator_t it;
@@ -504,13 +585,35 @@ static char *get_tuple_value(list_t *tuple_l, int lex)
 	return NULL;
 }
 
-static int add_user(bip_t *bip, list_t *data)
+static int get_tuple_nvalue(list_t *tuple_l, int lex)
+{
+	struct tuple *t;
+	list_iterator_t it;
+
+	for (list_it_init(tuple_l, &it); (t = list_it_item(&it));
+			list_it_next(&it)) {
+		if (t->type == lex)
+			return t->ndata;
+	}
+	return -1;
+}
+
+struct historical_directives {
+	int always_backlog;
+	int backlog;
+	int bl_msg_only;
+	int backlog_lines;
+	int backlog_no_timestamp;
+	int blreset_on_talk;
+};
+
+static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 {
 	int r;
 	struct tuple *t;
 	struct user *u;
 
-	char *name = get_tuple_value(data, LEX_NAME);
+	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
 		conf_die("User with no name");
@@ -540,17 +643,25 @@ static int add_user(bip_t *bip, list_t *data)
 #endif
 	}
 
+	u->backlog = hds->backlog;
+	u->always_backlog = hds->always_backlog;
+	u->bl_msg_only = hds->bl_msg_only;
+	u->backlog_lines = hds->backlog_lines;
+	u->backlog_no_timestamp = hds->backlog_no_timestamp;
+	u->blreset_on_talk = hds->blreset_on_talk;
+
 	while ((t = list_remove_first(data))) {
 		switch (t->type) {
 		case LEX_NAME:
 			MOVE_STRING(u->name, t->pdata);
 			break;
- 		case LEX_ADMIN:
- 			u->admin = t->ndata;
- 			break;
+		case LEX_ADMIN:
+			u->admin = t->ndata;
+			break;
 		case LEX_PASSWORD:
 			hash_binary(t->pdata, &u->password, &u->seed);
 			free(t->pdata);
+			t->pdata = NULL;
 			break;
 		case LEX_DEFAULT_NICK:
 			MOVE_STRING(u->default_nick, t->pdata);
@@ -585,6 +696,7 @@ static int add_user(bip_t *bip, list_t *data)
 		case LEX_CONNECTION:
 			r = add_connection(bip, u, t->pdata);
 			free(t->pdata);
+			t->pdata = NULL;
 			if (!r)
 				return 0;
 			break;
@@ -595,16 +707,17 @@ static int add_user(bip_t *bip, list_t *data)
 			if (!strncmp(t->pdata, "ca", 2))
 				u->ssl_check_mode = SSL_CHECK_CA;
 			free(t->pdata);
+			t->pdata = NULL;
 			break;
 		case LEX_SSL_CHECK_STORE:
-			u->ssl_check_store = t->pdata;
+			MOVE_STRING(u->ssl_check_store, t->pdata);
 			break;
 #endif
 		default:
 			conf_die("Uknown keyword in user statement");
-			break;
+			return 0;
 		}
-		if (t->type == TUPLE_STR && t->pdata)
+		if (t->tuple_type == TUPLE_STR && t->pdata)
 			free(t->pdata);
 		free(t);
 	}
@@ -613,6 +726,7 @@ static int add_user(bip_t *bip, list_t *data)
 		return 0;
 	}
 
+	u->in_use = 1;
 	return 1;
 }
 
@@ -649,7 +763,6 @@ static int validate_config(bip_t *bip)
 						link->name);
 #endif
 
-				//conf_die("user: ... net: ... can i has nick/user/rael");
 				r = 0;
 
 				for (hash_it_init(&link->chan_infos, &cit);
@@ -672,21 +785,99 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
+	if (strstr(conf_log_format, "\%u") == NULL)
+		mylog(LOG_WARN, "log_format doesn't contain \%u, all users'"
+			" logs will be mixed !");
 	return r;
+}
+
+void clear_marks(bip_t *bip)
+{
+	list_iterator_t lit;
+	hash_iterator_t hit;
+
+	for (list_it_init(&bip->link_list, &lit); list_it_item(&lit);
+			list_it_next(&lit))
+		((struct link *)list_it_item(&lit))->in_use = 0;
+	for (hash_it_init(&bip->users, &hit); hash_it_item(&hit);
+			hash_it_next(&hit))
+		((struct user *)hash_it_item(&hit))->in_use = 0;
+}
+
+void user_kill(bip_t *bip, struct user *user)
+{
+	(void)bip;
+	if (!hash_is_empty(&user->connections))
+		fatal("user_kill, user still has connections");
+	free(user->name);
+	free(user->password);
+	MAYFREE(user->default_nick);
+	MAYFREE(user->default_username);
+	MAYFREE(user->default_realname);
+
+#ifdef HAVE_LIBSSL
+	MAYFREE(user->ssl_check_store);
+#endif
+	free(user);
+}
+
+void sweep(bip_t *bip)
+{
+	list_iterator_t lit;
+	hash_iterator_t hit;
+
+	for (list_it_init(&bip->link_list, &lit); list_it_item(&lit);
+			list_it_next(&lit)) {
+		struct link *l = ((struct link *)list_it_item(&lit));
+		if (!l->in_use) {
+			mylog(LOG_INFO, "Administratively killing %s/%s",
+					l->user->name, l->name);
+			link_kill(bip, l);
+			list_remove_if_exists(&bip->conn_list, l);
+			list_it_remove(&lit);
+		}
+	}
+	for (hash_it_init(&bip->users, &hit); hash_it_item(&hit);
+			hash_it_next(&hit)) {
+		struct user *u = (struct user *)hash_it_item(&hit);
+		if (!u->in_use) {
+			hash_it_remove(&hit);
+			user_kill(bip, u);
+		}
+	}
 }
 
 int fireup(bip_t *bip, FILE *conf)
 {
+	int r;
 	struct tuple *t;
-	list_t *l;
+	int err = 0;
+	struct historical_directives hds;
 
-	conf_start();
-
-	l = parse_conf(conf);
-	if (conf_error)
+	clear_marks(bip);
+	parse_conf(conf, &err);
+	if (err) {
+		free_conf(root_list);
+		root_list = NULL;
 		return 0;
+	}
 
-	while ((t = list_remove_first(l))) {
+#define SET_HV(d, n) do {\
+	int __gtv = get_tuple_nvalue(root_list, LEX_##n);\
+	if (__gtv != -1) \
+		d = __gtv;\
+	else\
+		d = DEFAULT_##n;\
+	} while(0);
+	SET_HV(hds.always_backlog, ALWAYS_BACKLOG);
+	SET_HV(hds.backlog, BACKLOG);
+	SET_HV(hds.bl_msg_only, BL_MSG_ONLY);
+	SET_HV(hds.backlog_lines, BACKLOG_LINES);
+	SET_HV(hds.backlog_no_timestamp, BACKLOG_NO_TIMESTAMP);
+	SET_HV(hds.blreset_on_talk, BLRESET_ON_TALK);
+#undef SET_HV
+
+	while ((t = list_remove_first(root_list))) {
 		switch (t->type) {
 		case LEX_LOG_SYNC_INTERVAL:
 			conf_log_sync_interval = t->ndata;
@@ -718,44 +909,41 @@ int fireup(bip_t *bip, FILE *conf)
 		case LEX_PID_FILE:
 			MOVE_STRING(conf_pid_file, t->pdata);
 			break;
+		case LEX_ALWAYS_BACKLOG:
+			hds.always_backlog = t->ndata;
+			break;
+		case LEX_BACKLOG:
+			hds.backlog = t->ndata;
+			break;
+		case LEX_BL_MSG_ONLY:
+			hds.bl_msg_only = t->ndata;
+			break;
+		case LEX_BACKLOG_LINES:
+			hds.backlog_lines = t->ndata;
+			break;
+		case LEX_BACKLOG_NO_TIMESTAMP:
+			hds.backlog_no_timestamp = t->ndata;
+			break;
+		case LEX_BLRESET_ON_TALK:
+			hds.blreset_on_talk = t->ndata;
+			break;
 		case LEX_NETWORK:
-			add_network(bip, t->pdata);
+			r = add_network(bip, t->pdata);
 			list_free(t->pdata);
+			if (!r)
+				goto out_conf_error;
 			break;
 		case LEX_USER:
-			add_user(bip, t->pdata);
+			r = add_user(bip, t->pdata, &hds);
 			list_free(t->pdata);
+			if (!r)
+				goto out_conf_error;
 			break;
-
-#warning deprecated but we still need to support these
-#if 0
-               case LEX_ALWAYS_BACKLOG:
-                       conf_always_backlog = t->ndata;
-                       break;
-               case LEX_BACKLOG:
-                       conf_backlog = t->ndata;
-                       break;
-               case LEX_BL_MSG_ONLY:
-                       conf_bl_msg_only = t->ndata;
-                       break;
-               case LEX_BACKLOG_LINES:
-                       conf_backlog_lines = t->ndata;
-                       break;
-               case LEX_BACKLOG_NO_TIMESTAMP:
-                       conf_backlog_no_timestamp = t->ndata;
-                       break;
-               case LEX_BLRESET_ON_TALK:
-                       conf_blreset_on_talk = t->ndata;
-                       break;
-	       /* end of deprectated */
-#endif
-
-
-
 		default:
 			conf_die("Config error in base config (%d)", t->type);
+			goto out_conf_error;
 		}
-		if (t->type == TUPLE_STR && t->pdata)
+		if (t->tuple_type == TUPLE_STR && t->pdata)
 			free(t->pdata);
 		free(t);
 	}
@@ -763,14 +951,20 @@ int fireup(bip_t *bip, FILE *conf)
 	root_list = NULL;
 
 	validate_config(bip);
+	sweep(bip);
 	return 1;
+
+out_conf_error:
+	free_conf(root_list);
+	root_list = NULL;
+	return 0;
 }
 
 static void log_file_setup(void)
 {
 	char buf[4096];
 
-	if (conf_log_system) {
+	if (conf_log_system && conf_daemonize) {
 		if (conf_global_log_file && conf_global_log_file != stderr)
 			fclose(conf_global_log_file);
 		snprintf(buf, 4095, "%s/bip.log", conf_log_root);
@@ -881,7 +1075,7 @@ int main(int argc, char **argv)
 	signal(SIGXCPU, rlimit_cpu_reached);
 
 	conf_log_root = NULL;
-	conf_log_format = DEFAULT_LOG_FORMAT;
+	conf_log_format = strdup(DEFAULT_LOG_FORMAT);
 	conf_log_level = DEFAULT_LOG_LEVEL;
 	conf_daemonize = 1;
 	conf_global_log_file = stderr;
@@ -932,13 +1126,10 @@ int main(int argc, char **argv)
 			fatal("%s config file not found", confpath);
 	}
 
-
 	r = fireup(&bip, conf);
 	fclose(conf);
-	if (!r) {
-		fatal("%s", conf_errstr);
-		exit(28);
-	}
+	if (!r)
+		fatal("Not starting: error in config file.");
 
 	if (!conf_biphome) {
 		char *home = getenv("HOME");
@@ -1000,9 +1191,6 @@ int main(int argc, char **argv)
 		fatal("Could not create listening socket");
 
 	for (;;) {
-		if (conf_error)
-			mylog(LOG_ERROR, "conf error: %s", conf_errstr);
-
 		irc_main(&bip);
 
 		sighup = 0;
@@ -1641,11 +1829,13 @@ void adm_bip_help(struct link_client *ic, int admin)
 			"configuration");
 		bip_notify(ic, "/BIP LIST networks|users|connections|all_links"
 			"|all_connections");
+		bip_notify(ic, "/BIP ADD_CONN <connection name> <network>");
+		bip_notify(ic, "/BIP DEL_CONN <connection name>");
  	} else {
 		bip_notify(ic, "/BIP LIST networks|connections");
  	}
 	bip_notify(ic, "/BIP JUMP # jump to next server (in same network)");
-	bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only)");
+	bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only). Add -q flag and the operation is quiet.");
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "/BIP TRUST # trust this server certificate");
 #endif
@@ -1659,14 +1849,15 @@ void adm_bip_help(struct link_client *ic, int admin)
 	bip_notify(ic, "/BIP AWAY_NICK # clear away nick");
 }
 
-int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
+int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
+		unsigned int privmsg)
 {
 	int admin = LINK(ic)->user->admin;
 
 	if (line->elemc < privmsg + 2)
 		return OK_FORGET;
 
-	mylog(LOG_STD, "/BIP %s from %s", line->elemv[privmsg + 1],
+	mylog(LOG_INFO, "/BIP %s from %s", line->elemv[privmsg + 1],
 			LINK(ic)->user->name);
 	if (strcasecmp(line->elemv[privmsg + 1], "RELOAD") == 0) {
 		if (!admin) {
@@ -1736,7 +1927,12 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 		}
 		bip_notify(ic, "-- Jumping to next server");
 	} else if (strcasecmp(line->elemv[privmsg + 1], "BLRESET") == 0) {
-		adm_blreset(ic);
+		if (line->elemc == privmsg + 3 &&
+				strcmp(line->elemv[privmsg + 2], "-q") == 0) {
+			log_reinit_all(LINK(ic)->log);
+		} else {
+			adm_blreset(ic);
+		}
 	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
 		adm_bip_help(ic, admin);
 	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
@@ -1771,6 +1967,22 @@ int adm_bip(struct link_client *ic, struct line *line, unsigned int privmsg)
 			bip_notify(ic, "-- AWAY_NICK command needs zero or one"
 				" argument");
 		}
+	} else if (admin &&
+			strcasecmp(line->elemv[privmsg + 1], "ADD_CONN") == 0) {
+		if (line->elemc != privmsg + 4) {
+			adm_reply(ic, "/BIP ADD_CONN <connection name> "
+					"<network name>");
+		} else {
+			adm_bip_addconn(bip, ic, line->elemv[privmsg + 2],
+					line->elemv[privmsg + 3]);
+		}
+	} else if (admin &&
+			strcasecmp(line->elemv[privmsg + 1], "DEL_CONN") == 0) {
+		if (line->elemc != privmsg + 3) {
+			adm_reply(ic, "/BIP DEL_CONN <connection name>");
+		} else {
+			adm_bip_delconn(bip, ic, line->elemv[privmsg + 2]);
+		}
 #ifdef HAVE_LIBSSL
 	} else if (strcasecmp(line->elemv[privmsg + 1], "TRUST") == 0) {
 		return adm_trust(ic, line);
@@ -1785,12 +1997,14 @@ void free_conf(list_t *l)
 {
 	struct tuple *t;
 	list_iterator_t li;
+
 	for (list_it_init(l, &li); (t = list_it_item(&li)); list_it_next(&li)) {
 		switch (t->tuple_type) {
 		case TUPLE_STR:
-			free(t->pdata);	/* no break, for the style */
+			printf("freeconf: %s\n", (char *)t->pdata);
+			free(t->pdata);
+			break;
 		case TUPLE_INT:
-			free(t);
 			break;
 		case TUPLE_LIST:
 			free_conf(t->pdata);
@@ -1799,5 +2013,8 @@ void free_conf(list_t *l)
 			fatal("internal error free_conf");
 			break;
 		}
+		free(t);
 	}
+	free(l);
 }
+

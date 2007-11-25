@@ -91,6 +91,7 @@ struct user {
 #endif
 
 	hash_t connections;
+	int in_use; /* for mark and sweep on reload */
 };
 
 struct network
@@ -158,6 +159,7 @@ struct link {
 	int ssl_check_mode;
 	STACK_OF(X509) *untrusted_certs;
 #endif
+	int in_use; /* for mark and sweep on reload */
 };
 
 struct link_connection {

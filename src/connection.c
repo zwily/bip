@@ -52,7 +52,7 @@ void connection_close(connection_t *cn)
 {
 	mylog(LOG_DEBUG, "Connection close asked. FD:%d ",
 			(long)cn->handle);
-	if (cn->connected != CONN_DISCONN) {
+	if (cn->connected != CONN_DISCONN && cn->connected != CONN_ERROR) {
 		cn->connected = CONN_DISCONN;
 		if (close(cn->handle) == -1)
 			mylog(LOG_WARN, "Error on socket close: %s",
@@ -873,7 +873,8 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 
 	err = getaddrinfo(dsthostname, dstport, &hint, &cdata->dst);
 	if (err) {
-		mylog(LOG_ERROR, "getaddrinfo(dst): %s", gai_strerror(err));
+		mylog(LOG_ERROR, "getaddrinfo(%s): %s", dsthostname,
+				gai_strerror(err));
 		connecting_data_free(cdata);
 		cdata = NULL;
 		return;
@@ -1010,8 +1011,10 @@ connection_t *accept_new(connection_t *cn)
 
 	mylog(LOG_DEBUG, "Trying to accept new client on %d", cn->handle);
 	err = accept(cn->handle, &sa, &sa_len);
-	if (err < 0)
+	if (err < 0) {
+		mylog(LOG_ERROR, "accept failed: %s", strerror(errno));
 		return NULL;
+	}
 	socket_set_nonblock(err);
 
 	conn = connection_init(cn->anti_flood, cn->ssl, cn->timeout, 0);
@@ -1175,14 +1178,20 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
 			 err == X509_V_ERR_CERT_UNTRUSTED ||
 			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
-			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)) {
+			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
+			 err == X509_V_ERR_CERT_HAS_EXPIRED)) {
 
 		if (X509_STORE_get_by_subject(ctx, X509_LU_X509,
 				X509_get_subject_name(err_cert), &xobj) > 0 &&
 				!X509_cmp(xobj.data.x509, err_cert)) {
 
-			mylog(LOG_INFO, "Basic mode; peer certificate found "
-					"in store, accepting it!");
+			if (err == X509_V_ERR_CERT_HAS_EXPIRED)
+				mylog(LOG_INFO, "Basic mode; Accepting "
+						"*expired* peer certificate "
+						"found in store.");
+			else
+				mylog(LOG_INFO, "Basic mode; Accepting peer "
+					"certificate found in store.");
 
 			result = 1;
 			err = X509_V_OK;

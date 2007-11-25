@@ -226,7 +226,12 @@ The password. It \fBMUST\fP be generated with \fBbimkpw\fP or it'll not work.
 Tells whether BIP should check the server SSL certificate and against what.
 Can be \fBnone\fP for no check at all, \fBca\fP to check if the cert is signed
 by a Certificate Authority in repository, or \fBbasic\fP to check if cert
-exists in repository. The repository is defined by \fBssl_check_store\fP.
+exists in repository. The repository is defined by \fBssl_check_store\fP.  This
+allows a "ssh-like" private key generation scheme. Note that in basic mode:
+.br
+ - expired certificates that are in the store are considered valid.
+.br
+ - CA-signed certificates are considered valid even if not in store.
 
 .TP
 \fBssl_check_store\fP (default: \fBnot set\fP)

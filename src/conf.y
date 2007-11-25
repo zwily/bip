@@ -19,9 +19,7 @@
 extern int yylex (void);
 extern char *yytext;
 extern int linec;
-extern int conf_error;
-#define ERRBUFSZ 80
-extern char conf_errstr[ERRBUFSZ];
+int conf_error;
 
 int yywrap()
 {
@@ -30,9 +28,7 @@ int yywrap()
 
 int yyerror()
 {
-	snprintf(conf_errstr, ERRBUFSZ, "Parse error near %s, line %d\n",
-			yytext, linec + 1);
-	conf_errstr[ERRBUFSZ - 1] = 0;
+	mylog(LOG_ERROR, "Parse error near %s, line %d\n", yytext, linec + 1);
 	conf_error = 1;
 	return 1;
 }
@@ -114,6 +110,23 @@ command:
        | LEX_LOG_SYNC_INTERVAL LEX_EQ LEX_INT { $$ = tuple_i_new(
 						LEX_LOG_SYNC_INTERVAL, $3); }
        | LEX_PID_FILE LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_PID_FILE, $3); }
+       /* deprecated */
+           | LEX_BACKLOG_LINES LEX_EQ LEX_INT {
+	           $$ = tuple_i_new(LEX_BACKLOG_LINES, $3);
+		  }
+           | LEX_BACKLOG_NO_TIMESTAMP LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BACKLOG_NO_TIMESTAMP, $3);
+	       }
+           | LEX_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_BACKLOG, $3); }
+           | LEX_BLRESET_ON_TALK LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BLRESET_ON_TALK, $3);
+	       }
+           | LEX_BL_MSG_ONLY LEX_EQ LEX_BOOL {
+	       $$ = tuple_i_new(LEX_BL_MSG_ONLY, $3);
+	       }
+           | LEX_ALWAYS_BACKLOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(
+						LEX_ALWAYS_BACKLOG, $3); }
+       /* /deprecated */
        | LEX_NETWORK LEX_LBRA network LEX_RBRA { $$ = tuple_l_new(LEX_NETWORK,
 						$3); }
        | LEX_USER LEX_LBRA user LEX_RBRA { $$ = tuple_l_new(LEX_USER, $3); }

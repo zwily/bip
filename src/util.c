@@ -42,7 +42,7 @@ int is_valid_nick(char *str)
 	while (*tmp != '\0' && (isalnum(*tmp) || *tmp == '-' || *tmp == '[' ||
 			*tmp == ']' || *tmp == '\\' || *tmp == '`' ||
 			*tmp == '^' || *tmp == '{' || *tmp == '}' ||
-			*tmp == '|'))
+			*tmp == '|' || *tmp == '_' ))
 		tmp++;
 	return (*tmp == '\0');
 }
@@ -118,6 +118,9 @@ void _mylog(int level, char *fmt, va_list ap)
 {
 	char *prefix;
 
+	if (!conf_log_system)
+		return;
+
 	if (level > conf_log_level)
 		return;
 
@@ -126,7 +129,7 @@ void _mylog(int level, char *fmt, va_list ap)
 			prefix = "FATAL: ";
 			break;
 		case LOG_DEBUGVERB:
-			prefix = "DEBUG: ";
+			prefix = "DEBUGVERB: ";
 			break;
 		case LOG_DEBUG:
 			prefix = "DEBUG: ";
@@ -156,9 +159,6 @@ void _mylog(int level, char *fmt, va_list ap)
 void mylog(int level, char *fmt, ...)
 {
 	va_list ap;
-
-	if (!conf_log_system)
-		return;
 
 	va_start(ap, fmt);
 	_mylog(level, fmt, ap);
@@ -308,28 +308,6 @@ void *list_remove_last(list_t *list)
 	return ptr;
 }
 
-/*
-static void *list_remove_item(list_t *l, struct list_item *li)
-{
-	void *ret = li->ptr;
-	if (!li->prev) {
-		if (l->first != li)
-			fatal("list_remove_item");
-		l->first = li->next;
-	} else
-		li->prev->next = li->next;
-
-	if (!li->next) {
-		if (l->last != li)
-			fatal("list_remove_item");
-		l->last = li->prev;
-	} else
-		li->next->prev = li->prev;
-	free(li);
-	return ret;
-}
-*/
-
 void *list_remove_if_exists(list_t *list, void *ptr)
 {
 	list_iterator_t li;
@@ -383,12 +361,19 @@ void list_it_init(list_t *list, list_iterator_t *ti)
 {
 	ti->list = list;
 	ti->cur = list->first;
+	ti->next = NULL;
 }
 
 void list_it_next(list_iterator_t *ti)
 {
-	if (ti->cur)
+	if (ti->cur) {
+		if (ti->next)
+			fatal("list_it_next: inconsistent interator state");
 		ti->cur = ti->cur->next;
+	} else if (ti->next) {
+		ti->cur = ti->next;
+		ti->next = NULL;
+	}
 }
 
 void *list_it_item(list_iterator_t *ti)
@@ -415,7 +400,8 @@ void *list_it_remove(list_iterator_t *li)
 
 	void *ptr = li->cur->ptr;
 	struct list_item *item = li->cur;
-	li->cur = li->cur->next;
+	li->next = li->cur->next;
+	li->cur = NULL;
 	free(item);
 	return ptr;
 }
@@ -555,48 +541,71 @@ void *hash_remove(hash_t *hash, char *key)
 	return ptr;
 }
 
+int hash_is_empty(hash_t *h)
+{
+	int i;
+
+	for (i = 0; i < 256; i++) {
+		if (!list_is_empty(&h->lists[i]))
+			return 0;
+	}
+	return 1;
+}
+
 void hash_it_init(hash_t *h, hash_iterator_t *hi)
 {
 	memset(hi, 0, sizeof(hash_iterator_t));
 	hi->hash = h;
 
-	while (list_is_empty(&h->lists[hi->list]) && hi->list < 256)
+	while (hi->list < 256 && list_is_empty(&h->lists[hi->list]))
 		hi->list++;
 	if (hi->list < 256)
-		hi->cur = h->lists[hi->list].first;
-	else
-		hi->cur = NULL;
+		list_it_init(&h->lists[hi->list], &hi->lit);
 }
 
 void hash_it_next(hash_iterator_t *hi)
 {
-	hash_t *hash = hi->hash;
-
-	hi->cur = hi->cur->next;
-	while (!hi->cur) {
-		hi->list++;
-		if (hi->list == 256) {
-			hi->cur = NULL;
-			return;
-		}
-		hi->cur = hash->lists[hi->list].first;
+	list_it_next(&hi->lit);
+	if (!list_it_item(&hi->lit)) {
+		do {
+			hi->list++;
+			if (hi->list == 256)
+				return;
+		} while (list_is_empty(&hi->hash->lists[hi->list]));
+		list_it_init(&hi->hash->lists[hi->list], &hi->lit);
 	}
 }
 
 void *hash_it_item(hash_iterator_t *h)
 {
-	if (!h->cur)
+	struct hash_item *hi;
+
+	hi = list_it_item(&h->lit);
+	if (!hi)
 		return NULL;
-	struct hash_item *hi = h->cur->ptr;
 	return hi->item;
 }
 
 char *hash_it_key(hash_iterator_t *h)
 {
-	if (!h->cur)
+	struct hash_item *hi;
+	hi = list_it_item(&h->lit);
+	if (!hi)
 		return NULL;
-	struct hash_item *hi = h->cur->ptr;
 	return hi->key;
+}
+
+void *hash_it_remove(hash_iterator_t *hi)
+{
+	struct hash_item *hitem;
+	void *ptr;
+
+	hitem = list_it_remove(&hi->lit);
+
+	ptr = hitem->item;
+	free(hitem->key);
+	free(hitem);
+	return ptr;
 }
 
 void hash_dump(hash_t *h)
@@ -625,4 +634,3 @@ int ischannel(char p)
 {
 	return (p == '#' || p == '&' || p == '+' || p == '!');
 }
-
