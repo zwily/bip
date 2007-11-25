@@ -1220,7 +1220,7 @@ void adm_print_connection(struct link_client *ic, struct link *lnk,
 		bu = lnk->user;
 
 	bip_notify(ic, "* %s to %s as \"%s\" (%s!%s) :", lnk->name,
-		lnk->network->name, 
+		lnk->network->name,
 		(lnk->realname ? lnk->realname : bu->default_realname),
 		(lnk->connect_nick ? lnk->connect_nick : bu->default_nick),
 		(lnk->username ? lnk->username : bu->default_username));
@@ -1774,14 +1774,15 @@ void set_on_connect_send(struct link_client *ic, char *val)
 		s = list_remove_last(&link->on_connect_send);
 		if (s)
 			free(s);
-		bip_notify(ic, "on_connect_send cleared.");
+		bip_notify(ic, "last on_connect_send string deleted.");
 	}
 }
 
+#define ON_CONNECT_MAX_STRSIZE 1024
 void adm_on_connect_send(struct link_client *ic, struct line *line,
 		unsigned int privmsg)
 {
-	char buf[4096];
+	char buf[ON_CONNECT_MAX_STRSIZE];
 	int t_wrote = 0;
 	unsigned int i;
 
@@ -1794,14 +1795,26 @@ void adm_on_connect_send(struct link_client *ic, struct line *line,
 		return;
 
 	for (i = privmsg + 2; i < line->elemc; i++) {
-		if (t_wrote)
-			t_wrote += snprintf(buf, 4095 - t_wrote, " %s",
-					line->elemv[i]);
-		else
-			t_wrote = snprintf(buf, 4095, "%s", line->elemv[i]);
+		if (t_wrote) {
+			t_wrote += snprintf(buf,
+					ON_CONNECT_MAX_STRSIZE - 1 - t_wrote,
+					" %s", line->elemv[i]);
+			if (t_wrote >= ON_CONNECT_MAX_STRSIZE)
+				goto noroom;
+		} else {
+			t_wrote = snprintf(buf, ON_CONNECT_MAX_STRSIZE - 1,
+					"%s", line->elemv[i]);
+			if (t_wrote >= ON_CONNECT_MAX_STRSIZE)
+				goto noroom;
+		}
 	}
-	buf[4095] = 0;
+ok:
+	buf[ON_CONNECT_MAX_STRSIZE - 1] = 0;
 	set_on_connect_send(ic, buf);
+	return;
+noroom:
+	bip_notify(ic, "on connect send string too big, truncated");
+	goto ok;
 }
 
 void adm_away_nick(struct link_client *ic, char *val)
