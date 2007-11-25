@@ -54,7 +54,7 @@ static void conf_die(char *fmt, ...);
 #ifdef HAVE_LIBSSL
 int adm_trust(struct link_client *ic, struct line *line);
 #endif
-static char *get_tuple_value(list_t *tuple_l, int lex);
+static char *get_tuple_pvalue(list_t *tuple_l, int lex);
 void bip_notify(struct link_client *ic, char *fmt, ...);
 void adm_list_connections(struct link_client *ic, struct user *bu);
 void free_conf(list_t *l);
@@ -363,13 +363,13 @@ void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
 	struct link *l;
 
 	if (!hash_get(&user->connections, conn_name)) {
-		adm_reply(ic, "cannot find this connection");
+		bip_notify(ic, "cannot find this connection");
 		return;
 	}
 
 	l = hash_get(&user->connections, conn_name);
 	link_kill(bip, l);
-	adm_reply(ic, "deleted");
+	bip_notify(ic, "deleted");
 }
 
 void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
@@ -380,14 +380,14 @@ void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
 
 	/* check name uniqueness */
 	if (hash_get(&user->connections, conn_name)) {
-		adm_reply(ic, "connection name already exists for this user.");
+		bip_notify(ic, "connection name already exists for this user.");
 		return;
 	}
 
 	/* check we know about this network */
 	network = hash_get(&bip->networks, network_name);
 	if (!network) {
-		adm_reply(ic, "no such network name");
+		bip_notify(ic, "no such network name");
 		return;
 	}
 
@@ -423,7 +423,7 @@ void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
 #endif
 #undef SCOPY
 #undef ICOPY
-	adm_reply(ic, "connection added, you should soon be able to connect");
+	bip_notify(ic, "connection added, you should soon be able to connect");
 }
 
 static int add_connection(bip_t *bip, struct user *user, list_t *data)
@@ -1544,7 +1544,6 @@ noroom:
 void adm_list_connections(struct link_client *ic, struct user *bu)
 {
 	hash_iterator_t it;
-	char buf[RET_STR_LEN + 1];
 	connection_t *c;
 
 	c = CONN(ic);
@@ -1970,7 +1969,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 	} else if (admin &&
 			strcasecmp(line->elemv[privmsg + 1], "ADD_CONN") == 0) {
 		if (line->elemc != privmsg + 4) {
-			adm_reply(ic, "/BIP ADD_CONN <connection name> "
+			bip_notify(ic, "/BIP ADD_CONN <connection name> "
 					"<network name>");
 		} else {
 			adm_bip_addconn(bip, ic, line->elemv[privmsg + 2],
@@ -1979,7 +1978,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 	} else if (admin &&
 			strcasecmp(line->elemv[privmsg + 1], "DEL_CONN") == 0) {
 		if (line->elemc != privmsg + 3) {
-			adm_reply(ic, "/BIP DEL_CONN <connection name>");
+			bip_notify(ic, "/BIP DEL_CONN <connection name>");
 		} else {
 			adm_bip_delconn(bip, ic, line->elemv[privmsg + 2]);
 		}
