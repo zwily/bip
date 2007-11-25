@@ -421,6 +421,7 @@ void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
 #endif
 #undef SCOPY
 #undef ICOPY
+	adm_reply(ic, "connection added, you should soon be able to connect");
 }
 
 static int add_connection(bip_t *bip, struct user *user, list_t *data)
