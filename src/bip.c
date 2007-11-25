@@ -1796,6 +1796,8 @@ void adm_bip_help(struct link_client *ic, int admin)
 			"configuration");
 		adm_reply(ic, "/BIP LIST networks|users|connections|all_links"
 			"|all_connections");
+		adm_reply(ic, "/BIP ADD_CONN <connection name> <network>");
+		adm_reply(ic, "/BIP DEL_CONN <connection name>");
 	} else {
 		adm_reply(ic, "/BIP LIST networks|connections");
 	}
