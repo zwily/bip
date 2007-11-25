@@ -464,6 +464,8 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 		ret = irc_quit(server, line);
 	} else if (strcmp(line->elemv[0], "NICK") == 0) {
 		ret = irc_nick(server, line);
+	} else if (strcmp(line->elemv[0], "CTCP") == 0) {
+		ret = irc_ctcp(server, line);
 	}
 
 	if (ret == OK_COPY) {
@@ -1776,6 +1778,20 @@ static int irc_nick(struct link_server *server, struct line *line)
 	}
 
 	free(org_nick);
+	return OK_COPY;
+}
+
+static int irc_ctcp(struct link_server *server, struct line *line)
+{
+	if (line->elemc != 2)
+		return OK_COPY;
+
+	if (strcmp(line->elemv[1], "\001VERSION\001") == 0) {
+		WRITE_LINE1(CONN(server), NULL, "NOTICE",
+				"\001VERSION bip" BIP_VERSION "\001");
+		/* change to OK_FORGET, for bip to hide client versions */
+		return OK_COPY;
+	}
 	return OK_COPY;
 }
 
