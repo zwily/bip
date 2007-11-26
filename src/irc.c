@@ -965,6 +965,7 @@ void irc_add_channel_info(struct link_server *ircs, char *chan, char *key)
 		ci = chan_info_new();
 		ci->name = strdup(chan);
 		ci->key = key ? strdup(key) : NULL;
+		ci->backlog = 1;
 		hash_insert(&LINK(ircs)->chan_infos, chan, ci);
 		list_add_last(&LINK(ircs)->chan_infos_order, ci);
 	} else {
