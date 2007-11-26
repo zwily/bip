@@ -750,8 +750,6 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 	char *ret;
 	int out;
 	int done;
-	struct link *l;
-	struct chan_info *ci;
 
 	if (!buf)
 		fatal("BUG log_beautify not called correctly!");

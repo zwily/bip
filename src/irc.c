@@ -21,6 +21,7 @@
 #include "log.h"
 #include "connection.h"
 #include "md5.h"
+#include "version.h"
 
 #define S_CONN_DELAY (10)
 
@@ -57,6 +58,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 static void irc_cli_make_join(struct link_client *ic);
 static void server_setup_reconnect_timer(struct link *link);
 int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line);
+static int irc_ctcp(struct link_server *server, struct line *line);
 
 #define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
@@ -960,7 +962,7 @@ void irc_add_channel_info(struct link_server *ircs, char *chan, char *key)
 	ci = hash_get(&LINK(ircs)->chan_infos, chan);
 	if (!ci) {
 		struct chan_info *ci;
-		ci = malloc(sizeof(struct chan_info));
+		ci = chan_info_new();
 		ci->name = strdup(chan);
 		ci->key = key ? strdup(key) : NULL;
 		hash_insert(&LINK(ircs)->chan_infos, chan, ci);
