@@ -10,4 +10,5 @@ if [ ! -d src ] ; then
 fi
 
 git-archive --format=tar --prefix=$prefix/ HEAD | gzip -c > ../$prefix.tar.gz
+echo "See ../$prefix.tar.gz"
 
