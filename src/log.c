@@ -823,7 +823,7 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 				p++;
 
 		if (!p[0] || p[0] != ')' || !p[1] || p[1] != ':' ||
-				!p[2] || p[2] != ' ' || !p[3] || !p[4])
+				!p[2] || p[2] != ' ' || !p[3])
 			return _log_wrap(dest, buf);
 		p += 3;
 	} else {
