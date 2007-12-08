@@ -1103,7 +1103,7 @@ static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 		else if (LINK(ic)->l_server->nick)
 			WRITE_LINE2(CONN(ic), P_IRCMASK,
 					(LINK(ic)->user->bip_use_notice ?
-					 	"NOTICE" : "PRIVMSG"),
+						"NOTICE" : "PRIVMSG"),
 					LINK(ic)->l_server->nick,
 					":Not connected please try again "
 					"later...\r\n");
@@ -1145,7 +1145,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 
 	/* LINK(src) == LINK(dest) */
 	size_t len = strlen(line->elemv[2]) + 5;
-	char *tmp;
+	char *tmp, *oldelem;
 
 	if (len == 0)
 		return;
@@ -1159,13 +1159,15 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 	/* tricky: */
 	line->elemv[1] = LINK(src)->l_server->nick;
 
-	free(line->elemv[2]);
+	oldelem = line->elemv[2];
 	line->elemv[2] = tmp;
 	str = irc_line_to_string(line);
 	/* end of trick: */
 	line->elemv[1] = line->origin;
+	line->elemv[2] = oldelem;
 	line->origin = NULL;
 	write_line(CONN(dest), str);
+	free(tmp);
 	free(str);
 	return;
 }
