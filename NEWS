@@ -1,3 +1,7 @@
+09-12-2007: Bip has now two types of users "admins" and normal user. Some
+commands are reserved to admin. Add a admin = true; statement in your config
+(in user block) accordingly.
+
 29-10-2007: Certificate validation change. In "basic" mode, expired
 certificates are now accepted as long as they are in store (therefore trusted).
 This makes the basic mode be more SSH like. Some extreme security zealots might
