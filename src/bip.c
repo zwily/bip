@@ -785,8 +785,8 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
-	if (strstr(conf_log_format, "\%u") == NULL)
-		mylog(LOG_WARN, "log_format doesn't contain \%u, all users'"
+	if (strstr(conf_log_format, "%u") == NULL)
+		mylog(LOG_WARN, "log_format does not contain %%u, all users'"
 			" logs will be mixed !");
 	return r;
 }
