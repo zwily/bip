@@ -1791,12 +1791,20 @@ static int irc_ctcp(struct link_server *server, struct line *line)
 	if (line->elemc != 2)
 		return OK_COPY;
 
+	if (!line->origin)
+		return OK_COPY;
+
+	char *nick;
+	nick = nick_from_ircmask(line->origin);
+
 	if (strcmp(line->elemv[1], "\001VERSION\001") == 0) {
-		WRITE_LINE1(CONN(server), NULL, "NOTICE",
+		WRITE_LINE2(CONN(server), NULL, "NOTICE", nick,
 				"\001VERSION bip" BIP_VERSION "\001");
 		/* change to OK_FORGET, for bip to hide client versions */
+		free(nick);
 		return OK_COPY;
 	}
+	free(nick);
 	return OK_COPY;
 }
 
