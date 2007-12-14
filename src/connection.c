@@ -736,7 +736,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 	struct timeval btv, etv;
 	*nc = 0;
 
-	cn_newdata = list_new(NULL);
+	cn_newdata = list_new(list_ptr_cmp);
 	FD_ZERO(&fds_read);
 	FD_ZERO(&fds_write);
 	FD_ZERO(&fds_except);
@@ -747,7 +747,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 
 		mylog(LOG_DEBUGTOOMUCH, "I've seen socket %d !", cn->handle);
 		if (cn->connected == CONN_DISCONN) {
-			list_add_first(cn_newdata, cn);
+			list_add_first_uniq(cn_newdata, cn);
 			continue;
 		}
 
@@ -832,9 +832,9 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 		if (check_event_except(&fds_except, cn)) {
 			mylog(LOG_DEBUGTOOMUCH, "Notify on FD %d (state %d)",
 					cn->handle, cn->connected);
-			list_add_first(cn_newdata, cn);
+			list_add_first_uniq(cn_newdata, cn);
 			continue;
- 		}
+		}
 		if (check_event_write(&fds_write, cn, nc)) {
 			if (cn_is_in_error(cn))
 				toadd = 1;
@@ -846,7 +846,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 			toadd = 1;
 		}
 		if (toadd)
-			list_add_first(cn_newdata, cn);
+			list_add_first_uniq(cn_newdata, cn);
 	}
 	return cn_newdata;
 }

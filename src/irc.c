@@ -1201,7 +1201,7 @@ int irc_dispatch(bip_t *bip, struct link_any *l, struct line *line)
 		return irc_dispatch_loging_client(bip, (struct link_client*)l,
 				line);
 		break;
-#ifdef HAVE_LIBSSL		
+#ifdef HAVE_LIBSSL
 	case IRC_TYPE_TRUST_CLIENT:
 		return irc_dispatch_trust_client((struct link_client*)l, line);
 		break;

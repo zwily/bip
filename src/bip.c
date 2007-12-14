@@ -1843,9 +1843,9 @@ void adm_bip_help(struct link_client *ic, int admin)
 			"|all_connections");
 		bip_notify(ic, "/BIP ADD_CONN <connection name> <network>");
 		bip_notify(ic, "/BIP DEL_CONN <connection name>");
- 	} else {
+	} else {
 		bip_notify(ic, "/BIP LIST networks|connections");
- 	}
+	}
 	bip_notify(ic, "/BIP JUMP # jump to next server (in same network)");
 	bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only). Add -q flag and the operation is quiet.");
 #ifdef HAVE_LIBSSL
