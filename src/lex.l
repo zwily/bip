@@ -13,13 +13,15 @@
  */
 
 #include "conf.h"
-int linec = 0;
+int linec;
 #define YY_NO_UNPUT
 #include "util.h"
 extern list_t *root_list;
 void yyparse(void);
 void free_conf(list_t*);
-extern int conf_error;
+int conf_error;
+typedef struct bip bip_t;
+extern bip_t *_bip;
 
 #if 0
 /* SPANK ME WITH A SHOVEL */
@@ -29,12 +31,22 @@ void dummy_lex_FFS(void)
 	yyunput(0, NULL);
 }
 #endif
+void conf_die(bip_t *, char *, ...);
+
+int yyerror(void)
+{
+	conf_die(_bip, "Parse error near %s, line %d", yytext, linec + 1);
+	conf_error = 1;
+	return 1;
+}
 
 list_t *parse_conf(FILE *file, int *err)
 {
+	conf_error = 0;
+	linec = 0;
+
 	YY_BUFFER_STATE in = yy_create_buffer(file, YY_BUF_SIZE);
 	yy_switch_to_buffer(in);
-	conf_error = 0;
 	yyparse();
 	yy_delete_buffer(in);
 	*err = conf_error;
@@ -112,6 +124,6 @@ list_t *parse_conf(FILE *file, int *err)
 "{"			{ return LEX_LBRA; }
 "}"			{ return LEX_RBRA; }
 ";"			{ return LEX_SEMICOLON; }
-.			{ mylog(LOG_ERROR, "Parse error in config file line %d, unknown character '%s'\n", linec + 1, yytext);
+.			{ conf_die(_bip, "Parse error in config file line %d, unknown character '%s'", linec + 1, yytext); conf_error = 1;
 			return LEX_BUNCH; }
 %%

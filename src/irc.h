@@ -244,6 +244,8 @@ typedef struct bip {
 
 	hash_t networks;
 	hash_t users;
+	list_t errors;
+	struct link_client *reloading_client;
 } bip_t;
 
 void bip_init(bip_t *bip);

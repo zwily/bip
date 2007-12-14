@@ -19,17 +19,9 @@
 extern int yylex (void);
 extern char *yytext;
 extern int linec;
-int conf_error;
 
 int yywrap()
 {
-	return 1;
-}
-
-int yyerror()
-{
-	mylog(LOG_ERROR, "Parse error near %s, line %d\n", yytext, linec + 1);
-	conf_error = 1;
 	return 1;
 }
 

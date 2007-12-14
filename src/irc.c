@@ -2414,7 +2414,6 @@ prot_err:
 	}
 }
 
-struct link_client *reloading_client;
 /*
  * The main loop
  * inc is the incoming connection, clientl list a list of client struct that
@@ -2423,6 +2422,14 @@ struct link_client *reloading_client;
 void irc_main(bip_t *bip)
 {
 	int timeleft = 1000;
+
+	if (bip->reloading_client) {
+		char *l;
+
+		while ((l = list_remove_first(&bip->errors)))
+			bip_notify(bip->reloading_client, l);
+		bip->reloading_client = NULL;
+	}
 
 	/*
 	 * If the list is empty, we are starting. Otherwise we are reloading,
@@ -2491,6 +2498,8 @@ void link_kill(bip_t *bip, struct link *link)
 	irc_server_free(link->l_server);
 	while (link->l_clientc) {
 		struct link_client *lc = link->l_clientv[0];
+		if (lc == bip->reloading_client)
+			bip->reloading_client = NULL;
 		list_remove(&bip->conn_list, CONN(lc));
 		unbind_from_link(lc);
 		irc_client_free(lc);

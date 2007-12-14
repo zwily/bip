@@ -50,7 +50,7 @@ int conf_log_system = DEFAULT_LOG_SYSTEM;
 int conf_log_sync_interval = DEFAULT_LOG_SYNC_INTERVAL;
 
 list_t *parse_conf(FILE *file, int *err);
-static void conf_die(char *fmt, ...);
+void conf_die(bip_t *bip, char *fmt, ...);
 #ifdef HAVE_LIBSSL
 int adm_trust(struct link_client *ic, struct line *line);
 #endif
@@ -87,7 +87,7 @@ static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 	*password = md5;
 }
 
-static int add_server(struct server *s, list_t *data)
+static int add_server(bip_t *bip, struct server *s, list_t *data)
 {
 	struct tuple *t;
 
@@ -110,7 +110,7 @@ static int add_server(struct server *s, list_t *data)
 	}
 	if (!s->host) {
 		free(s);
-		conf_die("Server conf: host not set");
+		conf_die(bip, "Server conf: host not set");
 		return 0;
 	}
 	return 1;
@@ -121,14 +121,31 @@ static int add_server(struct server *s, list_t *data)
 extern list_t *root_list;
 int yyparse();
 
-static void conf_die(char *fmt, ...)
+void conf_die(bip_t *bip, char *fmt, ...)
 {
 	va_list ap;
+	int size = ERRBUFSZ;
+	int n;
+	char *error = malloc(size);
+
+	for (;;) {
+		va_start(ap, fmt);
+		n = vsnprintf(error, size, fmt, ap);
+		va_end(ap);
+		if (n > -1 && n < size) {
+			list_add_last(&bip->errors, error);
+			break;
+		}
+		if (n > -1)
+			size = n + 1;
+		else
+			size *= 2;
+		error = realloc(error, size);
+	}
 	va_start(ap, fmt);
 	_mylog(LOG_ERROR, fmt, ap);
 	va_end(ap);
 }
-
 
 FILE *conf_global_log_file;
 
@@ -255,20 +272,20 @@ static void version()
 "Distributed under the GNU Public License Version 2\n", BIP_VERSION);
 }
 
+bip_t *_bip;
+
 void reload_config(int i)
 {
 	(void)i;
 	sighup = 1;
+	_bip->reloading_client = NULL;
 }
-
-bip_t *_bip;
 
 void rlimit_cpu_reached(int i)
 {
 	(void)i;
 	mylog(LOG_WARN, "This process has reached the CPU time usage limit. "
 		"It means bip will be killed by the Operating System soon.");
-#warning CODEME warn all users via bip_notify
 }
 
 void rlimit_bigfile_reached(int i)
@@ -277,7 +294,6 @@ void rlimit_bigfile_reached(int i)
 	mylog(LOG_WARN, "A file has reached the max size this process is "
 		"allowed to create. The file will not be written correctly, "
 		"an error message should follow. This is not fatal.");
-#warning CODEME warn all users via bip_notify ?
 }
 
 void bad_quit(int i)
@@ -306,7 +322,7 @@ static int add_network(bip_t *bip, list_t *data)
 	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
-		conf_die("Network with no name");
+		conf_die(bip, "Network with no name");
 		return 0;
 	}
 	n = hash_get(&bip->networks, name);
@@ -337,7 +353,8 @@ static int add_network(bip_t *bip, list_t *data)
 			n->serverc++;
 			memset(&n->serverv[n->serverc - 1], 0,
 					sizeof(struct server));
-			r = add_server(&n->serverv[n->serverc - 1], t->pdata);
+			r = add_server(bip, &n->serverv[n->serverc - 1],
+					t->pdata);
 			if (!r) {
 				n->serverc--;
 				return 0;
@@ -346,7 +363,7 @@ static int add_network(bip_t *bip, list_t *data)
 			t->pdata = NULL;
 			break;
 		default:
-			conf_die("unknown keyword in network statement");
+			conf_die(bip, "unknown keyword in network statement");
 			return 0;
 			break;
 		}
@@ -362,14 +379,13 @@ void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
 	struct user *user = LINK(ic)->user;
 	struct link *l;
 
-	if (!hash_get(&user->connections, conn_name)) {
+	if (!(l = hash_get(&user->connections, conn_name))) {
 		bip_notify(ic, "cannot find this connection");
 		return;
 	}
 
-	l = hash_get(&user->connections, conn_name);
+	bip_notify(ic, "deleting");
 	link_kill(bip, l);
-	bip_notify(ic, "deleted");
 }
 
 void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
@@ -434,7 +450,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
-		conf_die("Connection with no name");
+		conf_die(bip, "Connection with no name");
 		return 0;
 	}
 	l = hash_get(&user->connections, name);
@@ -461,14 +477,14 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		case LEX_NETWORK:
 			l->network = hash_get(&bip->networks, t->pdata);
 			if (!l->network) {
-				conf_die("Undefined network %s.\n",
+				conf_die(bip, "Undefined network %s.\n",
 						t->pdata);
 				return 0;
 			}
 			break;
 		case LEX_NICK:
 			if (!is_valid_nick(t->pdata))
-				conf_die("Invalid nickname %s.", t->pdata);
+				conf_die(bip, "Invalid nickname %s.", t->pdata);
 			MOVE_STRING(l->connect_nick, t->pdata);
 			break;
 		case LEX_USER:
@@ -486,7 +502,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		case LEX_CHANNEL:
 			name = get_tuple_pvalue(t->pdata, LEX_NAME);
 			if (name == NULL) {
-				conf_die("Channel with no name");
+				conf_die(bip, "Channel with no name");
 				return 0;
 			}
 
@@ -542,7 +558,8 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			break;
 #endif
 		default:
-			conf_die("unknown keyword in connection statement");
+			conf_die(bip, "Unknown keyword in connection "
+					"statement");
 			return 0;
 		}
 		if (t->tuple_type == TUPLE_STR && t->pdata)
@@ -551,20 +568,22 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 	}
 	/* checks that can only be here, or must */
 	if (!l->network)
-		conf_die("Missing network in connection block");
+		conf_die(bip, "Missing network in connection block");
 	if (!l->connect_nick) {
 		if (!user->default_nick)
-			conf_die("No nick set and no default nick.");
+			conf_die(bip, "No nick set and no default nick.");
 		l->connect_nick = strdup(user->default_nick);
 	}
 	if (!l->username) {
 		if (!user->default_username)
-			conf_die("No username set and no default username.");
+			conf_die(bip, "No username set and no default "
+					"username.");
 		l->username = strdup(user->default_username);
 	}
 	if (!l->realname) {
 		if (!user->default_realname)
-			conf_die("No realname set and no default realname.");
+			conf_die(bip, "No realname set and no default "
+					"realname.");
 		l->realname = strdup(user->default_realname);
 	}
 
@@ -616,7 +635,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	char *name = get_tuple_pvalue(data, LEX_NAME);
 
 	if (name == NULL) {
-		conf_die("User with no name");
+		conf_die(bip, "User with no name");
 		return 0;
 	}
 	u = hash_get(&bip->users, name);
@@ -714,7 +733,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			break;
 #endif
 		default:
-			conf_die("Uknown keyword in user statement");
+			conf_die(bip, "Uknown keyword in user statement");
 			return 0;
 		}
 		if (t->tuple_type == TUPLE_STR && t->pdata)
@@ -722,7 +741,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 		free(t);
 	}
 	if (!u->password) {
-		conf_die("Missing password in user block");
+		conf_die(bip, "Missing password in user block");
 		return 0;
 	}
 
@@ -757,10 +776,10 @@ static int validate_config(bip_t *bip)
 #ifdef HAVE_LIBSSL
 				if (link->network->ssl &&
 						!link->ssl_check_mode)
-					conf_die("user %s, connection %s: you "
-						"should define a "
-						"ssl_check_mode.", user->name,
-						link->name);
+					conf_die(bip, "user %s, "
+						"connection %s: you should "
+						"define a ssl_check_mode.",
+						user->name, link->name);
 #endif
 
 				r = 0;
@@ -769,7 +788,8 @@ static int validate_config(bip_t *bip)
 						(ci = hash_it_item(&cit));
 						hash_it_next(&cit)) {
 					if (!ci->name)
-						conf_die("user %s, connection "
+						conf_die(bip, "user %s, "
+							"connection "
 							"%s: channel must have"
 							"a name.", user->name,
 							link->name);
@@ -778,7 +798,8 @@ static int validate_config(bip_t *bip)
 		}
 
 		if (user->backlog && !conf_log && user->backlog_lines == 0) {
-			conf_die("If conf_log = false, you must set backlog_"
+			conf_die(bip, "If conf_log = false, you must set "
+				"backlog_"
 				"lines to a non-nul value for each user with"
 				"backlog = true. Faulty user is %s",
 				user->name);
@@ -853,8 +874,11 @@ int fireup(bip_t *bip, FILE *conf)
 	struct tuple *t;
 	int err = 0;
 	struct historical_directives hds;
+	char *l;
 
 	clear_marks(bip);
+	while ((l = list_remove_first(&bip->errors)))
+		free(l);
 	parse_conf(conf, &err);
 	if (err) {
 		free_conf(root_list);
@@ -940,7 +964,8 @@ int fireup(bip_t *bip, FILE *conf)
 				goto out_conf_error;
 			break;
 		default:
-			conf_die("Config error in base config (%d)", t->type);
+			conf_die(bip, "Config error in base config (%d)",
+					t->type);
 			goto out_conf_error;
 		}
 		if (t->tuple_type == TUPLE_STR && t->pdata)
@@ -1134,7 +1159,8 @@ int main(int argc, char **argv)
 	if (!conf_biphome) {
 		char *home = getenv("HOME");
 		if (!home) {
-			conf_die("no $HOME !, do you live in a trailer ?");
+			conf_die(&bip,
+				"no $HOME !, do you live in a trailer ?");
 			return 0;
 		}
 		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
@@ -1731,7 +1757,6 @@ void bip_notify(struct link_client *ic, char *fmt, ...)
 	va_end(ap);
 }
 
-extern struct link_client *reloading_client;
 void adm_blreset(struct link_client *ic)
 {
 	log_reinit_all(LINK(ic)->log);
@@ -1876,8 +1901,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			bip_notify(ic, "-- You're not allowed to reload bip");
 			return OK_FORGET;
 		}
-		bip_notify(ic, "-- Bip has been set to reload shortly");
-		reloading_client = ic;
+		bip_notify(ic, "-- Reloading bip...");
+		bip->reloading_client = ic;
 		sighup = 1;
 	} else if (strcasecmp(line->elemv[privmsg + 1], "LIST") == 0) {
 		if (line->elemc != privmsg + 3) {
@@ -2013,7 +2038,6 @@ void free_conf(list_t *l)
 	for (list_it_init(l, &li); (t = list_it_item(&li)); list_it_next(&li)) {
 		switch (t->tuple_type) {
 		case TUPLE_STR:
-			printf("freeconf: %s\n", (char *)t->pdata);
 			free(t->pdata);
 			break;
 		case TUPLE_INT:
