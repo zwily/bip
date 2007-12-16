@@ -62,15 +62,18 @@ also find an example configuration file along with BIP.
 .SH GLOBAL OPTIONS
 
 .TP
-\fBbacklog_always\fP (default: \fBfalse\fP)
-If true, clients will always receive \fBbacklog_lines\fP log lines, even if
-they were already sent before. This option should of course not be enabled if
-\fBbacklog_lines\fP is 0 !
-
-.TP
 \fBbacklog\fP (default: \fBtrue\fP)
 Enable or disable the whole backlog system, which allows clients to see a
 log replay upon connection.
+
+.TP
+\fBbacklog_always\fP (default: \fBfalse\fP)
+If true, clients will always receive \fBbacklog_lines\fP log lines, even if
+they were already sent before. That means :
+If \fBbacklog_always\fP is false, backlog will be reset whenever there
+is no more client connected to a network. Else backlog will not be reset.
+This option should of course not be enabled if \fBbacklog_lines\fP is 0 !
+If you still want to do so, don't forget to /BIP BLRESET sometimes.
 
 .TP
 \fBbacklog_lines\fP (default: \fB10\fP)
@@ -86,10 +89,9 @@ If true, backlogged line won't include the timestamp.
 
 .TP
 \fBbacklog_reset_on_talk\fP (default: \fBfalse\fP)
-When true, backlog will not be reset upon client disconnection but upon client
-talk (channel/private message or action).  It means that next time you log to
-your bip session the backlogging will start at the time right after your last
-words on irc.
+When true, backlog will be reset upon client talk (channel/private message or
+action). It means that next time you log to your bip session, the backlogging
+will start at the time right after your last words on that specific network.
 
 .TP
 \fBbacklog_msg_only\fP (default: \fBfalse\fP)
