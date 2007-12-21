@@ -31,6 +31,7 @@ int link_add_untrusted(void *ls, X509 *cert);
 
 static int connection_timedout(connection_t *cn);
 static int socket_set_nonblock(int s);
+static void connection_connected(connection_t *c);
 
 struct connecting_data
 {
@@ -96,10 +97,14 @@ void connection_free(connection_t *cn)
 		}
 	}
 #endif
-	if (cn->localip)
+	if (cn->localip) {
 		free(cn->localip);
-	if (cn->remoteip)
+		cn->localip = NULL;
+	}
+	if (cn->remoteip) {
 		free(cn->remoteip);
+		cn->remoteip = NULL;
+	}
 	free(cn);
 }
 
@@ -148,6 +153,7 @@ static void connect_trynext(connection_t *cn)
 			connecting_data_free(cn->connecting_data);
 			cn->connecting_data = NULL;
 			cn->connected = cn->ssl ? CONN_NEED_SSLIZE : CONN_OK;
+			connection_connected(cn);
 			return;
 		}
 
@@ -605,9 +611,9 @@ static void connection_connected(connection_t *c)
 		free(c->localip);
 	c->localip = connection_localip(c);
 	c->localport = connection_localport(c);
-	c->remoteip = connection_remoteip(c);
 	if (c->remoteip)
 		free(c->remoteip);
+	c->remoteip = connection_remoteip(c);
 	c->remoteport = connection_remoteport(c);
 }
 
@@ -975,6 +981,7 @@ static void create_listening_socket(char *hostname, char *port,
 
 		freeaddrinfo(res);
 		cn->connected = CONN_OK;
+		connection_connected(cn);
 		return;
 	}
 	freeaddrinfo(res);
