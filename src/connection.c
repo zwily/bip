@@ -601,9 +601,13 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 
 static void connection_connected(connection_t *c)
 {
+	if (c->localip)
+		free(c->localip);
 	c->localip = connection_localip(c);
 	c->localport = connection_localport(c);
 	c->remoteip = connection_remoteip(c);
+	if (c->remoteip)
+		free(c->remoteip);
 	c->remoteport = connection_remoteport(c);
 }
 
