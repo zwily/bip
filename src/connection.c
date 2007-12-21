@@ -989,7 +989,7 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	char *incoming;
 	list_t *outgoing;
 
-	conn = (connection_t*)malloc(sizeof(connection_t));
+	conn = (connection_t *)calloc(sizeof(connection_t), 1);
 	incoming = (char*)malloc(sizeof(char) * CONN_BUFFER_SIZE);
 	outgoing = list_new(NULL);
 
