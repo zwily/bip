@@ -96,6 +96,10 @@ void connection_free(connection_t *cn)
 		}
 	}
 #endif
+	if (cn->localip)
+		free(cn->localip);
+	if (cn->remoteip)
+		free(cn->remoteip);
 	free(cn);
 }
 
@@ -581,8 +585,8 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	if (ret) {
 		mylog(LOG_ERROR, "Error while reading on fd %d",
 				cn->handle);
- 		return 1;
- 	}
+		return 1;
+	}
 
 	if (!cn->incoming_lines)
 		cn->incoming_lines = list_new(NULL);
@@ -593,6 +597,14 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	mylog(LOG_DEBUGTOOMUCH, "newlines on fd %d (state %d)", cn->handle,
 			cn->connected);
 	return 1;
+}
+
+static void connection_connected(connection_t *c)
+{
+	c->localip = connection_localip(c);
+	c->localport = connection_localport(c);
+	c->remoteip = connection_remoteip(c);
+	c->remoteport = connection_remoteport(c);
 }
 
 static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
@@ -646,6 +658,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 			}
 #endif
 			cn->connected = CONN_OK;
+			connection_connected(cn);
 			*nc = 1;
 			mylog(LOG_DEBUG, "fd:%d Connection established !",
 					cn->handle);
@@ -1240,7 +1253,7 @@ static int SSLize(connection_t *cn, int *nc)
 
 	err2 = SSL_get_error(cn->ssl_h, err);
 	ERR_print_errors(errbio);
-	
+
 	if (err2 == SSL_ERROR_NONE) {
 		SSL_CIPHER *cipher;
 		char buf[128];
@@ -1254,6 +1267,7 @@ static int SSLize(connection_t *cn, int *nc)
 		mylog(LOG_DEBUG, "Negociated cyphers: %s", buf);
 
 		cn->connected = CONN_OK;
+		connection_connected(cn);
 		*nc = 1;
 		return 0;
 	}

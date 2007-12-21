@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <netdb.h>
 
-
 #ifdef HAVE_LIBSSL
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
@@ -87,6 +86,8 @@ typedef struct connection {
 	int ssl_check_mode;
 	X509 *cert;
 #endif
+	char *localip, *remoteip;
+	uint16_t localport, remoteport;
 } connection_t;
 
 connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
