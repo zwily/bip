@@ -981,7 +981,6 @@ static void create_listening_socket(char *hostname, char *port,
 
 		freeaddrinfo(res);
 		cn->connected = CONN_OK;
-		connection_connected(cn);
 		return;
 	}
 	freeaddrinfo(res);
