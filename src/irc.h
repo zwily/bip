@@ -246,6 +246,10 @@ typedef struct bip {
 	hash_t users;
 	list_t errors;
 	struct link_client *reloading_client;
+
+#ifdef HAVE_OIDENTD
+	char *oidentdpath;
+#endif
 } bip_t;
 
 void bip_init(bip_t *bip);

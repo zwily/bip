@@ -31,6 +31,7 @@ int link_add_untrusted(void *ls, X509 *cert);
 
 static int connection_timedout(connection_t *cn);
 static int socket_set_nonblock(int s);
+static void connection_connected(connection_t *c);
 
 struct connecting_data
 {
@@ -96,6 +97,14 @@ void connection_free(connection_t *cn)
 		}
 	}
 #endif
+	if (cn->localip) {
+		free(cn->localip);
+		cn->localip = NULL;
+	}
+	if (cn->remoteip) {
+		free(cn->remoteip);
+		cn->remoteip = NULL;
+	}
 	free(cn);
 }
 
@@ -144,6 +153,7 @@ static void connect_trynext(connection_t *cn)
 			connecting_data_free(cn->connecting_data);
 			cn->connecting_data = NULL;
 			cn->connected = cn->ssl ? CONN_NEED_SSLIZE : CONN_OK;
+			connection_connected(cn);
 			return;
 		}
 
@@ -581,8 +591,8 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	if (ret) {
 		mylog(LOG_ERROR, "Error while reading on fd %d",
 				cn->handle);
- 		return 1;
- 	}
+		return 1;
+	}
 
 	if (!cn->incoming_lines)
 		cn->incoming_lines = list_new(NULL);
@@ -593,6 +603,18 @@ static int check_event_read(fd_set *fds, connection_t *cn)
 	mylog(LOG_DEBUGTOOMUCH, "newlines on fd %d (state %d)", cn->handle,
 			cn->connected);
 	return 1;
+}
+
+static void connection_connected(connection_t *c)
+{
+	if (c->localip)
+		free(c->localip);
+	c->localip = connection_localip(c);
+	c->localport = connection_localport(c);
+	if (c->remoteip)
+		free(c->remoteip);
+	c->remoteip = connection_remoteip(c);
+	c->remoteport = connection_remoteport(c);
 }
 
 static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
@@ -646,6 +668,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 			}
 #endif
 			cn->connected = CONN_OK;
+			connection_connected(cn);
 			*nc = 1;
 			mylog(LOG_DEBUG, "fd:%d Connection established !",
 					cn->handle);
@@ -972,7 +995,7 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	char *incoming;
 	list_t *outgoing;
 
-	conn = (connection_t*)malloc(sizeof(connection_t));
+	conn = (connection_t *)calloc(sizeof(connection_t), 1);
 	incoming = (char*)malloc(sizeof(char) * CONN_BUFFER_SIZE);
 	outgoing = list_new(NULL);
 
@@ -1240,7 +1263,7 @@ static int SSLize(connection_t *cn, int *nc)
 
 	err2 = SSL_get_error(cn->ssl_h, err);
 	ERR_print_errors(errbio);
-	
+
 	if (err2 == SSL_ERROR_NONE) {
 		SSL_CIPHER *cipher;
 		char buf[128];
@@ -1254,6 +1277,7 @@ static int SSLize(connection_t *cn, int *nc)
 		mylog(LOG_DEBUG, "Negociated cyphers: %s", buf);
 
 		cn->connected = CONN_OK;
+		connection_connected(cn);
 		*nc = 1;
 		return 0;
 	}

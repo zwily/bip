@@ -59,6 +59,10 @@ void bip_notify(struct link_client *ic, char *fmt, ...);
 void adm_list_connections(struct link_client *ic, struct user *bu);
 void free_conf(list_t *l);
 
+#ifdef HAVE_OIDENTD
+#define OIDENTD_FILENAME ".oidentd.conf"
+#endif
+
 static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 {
 	unsigned char *md5;
@@ -1083,6 +1087,7 @@ int main(int argc, char **argv)
 	int r, fd;
 	char buf[30];
 	bip_t bip;
+	char *home;
 
 	bip_init(&bip);
 	_bip = &bip;
@@ -1131,16 +1136,18 @@ int main(int argc, char **argv)
 
 	check_rlimits();
 
+	home = getenv("HOME");
+	if (!home) {
+		conf_die(&bip, "no $HOME !, do you live in a trailer ?");
+		return 0;
+	}
+
 	if (confpath) {
 		conf = fopen(confpath, "r");
 		if (!conf)
 			fatal("config file not found");
 	}
 	if (!conf) {
-		char *home;
-		home = getenv("HOME");
-		if (!home)
-			fatal("no home");
 		confpath = malloc(strlen(home) + 1 + strlen(S_CONF) + 1);
 		*confpath = 0;
 		strcat(confpath, home);
@@ -1151,18 +1158,20 @@ int main(int argc, char **argv)
 			fatal("%s config file not found", confpath);
 	}
 
+#ifdef HAVE_OIDENTD
+	bip.oidentdpath = malloc(strlen(home) + 1 +
+			strlen(OIDENTD_FILENAME) + 1);
+	strcpy(bip.oidentdpath, home);
+	strcat(bip.oidentdpath, "/");
+	strcat(bip.oidentdpath, OIDENTD_FILENAME);
+#endif
+
 	r = fireup(&bip, conf);
 	fclose(conf);
 	if (!r)
 		fatal("Not starting: error in config file.");
 
 	if (!conf_biphome) {
-		char *home = getenv("HOME");
-		if (!home) {
-			conf_die(&bip,
-				"no $HOME !, do you live in a trailer ?");
-			return 0;
-		}
 		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
 		strcpy(conf_biphome, home);
 		strcat(conf_biphome, "/.bip");
