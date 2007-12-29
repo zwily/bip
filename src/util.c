@@ -463,9 +463,13 @@ void hash_init(hash_t *h, int options)
 void hash_clean(hash_t *h)
 {
 	int i;
+	hash_item_t *hi;
+
 	for (i = 0; i < 256; i++) {
-		while (list_remove_first(&h->lists[i]))
-			;
+		while ((hi = list_remove_first(&h->lists[i]))) {
+			free(hi->key);
+			free(hi);
+		}
 	}
 }
 
