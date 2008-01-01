@@ -645,8 +645,10 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	int r;
 	struct tuple *t;
 	struct user *u;
-
 	char *name = get_tuple_pvalue(data, LEX_NAME);
+	list_t connection_list, *cl;
+
+	list_init(&connection_list, NULL);
 
 	if (name == NULL) {
 		conf_die(bip, "User with no name");
@@ -727,11 +729,8 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			u->bip_use_notice = t->ndata;
 			break;
 		case LEX_CONNECTION:
-			r = add_connection(bip, u, t->pdata);
-			free(t->pdata);
+			list_add_last(&connection_list, t->pdata);
 			t->pdata = NULL;
-			if (!r)
-				return 0;
 			break;
 #ifdef HAVE_LIBSSL
 		case LEX_SSL_CHECK_MODE:
@@ -757,6 +756,13 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	if (!u->password) {
 		conf_die(bip, "Missing password in user block");
 		return 0;
+	}
+
+	while ((cl = list_remove_first(&connection_list))) {
+		r = add_connection(bip, u, cl);
+		free(cl);
+		if (!r)
+			return 0;
 	}
 
 	u->in_use = 1;
