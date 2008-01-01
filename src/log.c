@@ -29,6 +29,11 @@ static int _log_write(log_t *logdata, logfilegroup_t *lf, char *d, char *str);
 void logfile_free(logfile_t *lf);
 static char *_log_wrap(char *dest, char *line);
 
+#define BOLD_CHAR 0x02
+#define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
+#define PMSG_ARROW " \002->\002 "
+
+
 /* TODO: change fatal("out of memory") to cleanup & return NULL */
 
 int check_dir(char *filename, int is_fatal)
@@ -723,8 +728,6 @@ int log_has_backlog(log_t *logdata, char *destination)
 	return lf->backlog_offset != lf->len;
 }
 
-#define BOLD_CHAR 0x02
-#define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 
 /*
  * chan:
@@ -852,7 +855,7 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 
 	p = ret = (char *)malloc(
 		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	2 + lom + 3
-		+ action * (2 + strlen("ACTION ")) + out * strlen(" -> "));
+		+ action * (2 + strlen("ACTION ")) + out * strlen(PMSG_ARROW));
 	if (!p)
 		fatal("out of memory");
 
@@ -876,8 +879,8 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 		p += strlen("ACTION ");
 	}
 	if (out) {
-		strcpy(p, " -> ");
-		p += strlen(" -> ");
+		strcpy(p, PMSG_ARROW);
+		p += strlen(PMSG_ARROW);
 	}
 	if (logdata->user->backlog_no_timestamp == 0) {
 		memcpy(p, sots, lots);
