@@ -487,8 +487,10 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			}
 			break;
 		case LEX_NICK:
-			if (!is_valid_nick(t->pdata))
+			if (!is_valid_nick(t->pdata)) {
 				conf_die(bip, "Invalid nickname %s.", t->pdata);
+				return 0;
+			}
 			MOVE_STRING(l->connect_nick, t->pdata);
 			break;
 		case LEX_USER:
@@ -571,23 +573,31 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		free(t);
 	}
 	/* checks that can only be here, or must */
-	if (!l->network)
+	if (!l->network) {
 		conf_die(bip, "Missing network in connection block");
+		return 0;
+	}
 	if (!l->connect_nick) {
-		if (!user->default_nick)
+		if (!user->default_nick) {
 			conf_die(bip, "No nick set and no default nick.");
+			return 0;
+		}
 		l->connect_nick = strdup(user->default_nick);
 	}
 	if (!l->username) {
-		if (!user->default_username)
+		if (!user->default_username) {
 			conf_die(bip, "No username set and no default "
 					"username.");
+			return 0;
+		}
 		l->username = strdup(user->default_username);
 	}
 	if (!l->realname) {
-		if (!user->default_realname)
+		if (!user->default_realname) {
 			conf_die(bip, "No realname set and no default "
 					"realname.");
+			return 0;
+		}
 		l->realname = strdup(user->default_realname);
 	}
 
@@ -779,11 +789,13 @@ static int validate_config(bip_t *bip)
 
 #ifdef HAVE_LIBSSL
 				if (link->network->ssl &&
-						!link->ssl_check_mode)
+				    !link->ssl_check_mode) {
 					conf_die(bip, "user %s, "
 						"connection %s: you should "
 						"define a ssl_check_mode.",
 						user->name, link->name);
+					return 0;
+				}
 #endif
 
 				r = 0;
@@ -791,12 +803,14 @@ static int validate_config(bip_t *bip)
 				for (hash_it_init(&link->chan_infos, &cit);
 						(ci = hash_it_item(&cit));
 						hash_it_next(&cit)) {
-					if (!ci->name)
+					if (!ci->name) {
 						conf_die(bip, "user %s, "
 							"connection "
 							"%s: channel must have"
 							"a name.", user->name,
 							link->name);
+						return 0;
+					}
 				}
 			}
 		}
@@ -807,6 +821,7 @@ static int validate_config(bip_t *bip)
 				"lines to a non-nul value for each user with"
 				"backlog = true. Faulty user is %s",
 				user->name);
+			return 0;
 		}
 	}
 
