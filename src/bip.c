@@ -2003,6 +2003,44 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 {
 	int admin = LINK(ic)->user->admin;
 
+	if (privmsg) {
+		char *linestr = line->elemv[2];
+		char *ptr = line->elemv[2], *eptr;
+		int slen;
+
+		if (line->elemc != 3)
+			return OK_FORGET;
+
+		line->elemc--;
+
+		while((eptr = strstr(ptr, " "))) {
+			slen = eptr - ptr;
+			if (slen == 0) {
+				ptr++;
+				continue;
+			}
+			line->elemv = realloc(line->elemv,
+					      line->elemc * sizeof(char *));
+			line->elemv[line->elemc] = malloc(slen + 1);
+			memcpy(line->elemv[line->elemc], ptr, slen);
+			line->elemv[line->elemc][slen] = 0;
+			line->elemc++;
+			ptr = eptr + 1;
+		}
+		eptr = ptr + strlen(ptr);
+		slen = eptr - ptr;
+		if (slen != 0) {
+			line->elemv = realloc(line->elemv,
+				      (line->elemc + 1) * sizeof(char *));
+			slen = eptr - ptr;
+			line->elemv[line->elemc] = malloc(slen + 1);
+			memcpy(line->elemv[line->elemc], ptr, slen);
+			line->elemv[line->elemc][slen] = 0;
+			line->elemc++;
+		}
+		free(linestr);
+	}
+
 	if (line->elemc < privmsg + 2)
 		return OK_FORGET;
 
