@@ -104,14 +104,6 @@ char *checkmode2text(int v)
 }
 #endif
 
-char *bool2text(int v)
-{
-	if (v)
-		return "true";
-	else
-		return "false";
-}
-
 extern FILE *conf_global_log_file;
 
 void _mylog(int level, char *fmt, va_list ap)

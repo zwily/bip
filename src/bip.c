@@ -1441,6 +1441,8 @@ void adm_list_all_connections(struct link_client *ic)
 	bip_notify(ic, "-- End of All connections");
 }
 
+#define STRORNULL(s) ((s) == NULL ? "unset" : (s))
+
 void adm_info_user(struct link_client *ic, char *name)
 {
 	struct user *u;
@@ -1454,13 +1456,8 @@ void adm_info_user(struct link_client *ic, char *name)
 		return;
 	}
 
-	//t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "");
-	//buf[RET_STR_LEN] = 0;
-	//bip_notify(ic, buf);
-	//t_written = 0;
-
-	t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "user: %s",
-			u->name);
+	t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
+			      "user: %s", u->name);
 	if (t_written >= RET_STR_LEN)
 		goto noroom;
 	if (u->admin) {
@@ -1477,10 +1474,12 @@ noroom:
 
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",
-		checkmode2text(u->ssl_check_mode), u->ssl_check_store);
+		   checkmode2text(u->ssl_check_mode),
+		   STRORNULL(u->ssl_check_store));
 #endif
 	bip_notify(ic, "Defaults nick: %s, user: %s, realname: %s",
-		u->default_nick, u->default_username, u->default_realname);
+		   STRORNULL(u->default_nick), STRORNULL(u->default_username),
+		   STRORNULL(u->default_realname));
 	if (u->backlog) {
 		bip_notify(ic, "Backlog enabled, lines: %d, no timestamp: %s,"
 			"  messages only: %s", u->backlog_lines,
@@ -1922,7 +1921,7 @@ void adm_bip_help(struct link_client *ic, int admin, char *subhelp)
 		bip_notify(ic, "  Please note that changes to 'user' or "
 			"'realname' will not be applied without a JUMP.");
 	} else if (admin && strcasecmp(subhelp, "INFO") == 0) {
-		bip_notify(ic, "/BIP INFO <user> (admin only) :");
+		bip_notify(ic, "/BIP INFO USER <user> (admin only) :");
 		bip_notify(ic, "  Show <user>'s current configuration.");
 		bip_notify(ic, "  That means it may be different from the "
 			"configuration stored in bip.conf");

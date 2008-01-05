@@ -123,6 +123,6 @@ char *hrtime(time_t t);
 #ifdef HAVE_LIBSSL
 char *checkmode2text(int v);
 #endif
-char *bool2text(int v);
+#define bool2text(v) ((v) ? "true" : "false")
 
 #endif
