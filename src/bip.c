@@ -2019,7 +2019,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 				continue;
 			}
 			line->elemv = realloc(line->elemv,
-					      line->elemc * sizeof(char *));
+					(line->elemc + 1) * sizeof(char *));
 			line->elemv[line->elemc] = malloc(slen + 1);
 			memcpy(line->elemv[line->elemc], ptr, slen);
 			line->elemv[line->elemc][slen] = 0;
