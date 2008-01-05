@@ -272,7 +272,7 @@ static void version()
 {
 	printf(
 "Bip IRC Proxy - %s\n"
-"Copyright © Arnaud Cornet and Loïc Gomez (2004 - 2007)\n"
+"Copyright © Arnaud Cornet and Loïc Gomez (2004 - 2008)\n"
 "Distributed under the GNU Public License Version 2\n", BIP_VERSION);
 }
 
@@ -1796,7 +1796,7 @@ void adm_blreset(struct link_client *ic)
 void adm_follow_nick(struct link_client *ic, char *val)
 {
 	struct link *link = LINK(ic);
-	if (strncasecmp(val, "TRUE", 4) == 0) {
+	if (strcasecmp(val, "TRUE") == 0) {
 		link->follow_nick = 1;
 		bip_notify(ic, "follow_nick is now true.");
 	} else {
@@ -1808,7 +1808,7 @@ void adm_follow_nick(struct link_client *ic, char *val)
 void adm_ignore_first_nick(struct link_client *ic, char *val)
 {
 	struct link *link = LINK(ic);
-	if (strncasecmp(val, "TRUE", 4) == 0) {
+	if (strcasecmp(val, "TRUE") == 0) {
 		link->ignore_first_nick = 1;
 		bip_notify(ic, "ignore_first_nick is now true.");
 	} else {
@@ -2084,8 +2084,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			return OK_FORGET;
 		}
 
-		if (admin && strncasecmp(line->elemv[privmsg + 2],
-					"user", 5) == 0) {
+		if (admin && strcasecmp(line->elemv[privmsg + 2],
+					"user") == 0) {
 			if (line->elemc == privmsg + 4) {
 				adm_info_user(ic, line->elemv[privmsg + 3]);
 			} else {
@@ -2094,8 +2094,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			}
 #if 0
 			TODO
-		} else if (strncasecmp(line->elemv[privmsg + 2],
-					"network", 8) == 0) {
+		} else if (strcasecmp(line->elemv[privmsg + 2],
+				      "network") == 0) {
 			if (line->elemc == privmsg + 4) {
 				adm_info_network(ic, line->elemv[privmsg + 3]);
 			} else {
