@@ -1,14 +1,12 @@
+This is the BIP IRC Proxy README.
 
-This is the BIP IRC Proxy readme, you'll learn how to quickly use bip.
-
-Bip can be used in two different way:
+Bip can be used in two different ways:
 - Old school bnc user style: easy and straightforward.
 - Unix service style with and init.d scripts and the logs in /var/log
 
-This small README file explains the usage "Old school" with which : 
+This small README file explains the usage "Old school" with which :
  - you do not need the root privileges.
- - gives easy access to the logs of the users of this bip to the one owning the
-   shell.
+ - gives easy access to the logs to the owner of the shell.
 
 Table of contents :
 
@@ -26,18 +24,28 @@ I. INSTALLATION
     Install bip on the machine that will be running bip (which is likely to be
     your personnal or shared server) either compiling the package or using your
     distro's package. Then create a configuration file.
-    
+
+    Choose your distribution package if available. If not, build bip the
+    old-fashioned way. You will need make, gcc, lex and yacc to build bip.
+    Just issue:
+
+    # ./configure --enable-oidentd && make
+
+    If openssl and its developement files are installed, bip should build with
+    SSL support. After a successful build the bip binary can be found in
+    ./src/bip.
+
 
 II. CONFIGURATION
 
     First of all, create your bip configuration an log directory:
-    
+
     # mkdir -p ~/.bip/logs
-    
+
     There are two ways to create your bip configuration :
     - edit the sample bip.conf file to match your needs
     - use the bipgenconfig script to easily generate a configuration
-    
+
     If you want to connect to bip using an SSL client, you'll need to create
     a certificate / key pair (in a bip.pem file) to allow bip to serve SSL
     sockets.
@@ -47,11 +55,11 @@ II. CONFIGURATION
       If you are using a distribution package, the bip.conf sample configuration
       file is likely to be shipped in /usr/share/doc/bip/examples/bip.conf.gz or
       something similar.
-      
+
       If not, you'll find sample configuration file in the source package's
       `samples' subdirectory.
-      
-      Put the uncompressed configuration file in your ~/.bip directory (it's
+
+      Put the uncompressed configuration file in your ~/.bip directory (its
       path should be ~/.bip/bip.conf), and edit it, most importantly the "user"
       section that contains information about you and the servers you will want
       to connect to. The "name" field in the "user" section is your login to
@@ -72,54 +80,61 @@ II. CONFIGURATION
       You can then remove the passphrase with :
 
       # openssl x509 -subject -dates -fingerprint -noout -in bip.pem
-    
+
     B. AUTOMATED CONFIGURATION
-    
+
       You can also use the bipgenconfig script to generate a new configuration.
       This script will also help you generate the SSL certificate / key pair
       needed for clients to connect to BIP through SSL.
-  
+
       This script can be found either in the source package's `scripts'
       directory or shipped with your distribution's package.
 
-      Using the script is very simple, and it'll generate a configuration file
-      but won't overwrite any existing configuration. 
+      Using the script is very simple, and it will generate a configuration
+      file but won't overwrite any existing configuration.
 
-      It'll ask you the path to the bipmkpw binary, to automatically hash the
+      It will ask you the path to the bipmkpw binary, to automatically hash the
       passwords you'll provide. Please make sure to enter the correct path to
       the binary or you might observe unexpected behaviour.
-      
+
       You'll need to move the generated configuration from bip.conf.autogen to
       bip.conf and the generated PEM file from bip.pem.autogen to bip.pem (or
       whatever path you've configured in bip.conf).
-    
+
 
 III. RUNNING BIP
 
     Once all this is configured, start bip as your regular user:
-    
+
+    # ./src/bip
+
+    If you have installed bip in your path (or if you are using you
+    distribution's package), simply use:
+
     # bip
-    
+
     Once bip starts, it connects to the different servers your defined in
     all "user"'s "connection" blocks.
-    
+
 
 IV. USING BIP
 
-    Then you want to use your regular irc client and connect to bip.
-    Point your client to the machine bip is running and set the proper port number
+    Then you want to use your regular irc client and connect to bip.  Point
+    your client to the machine bip is running and set the proper port number
     (defined in your bip.conf). You should then configure the client to use a
     specific irc server password constructed this way:
-    
-    user:password:network
-    
-    The user is the name field of the "user" section, the password is the password
-    (*not* the hash) corresponding to the "password" field of the same user section
-    (which is the hash generated with bipmkpw) and the network is the "name" field
-    of the "connection" subsection. This is how bip authenticates you and puts your
-    client to the correct network.
-    
+
+    user:password:connection
+
+    The user is the name field of the "user" section, the password is the
+    password (*not* the hash) corresponding to the "password" field of the same
+    user section (which is the hash generated with bipmkpw) and the connection
+    is the "name" field of the "connection" subsection. This is how bip
+    authenticates you and puts your client to the correct network.
+
     Using the default (or sample file) configuration, logs are in ~/.bip/logs/
-    
+
     Happy ircing!
-    
+
+-- Arnaud Cornet <nohar@t1r.net> and Loïc Gomez <opensource@kyoshiro.org>
+
