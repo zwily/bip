@@ -24,7 +24,7 @@ my $DEBUG = 0;
 my $global_done = 0;
 my $cert_done = 0;
 my $mode = 'normal';
-# maximum level of blocks { { { } } }
+# maximum level of nested blocks { { { } } }
 my $maxlevel = 5;
 my $bipmkpw;
 my $tmpcrt = "/tmp/bip-cert.cnf";
@@ -373,6 +373,31 @@ sub askbool {
 sub askPass {
 	my ($text) = @_;
 	
+	which_bipmkpw();
+	print("$text ? ");
+	my $pass = `$bipmkpw`;
+	chomp($pass);
+	$pass =~ s/^Password:\s*\n?//si;
+	chomp($pass);
+	return $pass;
+}
+
+sub which_bipmkpw {
+	my ($which);
+
+	return if ($bipmkpw ne '' && -x "$bipmkpw");
+
+	if (-x "/usr/bin/bipmkpw") {
+		$bipmkpw = '/usr/bin/bipmkpw';
+		return;
+	}
+
+	$which = `which bipmkpw`;
+	if ($which ne '' && -x "$which") {
+		$bipmkpw = $which;
+		return;
+	}
+
 	while (!$bipmkpw || ! -x "$bipmkpw") {
 		if ($bipmkpw ne '' && (! -f $bipmkpw || ! -x $bipmkpw)) {
 			print("No exec permission: $bipmkpw\n");
@@ -380,12 +405,7 @@ sub askPass {
 		$bipmkpw = askval("Please enter the path to bipmkpw:",
 				undef, 1);
 	}
-	print("$text ? ");
-	my $pass = `$bipmkpw`;
-	chomp($pass);
-	$pass =~ s/^Password:\s*\n?//si;
-	chomp($pass);
-	return $pass;
+	return;
 }
 
 sub askval {
