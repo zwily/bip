@@ -1,3 +1,25 @@
+2008-02-07  Arnaud Cornet <nohar@t1r.net>
+What's to expect in bip now:
+- Support kill -HUP and /bip reload cleanly.
+- Close/reopen files on sighup.
+- Have some reply when running BIP commands.  ssl_check_mode, always_backlog,
+  backlog, bl_msg_only, backlog_lines, backlog_no_timestamp, blreset_on_talk be
+  settable at the connection block rather than the user block.
+- Add backlog option to channels. Useful if you don't care about one particular
+  channel.
+- bip_use_notice: Add this option to receive bip message through notices.
+- Make SSL "basic" certificate check more loose (more SSH-like).  In "basic"
+  mode, normally un trusted certificates get to be trusted if they manually
+  trusted by user. This provides an SSH like private key auth mechani Expired
+  certificates were considered invalid in this mode which does not make much
+  sense.
+- blreset: add -q option to /bip blreset command if you don't want it to reply
+  anything (for scripts).
+- Support add_conn and del_conn bip commands for live connection addition and
+  removal.
+- Have a bold arrow to highligh your own word on private messages and multiple
+  connected clients.
+
 09-12-2007: Bip has now two types of users "admins" and normal user. Some
 commands are reserved to admin. Add a admin = true; statement in your config
 (in user block) accordingly.
