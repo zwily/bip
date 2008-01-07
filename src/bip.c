@@ -563,6 +563,11 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			if (strcmp(t->pdata, "ca") == 0)
 				l->ssl_check_mode = SSL_CHECK_CA;
 			break;
+#else
+		case LEX_SSL_CHECK_MODE:
+			mylog(LOG_WARN, "Found SSL option whereas bip is "
+					"not built with SSL support.");
+			break;
 #endif
 		default:
 			conf_die(bip, "Unknown keyword in connection "
@@ -744,6 +749,12 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			break;
 		case LEX_SSL_CHECK_STORE:
 			MOVE_STRING(u->ssl_check_store, t->pdata);
+			break;
+#else
+		case LEX_SSL_CHECK_MODE:
+		case LEX_SSL_CHECK_STORE:
+			mylog(LOG_WARN, "Found SSL option whereas bip is "
+					"not built with SSL support.");
 			break;
 #endif
 		default:
@@ -953,9 +964,20 @@ int fireup(bip_t *bip, FILE *conf)
 		case LEX_PORT:
 			conf_port = t->ndata;
 			break;
+#ifdef HAVE_LIBSSL
 		case LEX_CSS:
 			conf_css = t->ndata;
 			break;
+		case LEX_CSS_KEY:
+			MOVE_STRING(conf_ssl_certfile, t->pdata);
+			break;
+#else
+		case LEX_CSS:
+		case LEX_CSS_KEY:
+			mylog(LOG_WARN, "Found SSL option whereas bip is "
+					"not built with SSL support.");
+			break;
+#endif
 		case LEX_PID_FILE:
 			MOVE_STRING(conf_pid_file, t->pdata);
 			break;
@@ -1132,6 +1154,9 @@ int main(int argc, char **argv)
 	conf_daemonize = 1;
 	conf_global_log_file = stderr;
 	conf_pid_file = NULL;
+#ifdef HAVE_LIBSSL
+	conf_ssl_certfile = NULL;
+#endif
 
 	while ((ch = getopt(argc, argv, "hvnf:s:")) != -1) {
 		switch (ch) {
@@ -1214,18 +1239,13 @@ int main(int argc, char **argv)
 	}
 
 #ifdef HAVE_LIBSSL
-	conf_ssl_certfile = NULL;	/* Make into a config option */
 	if (!conf_ssl_certfile) {
 		char *ap = "/bip.pem";
-		if (conf_ssl_certfile) {
-			free(conf_ssl_certfile);
-			conf_ssl_certfile = NULL;
-		}
 		conf_ssl_certfile = malloc(strlen(conf_biphome) +
 				strlen(ap) + 1);
 		strcpy(conf_ssl_certfile, conf_biphome);
 		strcat(conf_ssl_certfile, ap);
-		mylog(LOG_INFO, "Default SSL certificate file: %s",
+		mylog(LOG_INFO, "Using default SSL certificate file: %s",
 				conf_ssl_certfile);
 	}
 #endif
