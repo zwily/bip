@@ -850,22 +850,24 @@ static int validate_config(bip_t *bip)
 		int e, fd;
 		struct stat fs;
 
-		e = stat(conf_ssl_certfile, &fs);
-		if (e)
-			mylog(LOG_WARN, "Unable to check PEM file is ok "
-				"stat(): %s", strerror(errno));
-		else if (!fs.st_ino)
-			conf_die(bip, "Inexistent PEM file %s", conf_ssl_certfile);
-		else if ( (fs.st_mode & S_IROTH) | (fs.st_mode & S_IWOTH) )
-			conf_die(bip, "PEM file %s should not be world readable / "
-				"writable. Please fix the modes.",
-				conf_ssl_certfile);
-		
 		if ( (fd = open(conf_ssl_certfile, O_RDONLY)) == -1) {
 			conf_die(bip, "Unable to open PEM file %s for reading",
 				conf_ssl_certfile);
+			return 0;
 		}
 		close(fd);
+
+		e = stat(conf_ssl_certfile, &fs);
+		if (e) {
+			mylog(LOG_WARN, "Unable to check PEM file, stat(%s): "
+				"%s", conf_ssl_certfile, strerror(errno));
+		} else if ( (fs.st_mode & S_IROTH) | (fs.st_mode & S_IWOTH) ) {
+			conf_die(bip, "PEM file %s should not be world readable / "
+				"writable. Please fix the modes.",
+				conf_ssl_certfile);
+			return 0;
+		}
+		
 	}
 
 	if (strstr(conf_log_format, "%u") == NULL)
