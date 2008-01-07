@@ -104,14 +104,6 @@ char *checkmode2text(int v)
 }
 #endif
 
-char *bool2text(int v)
-{
-	if (v)
-		return "true";
-	else
-		return "false";
-}
-
 extern FILE *conf_global_log_file;
 
 void _mylog(int level, char *fmt, va_list ap)
@@ -443,6 +435,7 @@ static int hash_item_cmp(struct hash_item *a, char *b)
 void hash_init(hash_t *h, int options)
 {
 	int i;
+
 	memset(h, 0, sizeof(hash_t));
 	for (i = 0; i < 256; i++) {
 		switch (options) {
@@ -463,9 +456,13 @@ void hash_init(hash_t *h, int options)
 void hash_clean(hash_t *h)
 {
 	int i;
+	struct hash_item *hi;
+
 	for (i = 0; i < 256; i++) {
-		while (list_remove_first(&h->lists[i]))
-			;
+		while ((hi = list_remove_first(&h->lists[i]))) {
+			free(hi->key);
+			free(hi);
+		}
 	}
 }
 

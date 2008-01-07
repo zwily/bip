@@ -101,6 +101,8 @@ change, nick change, user quit/part/join will be backlogged upon connection.
 .TP
 \fBclient_side_ssl\fP (default: \fBfalse\fP)
 When true, clients will need to connect to BIP using SSL.
+You'll also need to generate a SSL cert/key pair in <bipdir>/bip.pem (usually
+~bip/.bip/bip.pem or /var/lib/bip/bip.pem).
 
 .TP
 \fBip\fP
@@ -247,7 +249,7 @@ once.
 
 .TP
 \fBaway_nick\fP (default: \fBnot set\fP)
-If true, and if there are no more client attached, BIP will change nickname to
+If set, and if there are no more client attached, BIP will change nickname to
 this \fBaway_nick\fP. Your nickname will be restored upon client connect.
 
 .TP

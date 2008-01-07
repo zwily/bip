@@ -63,7 +63,6 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 static void irc_cli_make_join(struct link_client *ic);
 static void server_setup_reconnect_timer(struct link *link);
 int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line);
-static int irc_ctcp(struct link_server *server, struct line *line);
 
 #define LAGOUT_TIME 480
 #define LAGCHECK_TIME (90)
@@ -471,8 +470,6 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 		ret = irc_quit(server, line);
 	} else if (strcmp(line->elemv[0], "NICK") == 0) {
 		ret = irc_nick(server, line);
-	} else if (strcmp(line->elemv[0], "CTCP") == 0) {
-		ret = irc_ctcp(server, line);
 	}
 
 	if (ret == OK_COPY) {
@@ -1725,11 +1722,30 @@ static int irc_kick(struct link_server *server, struct line *line)
 	return OK_COPY;
 }
 
+static void irc_privmsg_check_ctcp(struct link_server *server,
+				   struct line *line)
+{
+	if (line->elemc != 3)
+		return;
+
+	if (!line->origin)
+		return;
+
+	char *nick;
+	nick = nick_from_ircmask(line->origin);
+	if (strcmp(line->elemv[2], "\001VERSION\001") == 0) {
+		WRITE_LINE2(CONN(server), NULL, "NOTICE", nick,
+				"\001VERSION bip" BIP_VERSION "\001");
+	}
+	free(nick);
+}
+
 static int irc_privmsg(struct link_server *server, struct line *line)
 {
 	if (LINK(server)->s_state == IRCS_CONNECTED)
 		log_privmsg(LINK(server)->log, line->origin, line->elemv[1],
 				line->elemv[2]);
+	irc_privmsg_check_ctcp(server, line);
 	return OK_COPY;
 }
 
@@ -1788,28 +1804,6 @@ static int irc_nick(struct link_server *server, struct line *line)
 	}
 
 	free(org_nick);
-	return OK_COPY;
-}
-
-static int irc_ctcp(struct link_server *server, struct line *line)
-{
-	if (line->elemc != 2)
-		return OK_COPY;
-
-	if (!line->origin)
-		return OK_COPY;
-
-	char *nick;
-	nick = nick_from_ircmask(line->origin);
-
-	if (strcmp(line->elemv[1], "\001VERSION\001") == 0) {
-		WRITE_LINE2(CONN(server), NULL, "NOTICE", nick,
-				"\001VERSION bip" BIP_VERSION "\001");
-		/* change to OK_FORGET, for bip to hide client versions */
-		free(nick);
-		return OK_COPY;
-	}
-	free(nick);
 	return OK_COPY;
 }
 

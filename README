@@ -41,11 +41,11 @@ specific irc server password constructed this way:
 
 user:password:network
 
-The user is the name field of the "user" section, the password is the *hash* of
-the password you entered in the "password" field of the same user section (the
-hash is generated with bipmkpw) and the network is the "name" field of the
-"connection" subsection. This is how bip authenticates you and puts your client
-to the correct network.
+The user is the name field of the "user" section, the password is the password
+(*not* the hash) corresponding to the "password" field of the same user section
+(which is the hash generated with bipmkpw) and the network is the "name" field
+of the "connection" subsection. This is how bip authenticates you and puts your
+client to the correct network.
 
 Using the default (or sample file) configuration, logs are in ~/.bip/logs/
 

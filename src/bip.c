@@ -272,7 +272,7 @@ static void version()
 {
 	printf(
 "Bip IRC Proxy - %s\n"
-"Copyright © Arnaud Cornet and Loïc Gomez (2004 - 2007)\n"
+"Copyright © Arnaud Cornet and Loïc Gomez (2004 - 2008)\n"
 "Distributed under the GNU Public License Version 2\n", BIP_VERSION);
 }
 
@@ -487,8 +487,10 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			}
 			break;
 		case LEX_NICK:
-			if (!is_valid_nick(t->pdata))
+			if (!is_valid_nick(t->pdata)) {
 				conf_die(bip, "Invalid nickname %s.", t->pdata);
+				return 0;
+			}
 			MOVE_STRING(l->connect_nick, t->pdata);
 			break;
 		case LEX_USER:
@@ -571,23 +573,31 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		free(t);
 	}
 	/* checks that can only be here, or must */
-	if (!l->network)
+	if (!l->network) {
 		conf_die(bip, "Missing network in connection block");
+		return 0;
+	}
 	if (!l->connect_nick) {
-		if (!user->default_nick)
+		if (!user->default_nick) {
 			conf_die(bip, "No nick set and no default nick.");
+			return 0;
+		}
 		l->connect_nick = strdup(user->default_nick);
 	}
 	if (!l->username) {
-		if (!user->default_username)
+		if (!user->default_username) {
 			conf_die(bip, "No username set and no default "
 					"username.");
+			return 0;
+		}
 		l->username = strdup(user->default_username);
 	}
 	if (!l->realname) {
-		if (!user->default_realname)
+		if (!user->default_realname) {
 			conf_die(bip, "No realname set and no default "
 					"realname.");
+			return 0;
+		}
 		l->realname = strdup(user->default_realname);
 	}
 
@@ -635,8 +645,10 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	int r;
 	struct tuple *t;
 	struct user *u;
-
 	char *name = get_tuple_pvalue(data, LEX_NAME);
+	list_t connection_list, *cl;
+
+	list_init(&connection_list, NULL);
 
 	if (name == NULL) {
 		conf_die(bip, "User with no name");
@@ -717,11 +729,8 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			u->bip_use_notice = t->ndata;
 			break;
 		case LEX_CONNECTION:
-			r = add_connection(bip, u, t->pdata);
-			free(t->pdata);
+			list_add_last(&connection_list, t->pdata);
 			t->pdata = NULL;
-			if (!r)
-				return 0;
 			break;
 #ifdef HAVE_LIBSSL
 		case LEX_SSL_CHECK_MODE:
@@ -747,6 +756,13 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	if (!u->password) {
 		conf_die(bip, "Missing password in user block");
 		return 0;
+	}
+
+	while ((cl = list_remove_first(&connection_list))) {
+		r = add_connection(bip, u, cl);
+		free(cl);
+		if (!r)
+			return 0;
 	}
 
 	u->in_use = 1;
@@ -779,11 +795,13 @@ static int validate_config(bip_t *bip)
 
 #ifdef HAVE_LIBSSL
 				if (link->network->ssl &&
-						!link->ssl_check_mode)
+				    !link->ssl_check_mode) {
 					conf_die(bip, "user %s, "
 						"connection %s: you should "
 						"define a ssl_check_mode.",
 						user->name, link->name);
+					return 0;
+				}
 #endif
 
 				r = 0;
@@ -791,12 +809,14 @@ static int validate_config(bip_t *bip)
 				for (hash_it_init(&link->chan_infos, &cit);
 						(ci = hash_it_item(&cit));
 						hash_it_next(&cit)) {
-					if (!ci->name)
+					if (!ci->name) {
 						conf_die(bip, "user %s, "
 							"connection "
 							"%s: channel must have"
 							"a name.", user->name,
 							link->name);
+						return 0;
+					}
 				}
 			}
 		}
@@ -807,6 +827,7 @@ static int validate_config(bip_t *bip)
 				"lines to a non-nul value for each user with"
 				"backlog = true. Faulty user is %s",
 				user->name);
+			return 0;
 		}
 	}
 
@@ -1420,6 +1441,8 @@ void adm_list_all_connections(struct link_client *ic)
 	bip_notify(ic, "-- End of All connections");
 }
 
+#define STRORNULL(s) ((s) == NULL ? "unset" : (s))
+
 void adm_info_user(struct link_client *ic, char *name)
 {
 	struct user *u;
@@ -1433,13 +1456,8 @@ void adm_info_user(struct link_client *ic, char *name)
 		return;
 	}
 
-	//t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "");
-	//buf[RET_STR_LEN] = 0;
-	//bip_notify(ic, buf);
-	//t_written = 0;
-
-	t_written += snprintf(buf + t_written, RET_STR_LEN - t_written, "user: %s",
-			u->name);
+	t_written += snprintf(buf + t_written, RET_STR_LEN - t_written,
+			      "user: %s", u->name);
 	if (t_written >= RET_STR_LEN)
 		goto noroom;
 	if (u->admin) {
@@ -1456,10 +1474,12 @@ noroom:
 
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",
-		checkmode2text(u->ssl_check_mode), u->ssl_check_store);
+		   checkmode2text(u->ssl_check_mode),
+		   STRORNULL(u->ssl_check_store));
 #endif
 	bip_notify(ic, "Defaults nick: %s, user: %s, realname: %s",
-		u->default_nick, u->default_username, u->default_realname);
+		   STRORNULL(u->default_nick), STRORNULL(u->default_username),
+		   STRORNULL(u->default_realname));
 	if (u->backlog) {
 		bip_notify(ic, "Backlog enabled, lines: %d, no timestamp: %s,"
 			"  messages only: %s", u->backlog_lines,
@@ -1775,7 +1795,7 @@ void adm_blreset(struct link_client *ic)
 void adm_follow_nick(struct link_client *ic, char *val)
 {
 	struct link *link = LINK(ic);
-	if (strncasecmp(val, "TRUE", 4) == 0) {
+	if (strcasecmp(val, "TRUE") == 0) {
 		link->follow_nick = 1;
 		bip_notify(ic, "follow_nick is now true.");
 	} else {
@@ -1787,7 +1807,7 @@ void adm_follow_nick(struct link_client *ic, char *val)
 void adm_ignore_first_nick(struct link_client *ic, char *val)
 {
 	struct link *link = LINK(ic);
-	if (strncasecmp(val, "TRUE", 4) == 0) {
+	if (strcasecmp(val, "TRUE") == 0) {
 		link->ignore_first_nick = 1;
 		bip_notify(ic, "ignore_first_nick is now true.");
 	} else {
@@ -1866,39 +1886,159 @@ void adm_away_nick(struct link_client *ic, char *val)
 	}
 }
 
-void adm_bip_help(struct link_client *ic, int admin)
+void adm_bip_help(struct link_client *ic, int admin, char *subhelp)
 {
-	if (admin) {
-		bip_notify(ic, "/BIP RELOAD # Re-read bip configuration "
-			"and apply changes. /!\\ VERY UNSTABLE !");
-		bip_notify(ic, "/BIP INFO user <username> # show a user's "
-			"configuration");
-		bip_notify(ic, "/BIP LIST networks|users|connections|all_links"
-			"|all_connections");
-		bip_notify(ic, "/BIP ADD_CONN <connection name> <network>");
-		bip_notify(ic, "/BIP DEL_CONN <connection name>");
-	} else {
-		bip_notify(ic, "/BIP LIST networks|connections");
-	}
-	bip_notify(ic, "/BIP JUMP # jump to next server (in same network)");
-	bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only). Add -q flag and the operation is quiet.");
+	if (subhelp == NULL) {
+		if (admin) {
+			bip_notify(ic, "/BIP RELOAD # Re-read bip configuration "
+				"and apply changes. /!\\ VERY UNSTABLE !");
+			bip_notify(ic, "/BIP INFO user <username> # show a user's "
+				"configuration");
+			bip_notify(ic, "/BIP LIST networks|users|connections|all_links"
+				"|all_connections");
+			bip_notify(ic, "/BIP ADD_CONN <connection name> <network>");
+			bip_notify(ic, "/BIP DEL_CONN <connection name>");
+		} else {
+			bip_notify(ic, "/BIP LIST networks|connections");
+		}
+		bip_notify(ic, "/BIP JUMP # jump to next server (in same network)");
+		bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only). Add -q flag and the operation is quiet.");
 #ifdef HAVE_LIBSSL
-	bip_notify(ic, "/BIP TRUST # trust this server certificate");
+		bip_notify(ic, "/BIP TRUST # trust this server certificate");
 #endif
-	bip_notify(ic, "/BIP HELP # show this help...");
-	bip_notify(ic, "## Temporary changes for this connection:");
-	bip_notify(ic, "/BIP FOLLOW_NICK|IGNORE_FIRST_NICK TRUE|FALSE");
-	bip_notify(ic, "/BIP ON_CONNECT_SEND <str> # Adds a string to "
-		"send on connect");
-	bip_notify(ic, "/BIP ON_CONNECT_SEND # Clears on_connect_send");
-	bip_notify(ic, "/BIP AWAY_NICK <nick> # Set away nick");
-	bip_notify(ic, "/BIP AWAY_NICK # clear away nick");
+		bip_notify(ic, "/BIP HELP [subhelp] # show this help...");
+		bip_notify(ic, "## Temporary changes for this connection:");
+		bip_notify(ic, "/BIP FOLLOW_NICK|IGNORE_FIRST_NICK TRUE|FALSE");
+		bip_notify(ic, "/BIP ON_CONNECT_SEND <str> # Adds a string to "
+			"send on connect");
+		bip_notify(ic, "/BIP ON_CONNECT_SEND # Clears on_connect_send");
+		bip_notify(ic, "/BIP AWAY_NICK <nick> # Set away nick");
+		bip_notify(ic, "/BIP AWAY_NICK # clear away nick");
+	} else if (admin && strcasecmp(subhelp, "RELOAD") == 0) {
+		bip_notify(ic, "/BIP RELOAD (admin only) :");
+		bip_notify(ic, "  Reloads bip configuration file and apply "
+			"changes.");
+		bip_notify(ic, "  Please note that changes to 'user' or "
+			"'realname' will not be applied without a JUMP.");
+	} else if (admin && strcasecmp(subhelp, "INFO") == 0) {
+		bip_notify(ic, "/BIP INFO USER <user> (admin only) :");
+		bip_notify(ic, "  Show <user>'s current configuration.");
+		bip_notify(ic, "  That means it may be different from the "
+			"configuration stored in bip.conf");
+	} else if (admin && strcasecmp(subhelp, "ADD_CONN") == 0) {
+		bip_notify(ic, "/BIP ADD_CONN <connection name> <network> "
+			"(admin only) :");
+		bip_notify(ic, "  Add a connection named <connection name> to "
+			"the network <network> to your connection list");
+		bip_notify(ic, "  <network> should already exist in bip's "
+			"configuration.");
+	} else if (admin && strcasecmp(subhelp, "DEL_CONN") == 0) {
+		bip_notify(ic, "/BIP DEL_CONN <connection name> (admin only) "
+			":");
+		bip_notify(ic, "  Remove the connection named <connection "
+			"name> from your connection list.");
+		bip_notify(ic, "  Removing a connection will cause "
+			"its disconnection.");
+	} else if (strcasecmp(subhelp, "JUMP") == 0) {
+		bip_notify(ic, "/BIP JUMP :");
+		bip_notify(ic, "  Jump to next server in current network.");
+	} else if (strcasecmp(subhelp, "BLRESET") == 0) {
+		bip_notify(ic, "/BIP BLRESET :");
+		bip_notify(ic, "  Reset backlog on this network.");
+	} else if (strcasecmp(subhelp, "TRUST") == 0) {
+		bip_notify(ic, "/BIP TRUST");
+		bip_notify(ic, "  Trust current server's certificate.");
+	} else if (strcasecmp(subhelp, "FOLLOW_NICK") == 0) {
+		bip_notify(ic, "/BIP FOLLOW_NICK TRUE|FALSE :");
+		bip_notify(ic, "  Change the value of the follow_nick option "
+			"for this connection.");
+		bip_notify(ic, "  If set to true, when you change nick, "
+			"BIP stores the new nickname as the new default "
+			"nickname value.");
+		bip_notify(ic, "  Thus, if you are disconnected from the "
+			"server, BIP will restore the correct nickname.");
+	} else if (strcasecmp(subhelp, "IGNORE_FIRST_NICK") == 0) {
+		bip_notify(ic, "/BIP IGNORE_FIRST_NICK TRUE|FALSE :");
+		bip_notify(ic, "  Change the value of the ignore_first_nick "
+			"option for this connection.");
+		bip_notify(ic, "  If set to TRUE, BIP will ignore the nickname"
+			"sent by the client upon connect.");
+		bip_notify(ic, "  Further nickname changes will be processed "
+			"as usual.");
+	} else if (strcasecmp(subhelp, "ON_CONNECT_SEND") == 0) {
+		bip_notify(ic, "/BIP ON_CONNECT_SEND [some text] :");
+		bip_notify(ic, "  BIP will send the text as is to the server "
+			"upon connection.");
+		bip_notify(ic, "  You can call this command more than once.");
+		bip_notify(ic, "  If [some text] is empty, this command will "
+			"remove any on_connect_send defined for this connection.");
+	} else if (strcasecmp(subhelp, "AWAY_NICK") == 0) {
+		bip_notify(ic, "/BIP AWAY_NICK [some_nick] :");
+		bip_notify(ic, "  If [some_nick] is set, BIP will change "
+			"nickname to [some_nick] if there are no more client "
+			"attached");
+		bip_notify(ic, "  If [some_nick] is empty, this command will "
+			"unset current connection's away_nick.");
+	} else if (strcasecmp(subhelp, "LIST") == 0) {
+		bip_notify(ic, "/BIP LIST <section> :");
+		bip_notify(ic, "  List information from a these sections :");
+		bip_notify(ic, "  - networks: list all available networks");
+		bip_notify(ic, "  - connections: list all your configured "
+			"connections and their state.");
+		if (admin) {
+			bip_notify(ic, "  - users: list all users (admin)");
+			bip_notify(ic, "  - all_links: list all connected "
+				"sockets from and to BIP (admin)");
+			bip_notify(ic, "  - all_connections: list all users' "
+				"configured connections (admin)");
+		}
+	} else {
+		bip_notify(ic, "-- No sub-help for '%s'", subhelp);
+	}
 }
 
 int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 		unsigned int privmsg)
 {
 	int admin = LINK(ic)->user->admin;
+
+	if (privmsg) {
+		char *linestr = line->elemv[2];
+		char *ptr = line->elemv[2], *eptr;
+		int slen;
+
+		if (line->elemc != 3)
+			return OK_FORGET;
+
+		line->elemc--;
+
+		while((eptr = strstr(ptr, " "))) {
+			slen = eptr - ptr;
+			if (slen == 0) {
+				ptr++;
+				continue;
+			}
+			line->elemv = realloc(line->elemv,
+					(line->elemc + 1) * sizeof(char *));
+			line->elemv[line->elemc] = malloc(slen + 1);
+			memcpy(line->elemv[line->elemc], ptr, slen);
+			line->elemv[line->elemc][slen] = 0;
+			line->elemc++;
+			ptr = eptr + 1;
+		}
+		eptr = ptr + strlen(ptr);
+		slen = eptr - ptr;
+		if (slen != 0) {
+			line->elemv = realloc(line->elemv,
+				      (line->elemc + 1) * sizeof(char *));
+			slen = eptr - ptr;
+			line->elemv[line->elemc] = malloc(slen + 1);
+			memcpy(line->elemv[line->elemc], ptr, slen);
+			line->elemv[line->elemc][slen] = 0;
+			line->elemc++;
+		}
+		free(linestr);
+	}
 
 	if (line->elemc < privmsg + 2)
 		return OK_FORGET;
@@ -1943,8 +2083,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			return OK_FORGET;
 		}
 
-		if (admin && strncasecmp(line->elemv[privmsg + 2],
-					"user", 5) == 0) {
+		if (admin && strcasecmp(line->elemv[privmsg + 2],
+					"user") == 0) {
 			if (line->elemc == privmsg + 4) {
 				adm_info_user(ic, line->elemv[privmsg + 3]);
 			} else {
@@ -1953,8 +2093,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			}
 #if 0
 			TODO
-		} else if (strncasecmp(line->elemv[privmsg + 2],
-					"network", 8) == 0) {
+		} else if (strcasecmp(line->elemv[privmsg + 2],
+				      "network") == 0) {
 			if (line->elemc == privmsg + 4) {
 				adm_info_network(ic, line->elemv[privmsg + 3]);
 			} else {
@@ -1980,17 +2120,25 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			adm_blreset(ic);
 		}
 	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
-		adm_bip_help(ic, admin);
+		if (line->elemc == privmsg + 2)
+			adm_bip_help(ic, admin, NULL);
+		else if (line->elemc == privmsg + 3)
+			adm_bip_help(ic, admin, line->elemv[privmsg + 2]);
+		else
+			bip_notify(ic,
+				"-- HELP command needs at most one argument");
 	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
 		if (line->elemc != privmsg + 3) {
-			bip_notify(ic, "-- FOLLOW_NICK command needs one argument");
+			bip_notify(ic,
+				"-- FOLLOW_NICK command needs one argument");
 			return OK_FORGET;
 		}
 		adm_follow_nick(ic, line->elemv[privmsg + 2]);
 	} else if (strcasecmp(line->elemv[privmsg + 1],
 				"IGNORE_FIRST_NICK") == 0) {
 		if (line->elemc != privmsg + 3) {
-			bip_notify(ic, "-- IGNORE_FIRST_NICK command needs one argument");
+			bip_notify(ic, "-- IGNORE_FIRST_NICK "
+				"command needs one argument");
 			return OK_FORGET;
 		}
 		adm_ignore_first_nick(ic, line->elemv[privmsg + 2]);
