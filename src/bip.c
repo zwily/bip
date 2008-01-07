@@ -202,7 +202,8 @@ try_again:
 			(long unsigned int)getpid());
 	int fd;
 	if ((fd = open(longpath, O_CREAT|O_WRONLY, S_IWUSR|S_IRUSR)) == -1)
-		fatal("%s %s", "open", strerror(errno));
+		fatal("Cannot write to PID file (%s) %s", longpath,
+				strerror(errno));
 	if (link(longpath, conf_pid_file) ==  -1) {
 		struct stat buf;
 		if (stat(longpath, &buf) == -1) {
