@@ -20,6 +20,9 @@
 #include <string.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "irc.h"
 #include "conf.h"
 #include "tuple.h"
@@ -841,6 +844,28 @@ static int validate_config(bip_t *bip)
 				user->name);
 			return 0;
 		}
+	}
+
+	if (conf_css && conf_ssl_certfile) {
+		int e, fd;
+		struct stat fs;
+
+		e = stat(conf_ssl_certfile, &fs);
+		if (e)
+			mylog(LOG_WARN, "Unable to check PEM file is ok "
+				"stat(): %s", strerror(errno));
+		else if (!fs.st_ino)
+			conf_die(bip, "Inexistent PEM file %s", conf_ssl_certfile);
+		else if ( (fs.st_mode & S_IROTH) | (fs.st_mode & S_IWOTH) )
+			conf_die(bip, "PEM file %s should not be world readable / "
+				"writable. Please fix the modes.",
+				conf_ssl_certfile);
+		
+		if ( (fd = open(conf_ssl_certfile, O_RDONLY)) == -1) {
+			conf_die(bip, "Unable to open PEM file %s for reading",
+				conf_ssl_certfile);
+		}
+		close(fd);
 	}
 
 	if (strstr(conf_log_format, "%u") == NULL)
