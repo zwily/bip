@@ -1023,10 +1023,12 @@ int fireup(bip_t *bip, FILE *conf)
 	free(root_list);
 	root_list = NULL;
 
-	validate_config(bip);
-	sweep(bip);
-	return 1;
-
+	if (validate_config(bip)) {
+		sweep(bip);
+		return 1;
+	} else {
+		return 0;
+	}
 out_conf_error:
 	free_conf(root_list);
 	root_list = NULL;
