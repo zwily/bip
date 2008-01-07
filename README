@@ -1,3 +1,6 @@
+
+This is the BIP IRC Proxy readme, you'll learn how to quickly use bip.
+
 Bip can be used in two different way:
 - Old school bnc user style: easy and straightforward.
 - Unix service style with and init.d scripts and the logs in /var/log
@@ -7,47 +10,116 @@ This small README file explains the usage "Old school" with which :
  - gives easy access to the logs of the users of this bip to the one owning the
    shell.
 
-Install bip on the machine that will be running bip (which is likely to be your
-personnal or shared server) either compiling the package or using your distro's
-package. Then create a configuration file:
+Table of contents :
 
-If you are using a distribution package, the bip.conf sample configuration file
-is likely to be shipped in /usr/share/doc/bip/examples/bip.conf.gz or something
-similar.
+	I.	Installation
+	II.	Configuration
+	   A.	  Manual configuration
+	   B.	  Automated configuration
+	III.	Running bip
+	IV.	Using bip
 
-Create your bip configuration an log directory:
 
-# mkdir -p ~/.bip/logs
 
-Put the uncompressed configuration file in your ~/.bip directory (it's path
-should be ~/.bip/bip.conf), and edit it, most importantly the "user" section
-that contains information about you and the servers you will want to connect
-to. The "name" field in the "user" section is your login to connect to bip.
-The "password" field is a hash of the password you will use to connect to bip.
-To generate a hash value from a password, use bipmkpw, program which comes in
-the bip package and source.
-The "name" field of the "connection" subsections are the server identifier for
-when you connect to bip.
+I. INSTALLATION
 
-Once all this is configured, start bip as you regular user:
+    Install bip on the machine that will be running bip (which is likely to be
+    your personnal or shared server) either compiling the package or using your
+    distro's package. Then create a configuration file.
+    
 
-# bip
+II. CONFIGURATION
 
-Once bip starts, it connects to the different servers your defined in
-"connection". Then you want to use your regular irc client and connect to bip.
-Point your client to the machine bip is running and set the proper port number
-(defined in your bip.conf). You should then configure the client to use a
-specific irc server password constructed this way:
+    First of all, create your bip configuration an log directory:
+    
+    # mkdir -p ~/.bip/logs
+    
+    There are two ways to create your bip configuration :
+    - edit the sample bip.conf file to match your needs
+    - use the bipgenconfig script to easily generate a configuration
+    
+    If you want to connect to bip using an SSL client, you'll need to create
+    a certificate / key pair (in a bip.pem file) to allow bip to serve SSL
+    sockets.
 
-user:password:network
+    A. MANUAL CONFIGURATION
 
-The user is the name field of the "user" section, the password is the password
-(*not* the hash) corresponding to the "password" field of the same user section
-(which is the hash generated with bipmkpw) and the network is the "name" field
-of the "connection" subsection. This is how bip authenticates you and puts your
-client to the correct network.
+      If you are using a distribution package, the bip.conf sample configuration
+      file is likely to be shipped in /usr/share/doc/bip/examples/bip.conf.gz or
+      something similar.
+      
+      If not, you'll find sample configuration file in the source package's
+      `samples' subdirectory.
+      
+      Put the uncompressed configuration file in your ~/.bip directory (it's
+      path should be ~/.bip/bip.conf), and edit it, most importantly the "user"
+      section that contains information about you and the servers you will want
+      to connect to. The "name" field in the "user" section is your login to
+      connect to bip.
+      The "name" field of the "connection" subsections are the server identifier
+      for when you connect to bip.
 
-Using the default (or sample file) configuration, logs are in ~/.bip/logs/
+      The "password" field is a hash of the password you will use to connect to
+      bip. To generate a hash value from a password, use bipmkpw, program which
+      comes in the bip package and source.
 
-Happy ircing!
+      If you've set client_side_ssl to true, you'll need to generate a bip.pem
+      file containing a certificate / key pair. In order to do so, you can use
+      the third party `openssl' binary :
 
+      # openssl req -new -x509 -days 365 -nodes -out bip.pem -keyout bip.pem
+
+      You can then remove the passphrase with :
+
+      # openssl x509 -subject -dates -fingerprint -noout -in bip.pem
+    
+    B. AUTOMATED CONFIGURATION
+    
+      You can also use the bipgenconfig script to generate a new configuration.
+      This script will also help you generate the SSL certificate / key pair
+      needed for clients to connect to BIP through SSL.
+  
+      This script can be found either in the source package's `scripts'
+      directory or shipped with your distribution's package.
+
+      Using the script is very simple, and it'll generate a configuration file
+      but won't overwrite any existing configuration. 
+
+      It'll ask you the path to the bipmkpw binary, to automatically hash the
+      passwords you'll provide. Please make sure to enter the correct path to
+      the binary or you might observe unexpected behaviour.
+      
+      You'll need to move the generated configuration from bip.conf.autogen to
+      bip.conf and the generated PEM file from bip.pem.autogen to bip.pem (or
+      whatever path you've configured in bip.conf).
+    
+
+III. RUNNING BIP
+
+    Once all this is configured, start bip as your regular user:
+    
+    # bip
+    
+    Once bip starts, it connects to the different servers your defined in
+    all "user"'s "connection" blocks.
+    
+
+IV. USING BIP
+
+    Then you want to use your regular irc client and connect to bip.
+    Point your client to the machine bip is running and set the proper port number
+    (defined in your bip.conf). You should then configure the client to use a
+    specific irc server password constructed this way:
+    
+    user:password:network
+    
+    The user is the name field of the "user" section, the password is the password
+    (*not* the hash) corresponding to the "password" field of the same user section
+    (which is the hash generated with bipmkpw) and the network is the "name" field
+    of the "connection" subsection. This is how bip authenticates you and puts your
+    client to the correct network.
+    
+    Using the default (or sample file) configuration, logs are in ~/.bip/logs/
+    
+    Happy ircing!
+    
