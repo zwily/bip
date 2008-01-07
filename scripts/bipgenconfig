@@ -28,6 +28,13 @@ my $mode = 'normal';
 my $maxlevel = 5;
 my $bipmkpw;
 my $tmpcrt = "/tmp/bip-cert.cnf";
+
+my %optcompat = (
+	"bl_msg_only" => "backlog_msg_only",
+	"blreset_on_talk" => "backlog_reset_on_talk",
+	"always_backlog" => "backlog_always",
+);
+
 my %optdesc = (
 	'global' => {
 		'ip' => { 'type' => 's', 'adv' => 1, 'default' => '0.0.0.0',
@@ -65,31 +72,6 @@ my %optdesc = (
 			'optional' => 1,
 			'depends' => 'log', 'depval' => 'true',
 			'desc' => 'Define the channel/private log format {see strftime, limited}:' },
-		'backlog' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
-			'optional' => 1,
-			'depends' => 'log', 'depval' => 'true',
-			'desc' => 'Do you want to activate backlog {play back logs} system ?' },
-		'backlog_lines' => { 'type' => 'i', 'adv' => 0, 'default' => '10',
-			'optional' => 1,
-			'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'How much line do you want bip to play back upon client connect' .
-				" {0 => replay everything since backlog's last reset} ?" },
-		'backlog_no_timestamp' => { 'type' => 'b', 'adv' => 0,
-			'optional' => 1,
-			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'Disable timestamp in backlog ?' },
-		'bl_msg_only' => { 'type' => 'b', 'adv' => 0,
-			'optional' => 1,
-			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'Only playback users messages {chan/priv}, no nick/join/... ?' },
-		'always_backlog' => { 'type' => 'b', 'adv' => 0,
-			'optional' => 1,
-			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'Always backlog {false means backlog pointers are reset after each backlog} ?' },
-		'blreset_on_talk' => { 'type' => 'b', 'adv' => 0,
-			'optional' => 1,
-			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
-			'desc' => 'Reset backlog each time an attached client "talks" ?' },
 	},
 
 	'network' => {
@@ -106,9 +88,15 @@ my %optdesc = (
 		'name' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 0,
 			'desc' => 'User\'s internal name ?' },
+		'admin' => { 'type' => 'b', 'adv' => 0, 'default' => 'false',
+			'optional' => 1,
+			'desc' => 'Is user an admin ?' },
 		'password' => { 'type' => 'p', 'adv' => 0, 'default' => '',
 			'optional' => 0,
 			'desc' => 'Set a password for his bip account:' },
+		'bip_use_notice' => { 'type' => 'b', 'adv' => 0, 'default' => 'false',
+			'optional' => 1,
+			'desc' => 'Do you prefer bip to use notices instead of privmsgs ?' },
 		'ssl_check_mode' => { 'type' => 's', 'adv' => 1,
 			'optional' => 1, 'default' => 'none',
 			'desc' => 'Type of SSL servers certificate\'s checks' },
@@ -124,7 +112,33 @@ my %optdesc = (
 		'default_realname' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 0,
 			'desc' => 'User\'s default IRC realname' },
+		'backlog' => { 'type' => 'b', 'adv' => 0, 'default' => 'true',
+			'optional' => 1,
+			'depends' => 'log', 'depval' => 'true',
+			'desc' => 'Do you want to activate backlog {play back logs} system ?' },
+		'backlog_lines' => { 'type' => 'i', 'adv' => 0, 'default' => '10',
+			'optional' => 1,
+			'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'How much line do you want bip to play back upon client connect' .
+				" {0 => replay everything since backlog's last reset} ?" },
+		'backlog_no_timestamp' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Disable timestamp in backlog ?' },
+		'backlog_msg_only' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Only playback users messages {chan/priv}, no nick/join/... ?' },
+		'backlog_always' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Always backlog {false means backlog pointers are reset after each backlog} ?' },
+		'backlog_reset_on_talk' => { 'type' => 'b', 'adv' => 0,
+			'optional' => 1,
+			'default' => 'false', 'depends' => 'backlog', 'depval' => 'true',
+			'desc' => 'Reset backlog each time an attached client "talks" ?' },
 		'connection' => { 'type' => 'e' },
+
 	},
 
 	'connection' => {
@@ -173,6 +187,9 @@ my %optdesc = (
 		'on_connect_send' => { 'type' => 's', 'adv' => 0, 'default' => '',
 			'optional' => 1,
 			'desc' => 'Send this raw message upon connection to IRC server' },
+		'ssl_check_mode' => { 'type' => 's', 'adv' => 1,
+			'optional' => 1, 'default' => '',
+			'desc' => 'Type of SSL servers certificate\'s checks' },
 		'channel' => { 'type' => 'e' },
 	},
 
@@ -202,17 +219,11 @@ my %optorder = (
 		'pid_file' ,
 		undef,
 		'log' ,
+		'log_system' ,
 		'log_sync_interval' ,
 		'log_level' ,
 		'log_root' ,
 		'log_format' ,
-		undef,
-		'backlog' ,
-		'backlog_lines' ,
-		'backlog_no_timestamp' ,
-		'bl_msg_only' ,
-		'always_backlog' ,
-		'blreset_on_talk' ,
 	],
 
 	'network' => [
@@ -230,6 +241,13 @@ my %optorder = (
 		'default_nick' ,
 		'default_user' ,
 		'default_realname' ,
+		undef,
+		'backlog' ,
+		'backlog_lines' ,
+		'backlog_no_timestamp' ,
+		'backlog_msg_only' ,
+		'backlog_always' ,
+		'backlog_reset_on_talk' ,
 		'connection' ,
 	],
 
@@ -249,6 +267,7 @@ my %optorder = (
 		'away_nick' ,
 		'no_client_away_msg' ,
 		'on_connect_send' ,
+		'ssl_check_mode' ,
 		'channel' ,
 	],
 
@@ -411,7 +430,33 @@ sub loadConfig {
 	$fh->close;
 	$hr = unserialize($data) || return "Invalid format in $f";
 	%cf = %{$hr};
+	$cf{'networks'} = [ values %{$cf{'networks'}} ];
+	$cf{'users'} = [ values %{$cf{'users'}} ];
+
+	sanitizeCompat(\%cf);
+	foreach (@{$cf{'networks'}}) {
+		$_->{'server'} = [ values %{$_->{'server'}} ];
+	}
+	foreach my $tcu (@{$cf{'users'}}) {
+		$tcu->{'connection'} = [ values %{$tcu->{'connection'}} ];
+		foreach my $tcc (@{$tcu->{'connection'}}) {
+			$tcc->{'channel'} = [ values %{$tcc->{'channel'}} ];
+		}
+	}
 	return "Config loaded from $f";
+}
+
+sub sanitizeCompat {
+	my ($d) = @_;
+
+	foreach (keys %$d) {
+		if (ref($d->{$_}) eq 'ARRAY') {
+			foreach my $d2 (@{$d->{$_}}) {
+				sanitizeCompat($d2);
+			}
+		}
+		$d->{$optcompat{$_}} = $d->{$_} if (defined $optcompat{$_});
+	}
 }
 
 sub resetConfig {
@@ -586,7 +631,8 @@ sub printBlock {
 	fatal("Too much recursion levels ($level)") if ($level ge $maxlevel);
 		
 	$out .= $prefix . $name . " {\n";
-	foreach my $k (keys(%{$e})) {
+	foreach my $k (@{$optorder{$name}}) {
+		next if ($k eq undef);
 		next if ($e->{$k} eq undef);
 		next if ($optdesc{$name}->{$k}->{'nosave'} eq 1);
 		my $t = $optdesc{$name}->{$k}->{'type'};
