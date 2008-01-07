@@ -102,10 +102,10 @@ change, nick change, user quit/part/join will be backlogged upon connection.
 \fBclient_side_ssl\fP (default: \fBfalse\fP)
 When true, clients will need to connect to BIP using SSL.
 You'll also need to generate a SSL cert/key pair in <bipdir>/bip.pem (usually
-~bip/.bip/bip.pem or /var/lib/bip/bip.pem) or <client_side_ssl_key> if defined.
+~bip/.bip/bip.pem or /var/lib/bip/bip.pem) or <client_side_ssl_pem> if defined.
 
 .TP
-\fBclient_side_ssl_key\fP (default: \fB<bipdir>/bip.pem\fP)
+\fBclient_side_ssl_pem\fP (default: \fB<bipdir>/bip.pem\fP)
 Set this to the full path of the cert/key pair bip should use to accept clients
 SSL connections.
 
