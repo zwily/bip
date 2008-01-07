@@ -968,12 +968,12 @@ int fireup(bip_t *bip, FILE *conf)
 		case LEX_CSS:
 			conf_css = t->ndata;
 			break;
-		case LEX_CSS_KEY:
+		case LEX_CSS_PEM:
 			MOVE_STRING(conf_ssl_certfile, t->pdata);
 			break;
 #else
 		case LEX_CSS:
-		case LEX_CSS_KEY:
+		case LEX_CSS_PEM:
 			mylog(LOG_WARN, "Found SSL option whereas bip is "
 					"not built with SSL support.");
 			break;

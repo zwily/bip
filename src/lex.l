@@ -111,7 +111,7 @@ list_t *parse_conf(FILE *file, int *err)
 "no_client_away_msg"	{ return LEX_NO_CLIENT_AWAY_MSG; }
 "pid_file"		{ return LEX_PID_FILE; }
 "bip_use_notice"	{ return LEX_BIP_USE_NOTICE; }
-"client_side_ssl_key"	{ return LEX_CSS_KEY; }
+"client_side_ssl_pem"	{ return LEX_CSS_PEM; }
 \"[^"]*\" 		{
 				size_t len = strlen(yytext) - 2;
 				yylval.string = malloc(len + 1);

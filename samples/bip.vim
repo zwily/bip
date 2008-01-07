@@ -54,7 +54,7 @@ syn region	bipMain		start=/\%^/ end=/\%$/
 " Top level elements
 syn keyword	bipKeyword	contained nextgroup=bipBoolV client_side_ssl
 syn keyword	bipKeyword	contained nextgroup=bipStringV log_root
-	\ log_format pid_file client_side_ssl_key
+	\ log_format pid_file client_side_ssl_pem
 syn keyword	bipKeyword	contained nextgroup=bipNumericV port log_level
 	\ log_sync_interval
 syn keyword	bipKeyword	contained nextgroup=bipIPV ip
