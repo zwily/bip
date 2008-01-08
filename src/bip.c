@@ -1258,16 +1258,17 @@ int main(int argc, char **argv)
 					"%s", conf_ssl_certfile);
 		}
 
-		if ( (fd = open(conf_ssl_certfile, O_RDONLY)) == -1)
+		if ((fd = open(conf_ssl_certfile, O_RDONLY)) == -1)
 			fatal("Unable to open PEM file %s for reading",
 				conf_ssl_certfile);
-		close(fd);
+		else
+			close(fd);
 
 		e = stat(conf_ssl_certfile, &fs);
 		if (e)
 			mylog(LOG_WARN, "Unable to check PEM file, stat(%s): "
 				"%s", conf_ssl_certfile, strerror(errno));
-		else if ( (fs.st_mode & S_IROTH) | (fs.st_mode & S_IWOTH) )
+		else if ((fs.st_mode & S_IROTH) | (fs.st_mode & S_IWOTH))
 			mylog(LOG_ERROR, "PEM file %s should not be world "
 				"readable / writable. Please fix the modes.",
 				conf_ssl_certfile);
