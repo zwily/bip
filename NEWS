@@ -29,6 +29,6 @@ certificates are now accepted as long as they are in store (therefore trusted).
 This makes the basic mode be more SSH like. Some extreme security zealots might
 want to be warned.
 
-02-09-2007: as of now log parameters go in the user {} statment. This brakes
+02-09-2007: as of now log parameters go in the user {} statment. This breaks
 every config and there is no backwrads compatibility as of now.
 Lots of internal changes, expect crashes.

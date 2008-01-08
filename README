@@ -16,6 +16,8 @@ Table of contents :
 	   B.	  Automated configuration
 	III.	Running bip
 	IV.	Using bip
+	   A.	  Connecting your client(s)
+	   B.	  Backlog and flood control
 
 
 
@@ -119,22 +121,51 @@ III. RUNNING BIP
 
 IV. USING BIP
 
-    Then you want to use your regular irc client and connect to bip.  Point
-    your client to the machine bip is running and set the proper port number
-    (defined in your bip.conf). You should then configure the client to use a
-    specific irc server password constructed this way:
+    A. CONNECTING YOUR CLIENT(S)
 
-    user:password:connection
+      Then you want to use your regular irc client and connect to bip.  Point
+      your client to the machine bip is running and set the proper port number
+      (defined in your bip.conf). You should then configure the client to use a
+      specific irc server password constructed this way:
+  
+      user:password:connection
+  
+      The user is the name field of the "user" section, the password is the
+      password (*not* the hash) corresponding to the "password" field of the
+      same user section (which is the hash generated with bipmkpw) and the
+      connection is the "name" field of the "connection" subsection. This is
+      how bip authenticates you and puts your client to the correct network.
+  
+      Using the default (or sample file) configuration, logs are in ~/.bip/logs/
+  
+    B. BACKLOG AND FLOOD CONTROL
 
-    The user is the name field of the "user" section, the password is the
-    password (*not* the hash) corresponding to the "password" field of the same
-    user section (which is the hash generated with bipmkpw) and the connection
-    is the "name" field of the "connection" subsection. This is how bip
-    authenticates you and puts your client to the correct network.
+      Bip has a backlogging system which will send back parts of the last logs
+      upon client connection. Depending on your configuration, that may mean a
+      *lot* of data sent back to your client.
+      
+      Users' messages will be replayed as if they were being sent at the moment
+      your client connects to bip, and if not disabled, system messages will
+      appear as coming from the "-bip" user.
+      
+      Considering that, you may want to disable your client's anti-flood system,
+      totally or not, depending on it's flexibility.
+      Since bip doesn't replay CTCP messages, you can safely let your client's
+      anti-flood system manage them.
+      
+      [Xchat]
+      If you're using Xchat, you can "disable" it by issuing these commands :
+      /set flood_msg_num = 1000
+      /set flood_msg_time = 10
+      In fact you'll tell xchat to activate its anti-flood system when you're
+      receiving more than 1000 messages in less than 10 seconds.
+      
+      If you forgot to set these, private messages may not appear in separate
+      tabs as usual. If so, simply issue a :
+      /set gui_auto_open_dialog on
+        
 
-    Using the default (or sample file) configuration, logs are in ~/.bip/logs/
-
-    Happy ircing!
+  Happy ircing!
 
 -- Arnaud Cornet <nohar@t1r.net> and Loïc Gomez <opensource@kyoshiro.org>
 

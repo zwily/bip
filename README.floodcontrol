@@ -10,7 +10,7 @@ coming from the "-bip" user.
 
 Considering that, you may want to disable your client's anti-flood system,
 totally or not, depending on it's flexibility.
-Since bip doesn't relay CTCP messages, you can safely let your client's
+Since bip doesn't replay CTCP messages, you can safely let your client's
 anti-flood system manage them.
 
 [Xchat]
