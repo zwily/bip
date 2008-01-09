@@ -1735,7 +1735,7 @@ static void irc_privmsg_check_ctcp(struct link_server *server,
 	nick = nick_from_ircmask(line->origin);
 	if (strcmp(line->elemv[2], "\001VERSION\001") == 0) {
 		WRITE_LINE2(CONN(server), NULL, "NOTICE", nick,
-				"\001VERSION bip" BIP_VERSION "\001");
+				"\001VERSION bip-" BIP_VERSION "\001");
 	}
 	free(nick);
 }
