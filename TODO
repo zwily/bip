@@ -1,8 +1,7 @@
-- check conn_list usage: esp wrt list_remove and closes
-- uid, gid
-- keep invites when detached ?
+- Allow to dump a config file, so that when the config is dynamically
+   changed, we can find it back after bip restart.
+
 - allow global (or per net ?) IP filtering
-- more /bip commands
 - DCC proxying...
 - encrypt logs
 - pre_on_connect_send => before join
@@ -25,7 +24,6 @@ Best regards,
 Whoopie
 --
 
-
 23:46 < nixternal> i have a question...when i log into my bip server with more
                    than 1 client at a time...i get a mass "ban message" from
                    the server..notice of all channel bans that i am in
@@ -47,4 +45,3 @@ FAQ:
 
 
 - backlog_no_private
-- biplog.vim syntax file
