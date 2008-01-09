@@ -1,0 +1,40 @@
+#!/bin/sh
+
+set -e
+
+if [ ! -d src ] ; then
+	echo "Please run me in bip sources root." >&2 
+	exit 1
+fi
+
+release="$1"
+
+if [ -n "$release" ]
+then
+	echo '#define BIP_VERSION "'$release'"' > src/version.h
+	git commit -a -m "Update src/version.h for release."
+	git tag release-$release
+	prefix=bip-$release
+else
+	prefix=bip-$(date +%y%m%d)
+fi
+
+olddir=$(pwd)
+tmpdir=$(mktemp -d /var/tmp/bip-XXXXX)
+git-archive --format=tar --prefix=$prefix/ HEAD > $tmpdir/$prefix.tar
+cd $tmpdir
+tar xf $prefix.tar
+cd $prefix
+./bootstrap
+cd ..
+tar czf $olddir/../$prefix.tar.gz $prefix
+cd $olddir
+rm -rf $tmpdir
+echo "See ../$prefix.tar.gz"
+
+if [ -n "$release" ]
+then
+	echo '#define BIP_VERSION "'$release'-git"' > src/version.h
+	git tag release-$release
+	git commit -a -m "Add -git to version string."
+fi
