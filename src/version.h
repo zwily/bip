@@ -1,1 +1,1 @@
-#define BIP_VERSION "0.6.1.GIT.UNRELEASED"
+#define BIP_VERSION "0.7.0-RC0"
