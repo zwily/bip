@@ -35,7 +35,6 @@ echo "See ../$prefix.tar.gz"
 if [ -n "$release" ]
 then
 	echo '#define BIP_VERSION "'$release'-git"' > src/version.h
-	git tag release-$release
 	git commit -a -m "Add -git to version string."
 fi
 
