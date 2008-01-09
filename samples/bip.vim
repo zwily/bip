@@ -1,6 +1,6 @@
 " Vim syntax file
 " Language: Bip configuration file
-" Copyright: Copyright (C) 2004 Arnaud Cornet and Loïc Gomez
+" Copyright: Copyright (C) 2004 Arnaud Cornet and LoÃ¯c Gomez
 " License: This file is part of the bip project. See the file 'COPYING' for
 "          the exact licensing terms.
 "

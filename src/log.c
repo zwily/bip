@@ -2,7 +2,7 @@
  * $Id: log.c,v 1.56 2005/04/21 06:58:50 nohar Exp $
  *
  * This file is part of the bip project
- * Copyright (C) 2004 Arnaud Cornet and Loïc Gomez
+ * Copyright (C) 2004 Arnaud Cornet and LoÃ¯c Gomez
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -2,7 +2,7 @@
  * $Id: bip.c,v 1.39 2005/04/21 06:58:50 nohar Exp $
  *
  * This file is part of the bip project
- * Copyright (C) 2004 2005 Arnaud Cornet and Loïc Gomez
+ * Copyright (C) 2004 2005 Arnaud Cornet and LoÃ¯c Gomez
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,7 +276,7 @@ static void version()
 {
 	printf(
 "Bip IRC Proxy - %s\n"
-"Copyright © Arnaud Cornet and Loïc Gomez (2004 - 2008)\n"
+"Copyright Â© Arnaud Cornet and LoÃ¯c Gomez (2004 - 2008)\n"
 "Distributed under the GNU Public License Version 2\n", BIP_VERSION);
 }
 

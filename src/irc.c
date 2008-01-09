@@ -3,7 +3,7 @@
  * $Id: irc.c,v 1.156 2005/04/21 06:58:50 nohar Exp $
  *
  * This file is part of the bip project
- * Copyright (C) 2004 2005 Arnaud Cornet and Loïc Gomez
+ * Copyright (C) 2004 2005 Arnaud Cornet and LoÃ¯c Gomez
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1209,7 +1209,7 @@ int irc_dispatch(bip_t *bip, struct link_any *l, struct line *line)
 		break;
 #endif
 	default:
-		fatal("gnéééééé");
+		fatal("gnÃ©Ã©Ã©Ã©Ã©Ã©");
 	}
 	return ERR_PROTOCOL; /* never reached */
 }
