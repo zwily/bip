@@ -11,8 +11,9 @@ release="$1"
 
 if [ -n "$release" ]
 then
+	git log > ChangeLog
 	echo '#define BIP_VERSION "'$release'"' > src/version.h
-	git commit -a -m "Update src/version.h for release."
+	git commit -a -m "Update src/version.h and Changelog for release."
 	git tag release-$release
 	prefix=bip-$release
 else
