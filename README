@@ -18,6 +18,7 @@ Table of contents :
 	IV.	Using bip
 	   A.	  Connecting your client(s)
 	   B.	  Backlog and flood control
+	   C.	  Multiple users and ident issues
 
 
 
@@ -163,7 +164,49 @@ IV. USING BIP
       If you forgot to set these, private messages may not appear in separate
       tabs as usual. If so, simply issue a :
       /set gui_auto_open_dialog on
-        
+
+    C. MULTIPLE USERS AND IDENT ISSUES
+
+      When you host many connections to the same IRC network, you might have
+      more connections than allowed by the network from one host.
+
+      Depending on the network and the services it runs, session limits may be
+      enforced either matching only your ip address/hostname, or matching the
+      username/ident part too.
+
+      To avoid being killed for session limit exceeded, you should define a
+      default_username in each user {}; block. A user without default_username
+      would appear as ~bip@yourhost if bip is the system user running bip. With
+      a default_username set to "myuser", he would appear as ~myuser@yourhost,
+      which may be sufficient for most networks.
+
+      If the network you're on is a bit more requiring, you can set up an
+      oidentd server on your host, and (if not already) compile bip with
+      oidentd spoofing support (--enable-oidentd option of the configure
+      script). Let's say bip is the system user running bip, you should add to
+      your /etc/oidentd.conf :
+
+        user "bip" {
+            default {
+                allow spoof_all
+                allow spoof_privport
+                allow spoof
+            }
+        }
+
+      Then reload oidentd and make sure that ~bip is accessible (+rx) by the
+      user running oidentd (which means most of the time ~bip should be world
+      readable and browsable +rx).
+
+      If you already have a ~bip/.oidentd.conf file, don't worry, bip'll only
+      add its entries without deleting any of the contents of the file.
+      This step should remove the "~" character from the username/ident part of
+      your ircmask, and thus satisfy some networks.
+
+      If the network is still killing you for session limit exceeded, you'll
+      have to contact it's admins and ask them for an exception on your host or
+      ip address.
+
 
   Happy ircing!
 
