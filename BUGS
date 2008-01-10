@@ -1,4 +1,1 @@
-- trailing colons ":" in privmsg mess up backlog system
-- privmsg with only one char mess up the backlog system
-- Fill NEWS file in...
 - make install fails to install examples.
