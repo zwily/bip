@@ -87,6 +87,7 @@ list_t *parse_conf(FILE *file, int *err)
 "ssl"		        { return LEX_SSL; }
 "ssl_check_mode"        { return LEX_SSL_CHECK_MODE; }
 "ssl_check_store"       { return LEX_SSL_CHECK_STORE; }
+"ssl_client_certfile"   { return LEX_SSL_CLIENT_CERTFILE; }
 "key"			{ return LEX_KEY; }
 "channel"		{ return LEX_CHANNEL; }
 "log_level"		{ return LEX_LOG_LEVEL; }

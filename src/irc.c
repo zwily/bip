@@ -2053,6 +2053,7 @@ connection_t *irc_server_connect(struct link *link)
 #ifdef HAVE_LIBSSL
 				link->network->ssl, link->ssl_check_mode,
 				link->user->ssl_check_store,
+				link->user->ssl_client_certfile,
 #else
 				0, 0, NULL,
 #endif
@@ -2470,9 +2471,12 @@ struct link *irc_link_new()
 
 void link_kill(bip_t *bip, struct link *link)
 {
-	list_remove(&bip->conn_list, CONN(link->l_server));
-	server_cleanup(link->l_server);
-	irc_server_free(link->l_server);
+	/* in case in never got connected */
+	if (link->l_server) {
+		list_remove(&bip->conn_list, CONN(link->l_server));
+		server_cleanup(link->l_server);
+		irc_server_free(link->l_server);
+	}
 	while (link->l_clientc) {
 		struct link_client *lc = link->l_clientv[0];
 		if (lc == bip->reloading_client)

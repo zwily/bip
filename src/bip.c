@@ -684,6 +684,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 		FREE(u->default_realname);
 #ifdef HAVE_LIBSSL
 		FREE(u->ssl_check_store);
+		FREE(u->ssl_client_certfile);
 #endif
 	}
 
@@ -753,7 +754,11 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 		case LEX_SSL_CHECK_STORE:
 			MOVE_STRING(u->ssl_check_store, t->pdata);
 			break;
+		case LEX_SSL_CLIENT_CERTFILE:
+			MOVE_STRING(u->ssl_client_certfile, t->pdata);
+			break;
 #else
+		case LEX_SSL_CLIENT_CERTFILE:
 		case LEX_SSL_CHECK_MODE:
 		case LEX_SSL_CHECK_STORE:
 			mylog(LOG_WARN, "Found SSL option whereas bip is "
@@ -878,6 +883,7 @@ void user_kill(bip_t *bip, struct user *user)
 
 #ifdef HAVE_LIBSSL
 	MAYFREE(user->ssl_check_store);
+	MAYFREE(user->ssl_client_certfile);
 #endif
 	free(user);
 }
@@ -1522,6 +1528,9 @@ noroom:
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",
 		   checkmode2text(u->ssl_check_mode),
 		   STRORNULL(u->ssl_check_store));
+	if (u->ssl_client_certfile)
+		bip_notify(ic, "SSL client certificate stored into '%s'",
+				u->ssl_client_certfile);
 #endif
 	bip_notify(ic, "Defaults nick: %s, user: %s, realname: %s",
 		   STRORNULL(u->default_nick), STRORNULL(u->default_username),

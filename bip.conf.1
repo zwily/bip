@@ -246,6 +246,12 @@ allows a "ssh-like" private key generation scheme. Note that in basic mode:
 \fBssl_check_store\fP (default: \fBnot set\fP)
 This repository is browsed by BIP when a SSL certificate or CA check is needed.
 
+.TP
+\fBssl_client_certfile\fP (default: \fBnot set\fP)
+Some networks (OFTC at least) allow you to authenticate to nickserv services
+using a client side certificate. Make this variable point to the .pem file to
+use this feature.
+
 .SH CONNECTION SUB-SECTION
 
 Each connection section associates a user to the networks he wants to connect

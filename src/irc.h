@@ -88,6 +88,7 @@ struct user {
 #ifdef HAVE_LIBSSL
 	int ssl_check_mode;
 	char *ssl_check_store;
+	char *ssl_client_certfile;
 #endif
 
 	hash_t connections;

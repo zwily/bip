@@ -1057,6 +1057,14 @@ connection_t *accept_new(connection_t *cn)
 				connection_free(conn);
 				return NULL;
 			}
+			if (!SSL_CTX_use_certificate_chain_file(sslctx,
+						conf_ssl_certfile))
+				mylog(LOG_WARN, "SSL: Unable to load "
+						"certificate file");
+			if (!SSL_CTX_use_PrivateKey_file(sslctx,
+						conf_ssl_certfile,
+						SSL_FILETYPE_PEM))
+				mylog(LOG_WARN, "SSL: Unable to load key file");
 		}
 
 		conn->ssl_h = SSL_new(sslctx);
@@ -1154,14 +1162,8 @@ prng_end:
 
 	/* allocated by function */
 	ctx = SSL_CTX_new(SSLv23_method());
-	if (!SSL_CTX_use_certificate_chain_file(ctx,conf_ssl_certfile))
-		mylog(LOG_WARN, "SSL: Unable to load certificate file");
-	if (!SSL_CTX_use_PrivateKey_file(ctx, conf_ssl_certfile,
-				SSL_FILETYPE_PEM))
-		mylog(LOG_WARN, "SSL: Unable to load key file");
-
 	SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_BOTH);
-	SSL_CTX_set_timeout(ctx,(long)60);
+	SSL_CTX_set_timeout(ctx, (long)60);
 	SSL_CTX_set_options(ctx, SSL_OP_ALL);
 
 	return ctx;
@@ -1321,7 +1323,7 @@ static int SSLize(connection_t *cn, int *nc)
 
 static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 		char *srchostname, char *srcport, int check_mode,
-		char *check_store, int timeout)
+		char *check_store, char *ssl_client_certfile, int timeout)
 {
 	connection_t *conn;
 
@@ -1330,6 +1332,7 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 		mylog(LOG_ERROR, "SSL context initialization failed");
 		return conn;
 	}
+
 	conn->cert = NULL;
 	conn->ssl_check_mode = check_mode;
 
@@ -1368,6 +1371,18 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 		fatal("Unknown SSL cert check mode.");
 	}
 
+	if (ssl_client_certfile) {
+		if (!SSL_CTX_use_certificate_chain_file(conn->ssl_ctx_h,
+					ssl_client_certfile))
+			mylog(LOG_WARN, "SSL: Unable to load certificate file");
+		else if (!SSL_CTX_use_PrivateKey_file(conn->ssl_ctx_h,
+					ssl_client_certfile, SSL_FILETYPE_PEM))
+			mylog(LOG_WARN, "SSL: Unable to load key file");
+		else
+			mylog(LOG_INFO, "SSL: using %s pem file as client SSL "
+					"certificate", ssl_client_certfile);
+	}
+
 	conn->ssl_h = SSL_new(conn->ssl_ctx_h);
 	if (conn->ssl_h == NULL) {
 		mylog(LOG_ERROR, "Unable to allocate SSL structures");
@@ -1392,7 +1407,7 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 
 connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
 		int srcport, int ssl, int ssl_check_mode, char *ssl_check_store,
-		int timeout)
+		char *ssl_client_certfile, int timeout)
 {
 	char dstportbuf[20], srcportbuf[20], *tmp;
 #ifndef HAVE_LIBSSL
@@ -1412,7 +1427,8 @@ connection_t *connection_new(char *dsthostname, int dstport, char *srchostname,
 #ifdef HAVE_LIBSSL
 	if (ssl)
 		return _connection_new_SSL(dsthostname, dstportbuf, srchostname,
-				tmp, ssl_check_mode, ssl_check_store, timeout);
+				tmp, ssl_check_mode, ssl_check_store,
+				ssl_client_certfile, timeout);
 	else
 #endif
 		return _connection_new(dsthostname, dstportbuf, srchostname,
