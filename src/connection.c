@@ -928,7 +928,7 @@ static void create_listening_socket(char *hostname, char *port,
 	struct addrinfo *res, *cur;
 	struct addrinfo hint = {
 		.ai_flags = AI_PASSIVE,
-		.ai_family = PF_UNSPEC,
+		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM,
 		.ai_protocol = 0,
 
