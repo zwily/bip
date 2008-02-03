@@ -1110,7 +1110,7 @@ void check_rlimits()
 		mylog(LOG_ERROR, "getrlimit(): failed with %s",
 				strerror(errno));
 	} else {
-		if (lt.rlim_max != RLIM_INFINITY) {
+		if (lt.rlim_max != RLIM_INFINITY && lt.rlim_max < 256) {
 			mylog(LOG_WARN, "opened files count rlimit "
 				"active, bip will not be allowed to open more "
 				"than %d files at a time", (int)lt.rlim_max);
