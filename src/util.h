@@ -18,7 +18,6 @@
 #include <stdarg.h>
 
 /* Warning: must be in order, 0 = less output */
-#define LOG_STD -1
 #define LOG_FATAL 0
 #define LOG_ERROR 1
 #define LOG_WARN 2

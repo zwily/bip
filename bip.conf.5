@@ -62,43 +62,6 @@ also find an example configuration file along with BIP.
 .SH GLOBAL OPTIONS
 
 .TP
-\fBbacklog\fP (default: \fBtrue\fP)
-Enable or disable the whole backlog system, which allows clients to see a
-log replay upon connection.
-
-.TP
-\fBbacklog_always\fP (default: \fBfalse\fP)
-If true, clients will always receive \fBbacklog_lines\fP log lines, even if
-they were already sent before. That means :
-If \fBbacklog_always\fP is false, backlog will be reset whenever there
-is no more client connected to a network. Else backlog will not be reset.
-This option should of course not be enabled if \fBbacklog_lines\fP is 0 !
-If you still want to do so, don't forget to /BIP BLRESET sometimes.
-
-.TP
-\fBbacklog_lines\fP (default: \fB10\fP)
-If set to 0, BIP will replay all the logs since last client disconnect. Else,
-it'll replay exactly \fBbacklog_lines\fP lines on each channel and privates.
-Be aware that BIP will replay \fBbacklog_lines\fP lines of all privates, even
-if there are more. For example if Coyote told you 12 lines and then RoadRunner
-6, you'll only have a replay of the 6 RoadRunner's lines and the last 4 of
-Coyote's.
-
-\fBbacklog_no_timestamp\fP (default: \fBfalse\fP)
-If true, backlogged line won't include the timestamp.
-
-.TP
-\fBbacklog_reset_on_talk\fP (default: \fBfalse\fP)
-When true, backlog will be reset upon client talk (channel/private message or
-action). It means that next time you log to your bip session, the backlogging
-will start at the time right after your last words on that specific network.
-
-.TP
-\fBbacklog_msg_only\fP (default: \fBfalse\fP)
-When true, bip will backlog only channel/private messages/notices. No topic
-change, nick change, user quit/part/join will be backlogged upon connection.
-
-.TP
 \fBclient_side_ssl\fP (default: \fBfalse\fP)
 When true, clients will need to connect to BIP using SSL.
 You'll also need to generate a SSL cert/key pair in <bipdir>/bip.pem (usually
@@ -200,6 +163,43 @@ options. It may appear more than once in the configuration file.
 \fBadmin\fP (default: \fBfalse\fP)
 If a user has admin set to true, he'll become a bip administrator, which allows
 him for example to RELOAD bip from IRC or to see the user configuration.
+
+.TP
+\fBbacklog\fP (default: \fBtrue\fP)
+Enable or disable the whole backlog system, which allows clients to see a
+log replay upon connection.
+
+.TP
+\fBbacklog_always\fP (default: \fBfalse\fP)
+If true, clients will always receive \fBbacklog_lines\fP log lines, even if
+they were already sent before. That means :
+If \fBbacklog_always\fP is false, backlog will be reset whenever there
+is no more client connected to a network. Else backlog will not be reset.
+This option should of course not be enabled if \fBbacklog_lines\fP is 0 !
+If you still want to do so, don't forget to /BIP BLRESET sometimes.
+
+.TP
+\fBbacklog_lines\fP (default: \fB10\fP)
+If set to 0, BIP will replay all the logs since last client disconnect. Else,
+it'll replay exactly \fBbacklog_lines\fP lines on each channel and privates.
+Be aware that BIP will replay \fBbacklog_lines\fP lines of all privates, even
+if there are more. For example if Coyote told you 12 lines and then RoadRunner
+6, you'll only have a replay of the 6 RoadRunner's lines and the last 4 of
+Coyote's.
+
+\fBbacklog_no_timestamp\fP (default: \fBfalse\fP)
+If true, backlogged line won't include the timestamp.
+
+.TP
+\fBbacklog_reset_on_talk\fP (default: \fBfalse\fP)
+When true, backlog will be reset upon client talk (channel/private message or
+action). It means that next time you log to your bip session, the backlogging
+will start at the time right after your last words on that specific network.
+
+.TP
+\fBbacklog_msg_only\fP (default: \fBfalse\fP)
+When true, bip will backlog only channel/private messages/notices. No topic
+change, nick change, user quit/part/join will be backlogged upon connection.
 
 .TP
 \fBbip_use_notice\fP (default: \fBfalse\fP)

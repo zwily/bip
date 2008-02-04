@@ -52,7 +52,8 @@ syn region	bipMain		start=/\%^/ end=/\%$/
 	\ contains=bipKeyword,bipNetwork,bipUser,bipComment,bipEndError
 
 " Top level elements
-syn keyword	bipKeyword	contained nextgroup=bipBoolV client_side_ssl
+syn keyword	bipKeyword	contained nextgroup=bipBoolV client_side_ssl 
+	\ log log_system
 syn keyword	bipKeyword	contained nextgroup=bipStringV log_root
 	\ log_format pid_file client_side_ssl_pem
 syn keyword	bipKeyword	contained nextgroup=bipNumericV port log_level
@@ -72,24 +73,23 @@ syn region	bipUser		contained matchgroup=Macro start=/user\s*{\s*/
 	\ contains=bipUKeyword,bipConnection,bipComment,bipEndError,bipWhite
 syn keyword	bipUKeyword	contained nextgroup=bipStringV password name
 	\ default_nick default_user default_realname ssl_check_store
-	\ ssl_check_mode
+	\ ssl_check_mode ssl_client_certfile
 syn keyword	bipUKeyword	contained nextgroup=bipNumericV backlog_lines 
 syn keyword	bipUKeyword	contained nextgroup=bipBoolV admin
-	\ no_backlog always_backlog bl_msg_only blreset_on_talk
-	\ backlog_no_timestamp backlog log_system backlog_reset_on_talk
+" DEPRECATED	\ always_backlog bl_msg_only blreset_on_talk 
+	\ backlog_no_timestamp backlog backlog_reset_on_talk
 	\ backlog_msg_only backlog_always bip_use_notice
 
 " Connection block (level 2)
 syn region	bipConnection	contained matchgroup=Macro
 	\ start=/connection\s*{\s*/ end=/};/
 	\ contains=bipCoKeyword,bipChannel,bipComment,bipEndError,bipWhite
-syn keyword	bipCoKeyword	contained nextgroup=bipBoolV ssl follow_nick
+syn keyword	bipCoKeyword	contained nextgroup=bipBoolV follow_nick
 	\ ignore_first_nick
 syn keyword	bipCoKeyword	contained nextgroup=bipStringV name user nick
 	\ network password vhost away_nick on_connect_send realname
 	\ no_client_away_msg ssl_check_mode
 syn keyword	bipCoKeyword	contained nextgroup=bipNumericV source_port
-no_client_away_msg
 
 " Channel elements (lvl 2)
 syn region	bipChannel	contained matchgroup=Macro

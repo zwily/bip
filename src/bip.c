@@ -250,8 +250,8 @@ pid_is_there:
 		}
 		if (pid)
 			mylog(LOG_INFO, "pid file found (pid %ld).", pid);
-		mylog(LOG_STD, "Another instance of bip is certainly runing.");
-		mylog(LOG_STD, "If you are sure this is not the case remove"
+		mylog(LOG_FATAL, "Another instance of bip is certainly runing.");
+		mylog(LOG_FATAL, "If you are sure this is not the case remove"
 					" %s.", conf_pid_file);
 		exit(2);
 	}
