@@ -1568,7 +1568,7 @@ void adm_list_users(struct link_client *ic)
 
 		buf[RET_STR_LEN] = 0;
 		t_written += snprintf(buf, RET_STR_LEN, "* %s%s:", u->name,
-				(u->admin ? "": "(admin)"));
+				(u->admin ? "(admin)": ""));
 		if (t_written >= RET_STR_LEN)
 			goto noroom;
 		for (hash_it_init(&u->connections, &lit); hash_it_item(&lit);
