@@ -97,7 +97,7 @@ command:
        | LEX_IP LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_IP, $3); }
        | LEX_PORT LEX_EQ LEX_INT { $$ = tuple_i_new(LEX_PORT, $3); }
        | LEX_CSS LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_CSS, $3); }
-       | LEX_CSS_PEM LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_CSS_PEM, $2); }
+       | LEX_CSS_PEM LEX_EQ LEX_STRING { $$ = tuple_s_new(LEX_CSS_PEM, $3); }
        | LEX_LOG LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_LOG, $3); }
        | LEX_LOG_SYSTEM LEX_EQ LEX_BOOL { $$ = tuple_i_new(LEX_LOG_SYSTEM, $3); }
        | LEX_LOG_SYNC_INTERVAL LEX_EQ LEX_INT { $$ = tuple_i_new(
