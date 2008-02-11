@@ -2055,7 +2055,7 @@ connection_t *irc_server_connect(struct link *link)
 				link->user->ssl_check_store,
 				link->user->ssl_client_certfile,
 #else
-				0, 0, NULL,
+				0, 0, NULL, NULL,
 #endif
 				CONNECT_TIMEOUT);
 	if (!conn)
