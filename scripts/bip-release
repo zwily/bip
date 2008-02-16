@@ -27,6 +27,7 @@ cd $tmpdir
 tar xf $prefix.tar
 cd $prefix
 ./bootstrap
+rm -rf autom4te.cache
 cd ..
 tar czf $olddir/../$prefix.tar.gz $prefix
 cd $olddir
