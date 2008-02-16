@@ -2030,8 +2030,8 @@ void irc_server_free(struct link_server *s)
 			hash_it_next(&hi)) {
 		struct channel *chan = hash_it_item(&hi);
 		channel_free(chan);
-
 	}
+	hash_clean(&s->channels);
 
 	free(s);
 }
