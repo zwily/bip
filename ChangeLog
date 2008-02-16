@@ -1,3 +1,60 @@
+commit ba4e70d6647cab63471391649adc7d5029d43228
+Author: Loïc Gomez <opensource@kyoshiro.org>
+Date:   Mon Feb 4 18:38:09 2008 +0100
+
+    fix unwanted commit
+
+commit efe0c43b9cdd3c0a4d1183678b36e2c33d7383fa
+Author: Loïc Gomez <opensource@kyoshiro.org>
+Date:   Mon Feb 4 18:36:35 2008 +0100
+
+    Documentation fixes
+    - update bip.vim and bip.conf sample files
+    - remove nonsense LOG_STD log level
+
+commit 89e88f6b7ba73eabe11d1dfae11131a9095248c2
+Author: Loïc Gomez <opensource@kyoshiro.org>
+Date:   Mon Feb 4 18:07:27 2008 +0100
+
+    /BIP commands:
+    - fix "(admin)" info inverted in /BIP list users
+
+commit fd5e483a499d8b4986128e9be7bcb70cc8315c8a
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Feb 3 11:55:24 2008 +0100
+
+    Warn only when open files limit is smaller that 256.
+
+commit b024221cecb8f61e00c251f9785e84852169667b
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Feb 2 12:46:20 2008 +0100
+
+    Use const varibable more consistently.
+
+commit d5ef114c2e71e444cf698b56052e066e409f57b5
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Tue Jan 22 00:36:18 2008 +0100
+
+    Have autodirt install manpages.
+
+commit 7470ebe96eb381e660508a32b81beba4f20e10f5
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Mon Jan 21 22:21:09 2008 +0100
+
+    Move bip.conf man page to section 5 (Fix debian bug 461871).
+
+commit 055266f92decb1c7155748f9dfd230fa63172be7
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jan 20 18:51:04 2008 +0100
+
+    Add -git to version string.
+
+commit f8c2876633167e36340cfe1304f2cd412168fc18
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jan 20 18:51:01 2008 +0100
+
+    Update src/version.h and Changelog for release.
+
 commit f1cc6451f5d1815d2865567cd841ac06fd32be5a
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Sun Jan 20 18:49:44 2008 +0100
