@@ -258,14 +258,14 @@ pid_is_there:
 	return 0;
 }
 
-#define S_CONF "/.bip/bip.conf"
+#define S_CONF "bip.conf"
 
 static void usage(char *name)
 {
 	printf(
 "Usage: %s [-f config_file] [-h] [-n]\n"
 "	-f config_file: Use config_file as the configuration file\n"
-"		If no config file is given %s will try to open ~" S_CONF "\n"
+"		If no config file is given %s will try to open ~/.bip/" S_CONF "\n"
 "	-n: Don't daemonize, log in stderr\n"
 "	-v: Print version and exit\n"
 "	-h: This help\n", name, name);
@@ -565,6 +565,8 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 				l->ssl_check_mode = SSL_CHECK_BASIC;
 			if (strcmp(t->pdata, "ca") == 0)
 				l->ssl_check_mode = SSL_CHECK_CA;
+			if (strcmp(t->pdata, "none") == 0)
+				l->ssl_check_mode = SSL_CHECK_NONE;
 			break;
 #else
 		case LEX_SSL_CHECK_MODE:
@@ -744,10 +746,12 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			break;
 #ifdef HAVE_LIBSSL
 		case LEX_SSL_CHECK_MODE:
-			if (!strncmp(t->pdata, "basic", 5))
+			if (!strcmp(t->pdata, "basic"))
 				u->ssl_check_mode = SSL_CHECK_BASIC;
-			if (!strncmp(t->pdata, "ca", 2))
+			if (!strcmp(t->pdata, "ca"))
 				u->ssl_check_mode = SSL_CHECK_CA;
+			if (!strcmp(t->pdata, "none"))
+				u->ssl_check_mode = SSL_CHECK_NONE;
 			free(t->pdata);
 			t->pdata = NULL;
 			break;
@@ -800,43 +804,36 @@ static int validate_config(bip_t *bip)
 
 	for (hash_it_init(&bip->users, &it); (user = hash_it_item(&it));
 			hash_it_next(&it)) {
-		if (!user->default_nick || !user->default_username ||
-				!user->default_realname) {
-			for (hash_it_init(&user->connections, &sit);
-					(link = hash_it_item(&sit));
-					hash_it_next(&sit)) {
+		for (hash_it_init(&user->connections, &sit);
+				(link = hash_it_item(&sit));
+				hash_it_next(&sit)) {
+			if (!user->default_nick || !user->default_username ||
+					!user->default_realname) {
 				if ((!link->username &&
 						!user->default_username) ||
 						(!link->connect_nick &&
 						 !user->default_nick) ||
 						(!link->realname &&
-						 !user->default_realname))
-					link_kill(bip, link);
-
-#ifdef HAVE_LIBSSL
-				if (link->network->ssl &&
-				    !link->ssl_check_mode) {
+						 !user->default_realname)) {
 					conf_die(bip, "user %s, "
-						"connection %s: you should "
-						"define a ssl_check_mode.",
+						"connection %s: you must defin"
+						"e nick, user and realname.",
 						user->name, link->name);
-					return 0;
+					link_kill(bip, link);
+					r = 0;
 				}
-#endif
+			}
 
-				r = 0;
-
-				for (hash_it_init(&link->chan_infos, &cit);
-						(ci = hash_it_item(&cit));
-						hash_it_next(&cit)) {
-					if (!ci->name) {
-						conf_die(bip, "user %s, "
-							"connection "
-							"%s: channel must have"
-							"a name.", user->name,
-							link->name);
-						return 0;
-					}
+			for (hash_it_init(&link->chan_infos, &cit);
+					(ci = hash_it_item(&cit));
+					hash_it_next(&cit)) {
+				if (!ci->name) {
+					conf_die(bip, "user %s, "
+						"connection "
+						"%s: channel must have"
+						"a name.", user->name,
+						link->name);
+					return 0;
 				}
 			}
 		}
@@ -1142,7 +1139,6 @@ int main(int argc, char **argv)
 	int r, fd;
 	char buf[30];
 	bip_t bip;
-	char *home;
 
 	bip_init(&bip);
 	_bip = &bip;
@@ -1194,28 +1190,12 @@ int main(int argc, char **argv)
 
 	check_rlimits();
 
+	char *home = NULL; /* oidentd path searching ignores conf_biphome */
 	home = getenv("HOME");
 	if (!home) {
 		conf_die(&bip, "no $HOME !, do you live in a trailer ?");
 		return 0;
 	}
-
-	if (confpath) {
-		conf = fopen(confpath, "r");
-		if (!conf)
-			fatal("config file not found");
-	}
-	if (!conf) {
-		confpath = malloc(strlen(home) + 1 + strlen(S_CONF) + 1);
-		*confpath = 0;
-		strcat(confpath, home);
-		strcat(confpath, "/");
-		strcat(confpath, S_CONF);
-		conf = fopen(confpath, "r");
-		if (!conf)
-			fatal("%s config file not found", confpath);
-	}
-
 #ifdef HAVE_OIDENTD
 	bip.oidentdpath = malloc(strlen(home) + 1 +
 			strlen(OIDENTD_FILENAME) + 1);
@@ -1224,16 +1204,30 @@ int main(int argc, char **argv)
 	strcat(bip.oidentdpath, OIDENTD_FILENAME);
 #endif
 
-	r = fireup(&bip, conf);
-	fclose(conf);
-	if (!r)
-		fatal("Not starting: error in config file.");
 
 	if (!conf_biphome) {
 		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
 		strcpy(conf_biphome, home);
 		strcat(conf_biphome, "/.bip");
 	}
+
+	if (!confpath) {
+		confpath = malloc(strlen(conf_biphome) + 1 +
+				strlen(S_CONF) + 1);
+		*confpath = 0;
+		strcat(confpath, conf_biphome);
+		strcat(confpath, "/");
+		strcat(confpath, S_CONF);
+	}
+	conf = fopen(confpath, "r");
+	if (!conf)
+		fatal("config file not found");
+
+	r = fireup(&bip, conf);
+	fclose(conf);
+	if (!r)
+		fatal("Not starting: error in config file.");
+
 	if (!conf_log_root) {
 		char *ap = "/logs";
 		conf_log_root = malloc(strlen(conf_biphome) + strlen(ap) + 1);
@@ -1577,8 +1571,8 @@ void adm_list_users(struct link_client *ic)
 			if (first) {
 				first = 0;
 			} else {
-				t_written += snprintf(buf + t_written, RET_STR_LEN
-					- t_written, ",");
+				t_written += snprintf(buf + t_written,
+						RET_STR_LEN - t_written, ",");
 				if (t_written >= RET_STR_LEN)
 					goto noroom;
 			}
