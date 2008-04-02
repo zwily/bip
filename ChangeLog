@@ -1,3 +1,53 @@
+commit 2cbf377cc2ce387ed2542a0c2c7a2b45c38ba58d
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Apr 2 23:41:27 2008 +0200
+
+    Fix default nick/user/realname check
+    
+    (debian bug 473999).
+    allow ssl_check_mode = none.
+    tweak HOME handling.
+    
+    Most of this is Yoann Guillot's work.
+
+commit e383c2b6f6c69bf71010621b5e9f2be875b92971
+Merge: d7430d4... 6cee8c7...
+Author: Loïc Gomez <opensource@kyoshiro.org>
+Date:   Sat Feb 16 13:50:40 2008 +0100
+
+    Merge branch 'master' of http://bip.t1r.net/bip
+
+commit 6cee8c728f4465e2cb185d2e32e1d6587c063a41
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Feb 16 11:33:00 2008 +0100
+
+    bip-release glitch fix.
+
+commit 303503cfc75634b891664afa00ccdad290e464bc
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Feb 16 11:32:13 2008 +0100
+
+    Post release leak fix. :)
+
+commit 2516a89ac873cc04dc2403b9b3400a5125cc6828
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Feb 15 23:59:35 2008 +0100
+
+    Add -git to version string.
+
+commit eb1dbb1023ca4d5c207936e1e7f39aa323eebe2c
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Feb 15 23:59:30 2008 +0100
+
+    Update src/version.h and Changelog for release.
+
+commit d7430d44cc780384507bef5bb3f1a4c3e1cc6315
+Author: Loïc Gomez <opensource@kyoshiro.org>
+Date:   Mon Feb 11 13:10:42 2008 +0100
+
+    SSL:
+    - make bip compile with --disable-ssl configuration
+
 commit ba4e70d6647cab63471391649adc7d5029d43228
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Mon Feb 4 18:38:09 2008 +0100
