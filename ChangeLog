@@ -1,3 +1,27 @@
+commit dbcd0aad07cf3f0ccdd2b59d827535e80d99c1e2
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Apr 5 11:44:15 2008 +0200
+
+    Fix build on systems without RLIMIT_AS (eg OpenBSD).
+
+commit f618d05af831cc7691b15a997dcfada0dd30a4cb
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Apr 2 23:56:21 2008 +0200
+
+    Merge bip.conf.5 fix from debian.
+
+commit 82dbe852f8833a875b0509d1532e4f8c9fb2725b
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Apr 2 23:49:51 2008 +0200
+
+    Add -git to version string.
+
+commit 37a44139d11dc48691bdd7ce1ea424c94fc241af
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Apr 2 23:49:48 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit 2cbf377cc2ce387ed2542a0c2c7a2b45c38ba58d
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Wed Apr 2 23:41:27 2008 +0200
