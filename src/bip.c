@@ -1065,6 +1065,7 @@ void check_rlimits()
 
 	cklim = 0;
 
+#ifdef RLIMIT_AS
 	r = getrlimit(RLIMIT_AS, &lt);
 	if (r) {
 		mylog(LOG_ERROR, "getrlimit(): failed with %s",
@@ -1076,6 +1077,7 @@ void check_rlimits()
 			cklim = 1;
 		}
 	}
+#endif
 
 	r = getrlimit(RLIMIT_CPU, &lt);
 	if (r) {
