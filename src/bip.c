@@ -848,7 +848,9 @@ static int validate_config(bip_t *bip)
 		}
 	}
 
-	if (strstr(conf_log_format, "%u") == NULL)
+	hash_it_init(&bip->users, &it);
+	hash_it_next(&it);
+	if (hash_it_item(&it) && !strstr(conf_log_format, "%u"))
 		mylog(LOG_WARN, "log_format does not contain %%u, all users'"
 			" logs will be mixed !");
 	return r;
