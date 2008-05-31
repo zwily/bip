@@ -1,3 +1,24 @@
+<jj>         home = getenv("HOME");
+<jj>         if (!home) {
+<jj>                 conf_die(&bip, "no $HOME !, do you live in a trailer ?");
+<jj> faudrait virer ca
+<nohar> pourquoi ?
+<jj> bah mon bip a pas de HOME
+<nohar> ?
+<nohar> un user sans home ?
+<jj> et je le definis juste pour pas qu'il conf_die
+<nohar> c'est possible ca ? :)
+<gromit> sarko
+<jj> env - bip
+<jj> le -s suffit
+<nohar> hum ok :)
+<nohar> c'est complètement élite "env -" :)
+<jj> faudrait ptet pouvoir specifier directement le oidentd_path
+<nohar> oui et documenter -s
+<jj> rajoute le -s au --help aussi a l'occasion
+<jj> voila
+
+
 - Allow to dump a config file, so that when the config is dynamically
    changed, we can find it back after bip restart.
 
