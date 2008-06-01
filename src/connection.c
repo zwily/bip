@@ -306,6 +306,8 @@ static int real_write_all(connection_t *cn)
 
 		switch (ret) {
 		case WRITE_ERROR:
+			/* we might as well free(line) here */
+			list_add_first(cn->outgoing, line);
 			return 1;
 		case WRITE_KEEP:
 			/* interrupted or not ready */
