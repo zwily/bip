@@ -1584,7 +1584,6 @@ static int irc_mode(struct link_server *server, struct line *line)
 			cur_arg++;
 			break;
 		case 'o':
-
 			if (cur_arg + 3 >= line->elemc)
 				return ERR_PROTOCOL;
 
@@ -1633,6 +1632,8 @@ static int irc_mode(struct link_server *server, struct line *line)
 		case 'h':
 		case 'H':
 		case 'e':
+		case 'q':
+		case 'I':
 			if (cur_arg + 3 >= line->elemc)
 				return ERR_PROTOCOL;
 			cur_arg++;
