@@ -2122,7 +2122,7 @@ void oidentd_dump(bip_t *bip)
 	char tag_written = 0;
 
 	if (stat(bip->oidentdpath, &stats) == -1) {
-		if (errno == ENOENT && (f = fopen(bip->oidentdpath, "w+")))
+		if (errno == ENOENT && (f = fopen(bip->oidentdpath, "w+"))) {
 			fchmod(fileno(f), 0644);
 		} else {
 			mylog(LOG_WARN, "Can't open/create %s",
