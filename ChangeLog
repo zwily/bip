@@ -1,3 +1,33 @@
+commit fc546e9db8ddf63b92d9cab5743148fb787d0953
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 10:27:52 2008 +0200
+
+    Support channel modes q and I (oftc)
+
+commit 604eb26ec6fa46b7840d03208da1bb8a1f78a727
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat May 31 12:31:30 2008 +0200
+
+    Merge jj's patch (debian bug 481488)
+
+commit d92ffeea09a7a725ec16e15735f4b18670878187
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat May 31 12:24:56 2008 +0200
+
+    Update todo
+
+commit 4b2a0eb935101e353d9d510f4a53da77c04c67bd
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Apr 5 11:55:42 2008 +0200
+
+    Add -git to version string.
+
+commit 39d2850ad722d5df4f4d42206b1d757bde690c84
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Apr 5 11:55:40 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit dbcd0aad07cf3f0ccdd2b59d827535e80d99c1e2
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Sat Apr 5 11:44:15 2008 +0200
