@@ -1,3 +1,9 @@
+commit 9ab6e6e125ba33aba50b261a2dc09ebf58c6db9c
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 11:11:08 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit 35e581244813c7db42c0267f0189c270a24c0577
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Sun Jun 1 11:11:03 2008 +0200
