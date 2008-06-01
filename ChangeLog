@@ -1,3 +1,27 @@
+commit 35e581244813c7db42c0267f0189c270a24c0577
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 11:11:03 2008 +0200
+
+    Make jj's patch build
+
+commit e863227099e4fdd60bf5c6a87e2a274d4c89d683
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 11:05:22 2008 +0200
+
+    Fix probable but rare memory leak
+
+commit 3f9d1621293176ca489c341ccde154eff8c28437
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 10:56:16 2008 +0200
+
+    Add -git to version string.
+
+commit 9fcbe8a6aa9ef113b721c97139f1e1d6af91a64c
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 10:56:12 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit fc546e9db8ddf63b92d9cab5743148fb787d0953
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Sun Jun 1 10:27:52 2008 +0200
