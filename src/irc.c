@@ -1345,15 +1345,29 @@ static int irc_353(struct link_server *server, struct line *line)
 	names = line->elemv[4];
 
 	while (*names) {
-		eon = names;
 		int ovmask = 0;
-		/* these should be exclusive */
-		if (*names == '@') {
-			names++;
-			ovmask |= NICKOP;
-		} else if (*names == '+') {
-			names++;
-			ovmask |= NICKVOICED;
+		int flagchars = 1;
+		/* some ircds (e.g. unreal) may display several flags for the
+                   same nick */
+		while (flagchars) {
+			switch (*names) {
+			case '@':
+				names++;
+				ovmask |= NICKOP;
+				break;
+			case '+':
+				names++;
+				ovmask |= NICKVOICED;
+				break;
+			case '%': /* unrealircd: halfop */
+			case '&': /* unrealircd: protect */
+			case '~': /* unrealircd: owner */
+				names++;
+				break;
+			default:
+				flagchars = 0;
+				break;
+			}
 		}
 		eon = names;
 		while (*eon && *eon != ' ')
