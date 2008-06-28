@@ -1,3 +1,21 @@
+commit babaac246d9d05a0c555823be16e8827561b2da8
+Author: Sebastian Hagen <sebastian_hagen@memespace.net>
+Date:   Tue Jun 24 20:27:12 2008 +0200
+
+    Do not freak out when seeing unreal ircd wierd name flags.
+
+commit 81239265b9732177bfa2de785399528e5c79317a
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 11:11:30 2008 +0200
+
+    Add -git to version string.
+
+commit 1fb6c2a164f7aeeb556015b68dfc80357b6723b2
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Jun 1 11:11:28 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit 9ab6e6e125ba33aba50b261a2dc09ebf58c6db9c
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Sun Jun 1 11:11:08 2008 +0200
