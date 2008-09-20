@@ -138,6 +138,9 @@ list_t *channel_name_list(struct channel *c)
 		if (n->ovmask & NICKOP) {
 			strncat(str, "@", NAMESIZE);
 			len++;
+		} else if (n->ovmask & NICKHALFOP) {
+			strncat(str, "%", NAMESIZE);
+			len++;
 		} else if (n->ovmask & NICKVOICED) {
 			strncat(str, "+", NAMESIZE);
 			len++;
@@ -1359,7 +1362,10 @@ static int irc_353(struct link_server *server, struct line *line)
 				names++;
 				ovmask |= NICKVOICED;
 				break;
-			case '%': /* unrealircd: halfop */
+			case '%': /* unrealircd and others: halfop */
+				names++;
+				ovmask |= NICKHALFOP;
+				break;
 			case '&': /* unrealircd: protect */
 			case '~': /* unrealircd: owner */
 				names++;
@@ -1609,6 +1615,20 @@ static int irc_mode(struct link_server *server, struct line *line)
 				nick->ovmask |= NICKOP;
 			else
 				nick->ovmask &= ~NICKOP;
+			cur_arg++;
+			break;
+		case 'h':
+			if (cur_arg + 3 >= line->elemc)
+				return ERR_PROTOCOL;
+
+			nick = hash_get(&channel->nicks,
+					line->elemv[cur_arg + 3]);
+			if (!nick)
+				return ERR_PROTOCOL;
+			if (add)
+				nick->ovmask |= NICKHALFOP;
+			else
+				nick->ovmask &= ~NICKHALFOP;
 			cur_arg++;
 			break;
 		case 'v':

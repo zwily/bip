@@ -37,7 +37,8 @@ struct server {
 #define server_new() calloc(sizeof(struct server), 1)
 
 #define NICKOP 1
-#define NICKVOICED 2
+#define NICKHALFOP (1<<1)
+#define NICKVOICED (1<<2)
 
 struct nick {
 	char *name;
