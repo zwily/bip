@@ -270,6 +270,9 @@ static int who_arg_to_ovmask(char *str)
 		ovmask |= NICKOP;
 	if (strchr(str, '+'))
 		ovmask |= NICKVOICED;
+	/* most likely useless */
+	if (strchr(str, '%'))
+		ovmask |= NICKHALFOP;
 	return ovmask;
 }
 
@@ -296,7 +299,10 @@ static int irc_352(struct link_server *server, struct line *line)
 		if (!nick)
 			return OK_COPY_WHO;
 
-		nick->ovmask = who_arg_to_ovmask(line->elemv[7]);
+		/* it seems halfop status is not reported in whoreply messages
+		 * do we really need to parse this ? */
+		nick->ovmask &= NICKHALFOP;
+		nick->ovmask |= who_arg_to_ovmask(line->elemv[7]);
 	}
 
 	return OK_COPY_WHO;
