@@ -1663,7 +1663,6 @@ static int irc_mode(struct link_server *server, struct line *line)
 			if (add)
 				cur_arg++;
 			break;
-		case 'h':
 		case 'H':
 		case 'e':
 		case 'q':
