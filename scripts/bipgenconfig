@@ -574,7 +574,7 @@ authorityKeyIdentifier=keyid:always";
 #		print "Existing $certout found, renamed to $certout.$ts\n";
 #	}
 
-	`openssl req -new -x509 -days 365 -nodes -config "$tmpcrt" -out "$certout" -keyout "$certout"`;
+	`openssl req -new -newkey rsa:4096 -x509 -days 365 -nodes -config "$tmpcrt" -out "$certout" -keyout "$certout"`;
 	# TODO check command status
 	`openssl x509 -subject -dates -fingerprint -noout -in "$certout"`;
 	# TODO check command status
