@@ -299,10 +299,13 @@ static int irc_352(struct link_server *server, struct line *line)
 		if (!nick)
 			return OK_COPY_WHO;
 
+#if 0
+		This causes more problems that it solves
 		/* it seems halfop status is not reported in whoreply messages
 		 * do we really need to parse this ? */
 		nick->ovmask &= NICKHALFOP;
 		nick->ovmask |= who_arg_to_ovmask(line->elemv[7]);
+#endif
 	}
 
 	return OK_COPY_WHO;
@@ -876,8 +879,10 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 		struct line *line)
 {
-	if (line->elemc >= 3)
-		log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
+	if (line->elemc < 3)
+		return OK_FORGET;
+
+	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
 	if (strcmp(line->elemv[1], "-bip") == 0)
 		return adm_bip(bip, ic, line, 1);
@@ -889,6 +894,8 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 
 static int irc_cli_notice(struct link_client *ic, struct line *line)
 {
+	if (line->elemc < 3)
+		return OK_FORGET;
 	log_cli_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
 				line->elemv[1], line->elemv[2]);
 	return OK_COPY_CLI;
