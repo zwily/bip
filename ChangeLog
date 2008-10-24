@@ -1,3 +1,45 @@
+commit cd82512f7a5f2d708c87e486cbf48ed2d933287b
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Oct 24 09:11:23 2008 +0200
+
+    Ignore nick channel status in whorepl. Fix crash on client empty privmsg.
+
+commit f6582a54b294d6fb1f68e6e732aff3b8702e70df
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Oct 24 00:08:47 2008 +0200
+
+    bipgenconfig: generate 4096 bit rsa keys
+
+commit 83b19b7c5a002a64259441f4dc4af743b560eafd
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Oct 8 01:04:14 2008 +0200
+
+    Hack around to make halfop support actually work.
+
+commit ed92b9a8bdc19587549de8d480d47a25511bddb4
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Oct 8 00:05:26 2008 +0200
+
+    Build fix
+
+commit 8ba984165b0fd464a9730c41e975f3b24f1da187
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Sep 20 14:48:16 2008 +0200
+
+    Implement quick halfop tracking support.
+
+commit ddacb833dd99df287853db3c97c71c17c491182b
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Jun 28 18:59:19 2008 +0200
+
+    Add -git to version string.
+
+commit 412cddaf519e78dba62afac3ecc28a0b85011ce8
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sat Jun 28 18:59:15 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit babaac246d9d05a0c555823be16e8827561b2da8
 Author: Sebastian Hagen <sebastian_hagen@memespace.net>
 Date:   Tue Jun 24 20:27:12 2008 +0200
