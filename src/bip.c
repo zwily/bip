@@ -1292,6 +1292,15 @@ int main(int argc, char **argv)
 	write(fd, buf, strlen(buf));
 	close(fd);
 
+#ifdef RLIMIT_NPROC
+	struct rlimit                rlim;
+
+	/* fork() is not need anymore, disable it */
+	rlim.rlim_max = rlim.rlim_cur = 0;
+	if (setrlimit(RLIMIT_NPROC, &rlim))
+		fatal("Could not drop fork priviledges");
+#endif
+
 	bip.listener = listen_new(conf_ip, conf_port, conf_css);
 	if (!bip.listener)
 		fatal("Could not create listening socket");
