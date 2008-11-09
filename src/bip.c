@@ -1953,7 +1953,7 @@ void adm_bip_help(struct link_client *ic, int admin, char *subhelp)
 	if (subhelp == NULL) {
 		if (admin) {
 			bip_notify(ic, "/BIP RELOAD # Re-read bip configuration "
-				"and apply changes. /!\\ VERY UNSTABLE !");
+				"and apply changes.");
 			bip_notify(ic, "/BIP INFO user <username> # show a user's "
 				"configuration");
 			bip_notify(ic, "/BIP LIST networks|users|connections|all_links"
