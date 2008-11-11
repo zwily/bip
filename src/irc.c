@@ -1304,7 +1304,7 @@ static int irc_332(struct link_server *server, struct line *line)
 static int irc_333(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	if (line->elemc != 5)
+	if (line->elemc < 3)
 		return ERR_PROTOCOL;
 
 	channel = hash_get(&server->channels, line->elemv[2]);
@@ -1313,10 +1313,15 @@ static int irc_333(struct link_server *server, struct line *line)
 		return OK_COPY;
 	if (channel->creator)
 		free(channel->creator);
-	channel->creator = strdup(line->elemv[3]);
 	if (channel->create_ts)
 		free(channel->create_ts);
-	channel->create_ts = strdup(line->elemv[4]);
+	if (line->elemc == 5) {
+		channel->creator = strdup(line->elemv[3]);
+		channel->create_ts = strdup(line->elemv[4]);
+	} else {
+		channel->creator = strdup("");
+		channel->create_ts = strdup("0");
+	}
 	log_init_topic_time(LINK(server)->log, channel->name, channel->creator,
 			channel->create_ts);
 	return OK_COPY;
