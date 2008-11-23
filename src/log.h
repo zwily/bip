@@ -23,7 +23,7 @@
 #include "util.h"
 
 #define MAX_PATH_LEN 1024
-#define LOGLINE_MAXLEN 512
+#define LOGLINE_MAXLEN 2048
 
 #define S_PRIVATES "privates"
 

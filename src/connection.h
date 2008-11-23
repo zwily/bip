@@ -39,7 +39,7 @@
 #include <openssl/bio.h>
 #endif
 
-#define CONN_BUFFER_SIZE 2048
+#define CONN_BUFFER_SIZE 8192
 
 #define CONN_OK 1
 #define CONN_TIMEOUT 2
