@@ -531,6 +531,21 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 		WRITE_LINE4(CONN(ic), P_SERV, "333", LINK(ic)->l_server->nick,
 				chan->name, chan->creator, chan->create_ts);
 
+	list_t *name_list = channel_name_list(chan);
+	char *s;
+	while ((s = list_remove_first(name_list))) {
+		char tmptype[2];
+		tmptype[0] = chan->type;
+		tmptype[1] = 0;
+		WRITE_LINE4(CONN(ic), P_SERV, "353", LINK(ic)->l_server->nick,
+				tmptype, chan->name, s);
+		free(s);
+	}
+	list_free(name_list);
+
+	WRITE_LINE3(CONN(ic), P_SERV, "366", LINK(ic)->l_server->nick,
+			chan->name, "End of /NAMES list.");
+
 	/* XXX: could be more efficient */
 	if (!user->backlog) {
 		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
@@ -550,21 +565,6 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 		mylog(LOG_DEBUG, "Nothing to backlog for %s/%s",
 			user->name, chan->name);
 	}
-
-	list_t *name_list = channel_name_list(chan);
-	char *s;
-	while ((s = list_remove_first(name_list))) {
-		char tmptype[2];
-		tmptype[0] = chan->type;
-		tmptype[1] = 0;
-		WRITE_LINE4(CONN(ic), P_SERV, "353", LINK(ic)->l_server->nick,
-				tmptype, chan->name, s);
-		free(s);
-	}
-	list_free(name_list);
-
-	WRITE_LINE3(CONN(ic), P_SERV, "366", LINK(ic)->l_server->nick,
-			chan->name, "End of /NAMES list.");
 }
 
 static void write_init_string(connection_t *c, struct line *line, char *nick)
