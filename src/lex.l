@@ -115,9 +115,7 @@ list_t *parse_conf(FILE *file, int *err)
 "client_side_ssl_pem"	{ return LEX_CSS_PEM; }
 \"[^"]*\" 		{
 				size_t len = strlen(yytext) - 2;
-				yylval.string = malloc(len + 1);
-				if (!yylval.string)
-					fatal("malloc");
+				yylval.string = bip_malloc(len + 1);
 				memcpy(yylval.string, yytext + 1, len);
 				yylval.string[len] = 0;
 				return LEX_STRING;

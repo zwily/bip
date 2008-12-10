@@ -27,6 +27,17 @@
 extern int conf_log_level;
 extern int conf_log_system;
 extern int errno;
+extern FILE *conf_global_log_file;
+
+void *bip_malloc(size_t size)
+{
+	void *r = malloc(size);
+	if (!r) {
+		fprintf(conf_global_log_file, 1, strlen("malloc"), "malloc");
+		exit(28);
+	}
+	return r;
+}
 
 /*
  * <nick> ::= <letter> { <letter> | <number> | <special> }
@@ -103,8 +114,6 @@ char *checkmode2text(int v)
 	}
 }
 #endif
-
-extern FILE *conf_global_log_file;
 
 void _mylog(int level, char *fmt, va_list ap)
 {
@@ -196,9 +205,7 @@ void list_init(list_t *l, int (*cmp)(void *, void *))
 list_t *list_new(int (*cmp)(void *, void *))
 {
 	list_t *l;
-	l = malloc(sizeof(list_t));
-	if (!l)
-		fatal("malloc");
+	l = bip_malloc(sizeof(list_t));
 	list_init(l, cmp);
 	return l;
 }
@@ -206,9 +213,7 @@ list_t *list_new(int (*cmp)(void *, void *))
 static struct list_item *list_item(void *ptr)
 {
 	struct list_item *l;
-	l = malloc(sizeof(struct list_item));
-	if (!l)
-		fatal("malloc");
+	l = bip_malloc(sizeof(struct list_item));
 	l->ptr = ptr;
 	l->next = NULL;
 	l->prev = NULL;
@@ -475,9 +480,7 @@ void hash_free(hash_t *h)
 hash_t *hash_new(int options)
 {
 	hash_t *h;
-	h = malloc(sizeof(hash_t));
-	if (!h)
-		fatal("malloc");
+	h = bip_malloc(sizeof(hash_t));
 	hash_init(h, options);
 	return h;
 }
@@ -500,9 +503,7 @@ void hash_insert(hash_t *hash, char *key, void *ptr)
 	if (hash_get(hash, key))
 		fatal("Element with key %s already in hash %x\n", key, hash);
 
-	it = malloc(sizeof(struct hash_item));
-	if (!it)
-		fatal("malloc");
+	it = bip_malloc(sizeof(struct hash_item));
 	it->key = strdup(key);
 	it->item = ptr;
 	list_add_first(&hash->lists[hash_func(key)], it);

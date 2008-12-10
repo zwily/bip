@@ -76,7 +76,7 @@ int check_dir_r(char *dirname)
 
 	mylog(LOG_DEBUGVERB, "Recursive check of %s engaged", dirname);
 	tmp = dirname;
-	dir = (char *)malloc(sizeof(char) * (len + 1));
+	dir = (char *)bip_malloc(len + 1);
 	while (*tmp) {
 		int slash_ok = 1;
 		while (*tmp == '/') {
@@ -140,9 +140,7 @@ char *log_build_filename(log_t *logdata, char *destination)
 	strtolower(dest);
 
 	log_format_len = strlen(conf_log_format);
-	logfile = (char*)malloc((MAX_PATH_LEN + 1)*sizeof(char));
-	if (!logfile)
-		fatal("out of memory");
+	logfile = (char *)bip_malloc(MAX_PATH_LEN + 1);
 
 	time(&s);
 	now = localtime(&s);
@@ -232,9 +230,7 @@ static int log_add_file(log_t *logdata, char *destination, char *filename)
 			return 0;
 		}
 
-		lf = malloc(sizeof(logfile_t));
-		if (!lf)
-			fatal("out of memory");
+		lf = bip_malloc(sizeof(logfile_t));
 		lf->file = f;
 		lf->filename = strdup(filename);
 		if (!lf->filename)
@@ -557,7 +553,7 @@ void log_init_topic_time(log_t *logdata, char *channel, char *who, char *when)
 
 	seconds = atoi(when);
 	time = localtime(&seconds);
-	timestr = (char*)malloc(sizeof(char) * (50 + 1));
+	timestr = (char *)bip_malloc(50 + 1);
 	timestr[0] = '\0';
 	if (time)
 		strftime(timestr, 50, "%A %d %B %Y, %H:%M:%S", time);
@@ -574,8 +570,8 @@ void log_mode(log_t *logdata, char *ircmask, char *channel, char *modes,
 		char **modargv, unsigned modargc)
 {
 	unsigned i;
-	char *tmpbuf = malloc(LOGLINE_MAXLEN + 1);
-	char *tmpbuf2 = malloc(LOGLINE_MAXLEN + 1);
+	char *tmpbuf = bip_malloc(LOGLINE_MAXLEN + 1);
+	char *tmpbuf2 = bip_malloc(LOGLINE_MAXLEN + 1);
 	char *tmp;
 	snprintf(tmpbuf, LOGLINE_MAXLEN, "%s -!- mode/%s [%s", timestamp(),
 			channel, modes);
@@ -853,11 +849,9 @@ char *log_beautify(log_t *logdata, char *buf, char *dest)
 	if (lom == 0)
 		return _log_wrap(dest, buf);
 
-	p = ret = (char *)malloc(
+	p = ret = (char *)bip_malloc(
 		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	2 + lom + 3
 		+ action * (2 + strlen("ACTION ")) + out * strlen(PMSG_ARROW));
-	if (!p)
-		fatal("out of memory");
 
 	*p++ = ':';
 
@@ -947,7 +941,7 @@ char *log_backread(log_t *logdata, char *destination, int *skip)
 		return NULL;
 	}
 
-	buf = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
+	buf = (char *)bip_malloc(LOGLINE_MAXLEN + 1);
 
 next_file:
 	/* check the files containing data to backlog */
@@ -1090,7 +1084,7 @@ static char *_log_wrap(char *dest, char *line)
 	char *buf;
 	size_t count;
 
-	buf = malloc(LOGLINE_MAXLEN + 1);
+	buf = bip_malloc(LOGLINE_MAXLEN + 1);
 	count = snprintf(buf, LOGLINE_MAXLEN + 1,
 			":" P_IRCMASK " PRIVMSG %s :%s\r\n", dest, line);
 	if (count >= LOGLINE_MAXLEN + 1) {
@@ -1186,7 +1180,7 @@ log_t *log_new(struct user *user, char *network)
 	logdata->user = user;
 	logdata->network = strdup(network);
 	hash_init(&logdata->logfgs, HASH_NOCASE);
-	logdata->buffer = (char *)malloc((LOGLINE_MAXLEN + 1) * sizeof(char));
+	logdata->buffer = (char *)bip_malloc(LOGLINE_MAXLEN + 1);
 	logdata->buffer[LOGLINE_MAXLEN - 1] = 0; // debug
 	logdata->buffer[LOGLINE_MAXLEN] = 0;
 	if (!logdata->user || !logdata->network || !logdata->buffer)

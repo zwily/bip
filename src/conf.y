@@ -20,6 +20,8 @@ extern int yylex (void);
 extern char *yytext;
 extern int linec;
 
+#define YYMALLOC bip_malloc
+
 int yywrap()
 {
 	return 1;

@@ -479,7 +479,7 @@ static void data_find_lines(connection_t *cn)
 		if (ssz >= 1) {
 			if (p[len - 1] == '\r')
 				ssz--;
-			buf = malloc(ssz + 1);
+			buf = bip_malloc(ssz + 1);
 			memcpy(buf, p + lastlen, ssz);
 			buf[ssz] = 0;
 
@@ -891,7 +891,7 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 
 	cn->connected = CONN_ERROR;
 	cdata = (struct connecting_data *)
-		malloc(sizeof(struct connecting_data));
+		bip_malloc(sizeof(struct connecting_data));
 	if (!cdata)
 		fatal("Out of memory.");
 	cdata->dst = cdata->src = cdata->cur = NULL;
@@ -998,7 +998,7 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	list_t *outgoing;
 
 	conn = (connection_t *)calloc(sizeof(connection_t), 1);
-	incoming = (char*)malloc(sizeof(char) * CONN_BUFFER_SIZE);
+	incoming = (char *)bip_malloc(CONN_BUFFER_SIZE);
 	outgoing = list_new(NULL);
 
 	conn->anti_flood = anti_flood;
@@ -1586,9 +1586,7 @@ static char *socket_ip(int fd, int remote)
 		return NULL;
 	}
 
-	ip = malloc(65);
-	if (ip == NULL)
-		fatal("malloc");
+	ip = bip_malloc(65);
 
 	switch (addr.sa_family) {
 	case AF_INET:

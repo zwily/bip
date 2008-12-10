@@ -123,5 +123,6 @@ char *hrtime(time_t t);
 char *checkmode2text(int v);
 #endif
 #define bool2text(v) ((v) ? "true" : "false")
+void *bip_malloc(size_t size);
 
 #endif

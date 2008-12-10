@@ -97,9 +97,7 @@ char *nick_from_ircmask(char *mask)
 	if (!*nick)
 		return strdup(mask);
 	len = nick - mask;
-	ret = malloc(len + 1);
-	if (!ret)
-		fatal("malloc");
+	ret = bip_malloc(len + 1);
 	memcpy(ret, mask, len);
 	ret[len] = 0;
 	return ret;
@@ -115,7 +113,7 @@ list_t *channel_name_list(struct channel *c)
 	ret = list_new(NULL);
 
 	size_t len = 0;
-	char *str = malloc(NAMESIZE);
+	char *str = bip_malloc(NAMESIZE);
 	*str = 0;
 	for (hash_it_init(&c->nicks, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)){
@@ -127,7 +125,7 @@ list_t *channel_name_list(struct channel *c)
 		if (len + strlen(n->name) + 2 + (n->ovmask ? 1 : 0)
 				>= NAMESIZE) {
 			list_add_last(ret, str);
-			str = malloc(s);
+			str = bip_malloc(s);
 			*str = 0;
 			len = 0;
 		}
@@ -247,7 +245,7 @@ static void irc_server_connected(struct link_server *server)
 	for (list_it_init(&LINK(server)->on_connect_send, &itocs);
 				list_it_item(&itocs); list_it_next(&itocs)) {
                 ssize_t len = strlen(list_it_item(&itocs)) + 2;
-                char *str = malloc(len + 1);
+                char *str = bip_malloc(len + 1);
                 sprintf(str, "%s\r\n", (char *)list_it_item(&itocs));
                 write_line(CONN(server), str);
                 free(str);
@@ -393,7 +391,7 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 	} else if (strcmp(line->elemv[0], "433") == 0) {
 		if (LINK(server)->s_state != IRCS_CONNECTED) {
 			size_t nicklen = strlen(server->nick);
-			char *newnick = malloc(nicklen + 2);
+			char *newnick = bip_malloc(nicklen + 2);
 			strcpy(newnick, server->nick);
 			if (strlen(server->nick) < 9) {
 				strcat(newnick, "`");
@@ -518,7 +516,7 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	if (!user)
 		fatal("irc_send_join: No user associated");
 
-	ircmask = malloc(strlen(LINK(ic)->l_server->nick) +
+	ircmask = bip_malloc(strlen(LINK(ic)->l_server->nick) +
 			strlen("!bip@bip.bip.bip") + 1);
 	strcpy(ircmask, LINK(ic)->l_server->nick);
 	strcat(ircmask, "!bip@bip.bip.bip");
@@ -646,7 +644,7 @@ static char *get_str_elem(char *str, int num)
 		}
 		if (c - cur < 1)
 			return NULL;
-		ret = malloc(c - cur + 1);
+		ret = bip_malloc(c - cur + 1);
 		strncpy(ret, cur, c - cur);
 		ret[c - cur] = 0;
 		return ret;
@@ -655,7 +653,7 @@ static char *get_str_elem(char *str, int num)
 		c = str + strlen(str);
 		if (c - cur < 1)
 			return NULL;
-		ret = malloc(c - cur + 1);
+		ret = bip_malloc(c - cur + 1);
 		strncpy(ret, cur, c - cur);
 		ret[c - cur] = 0;
 		return ret;
@@ -1009,7 +1007,7 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 
 	while ((e = strchr(s, ','))) {
 		size_t len = e - s;
-		char *p = malloc(len + 1);
+		char *p = bip_malloc(len + 1);
 		size_t klen;
 		char *kp = NULL;
 
@@ -1021,7 +1019,7 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 				if (!ke)
 					ke = ks + strlen(ks);
 				klen = ke - ks;
-				kp = malloc(klen + 1);
+				kp = bip_malloc(klen + 1);
 				memcpy(kp, ks, klen);
 				kp[klen] = 0;
 				if (*ke == 0)
@@ -1168,7 +1166,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 	if (len == 0)
 		return;
 
-	tmp = malloc(len);
+	tmp = bip_malloc(len);
 
 	snprintf(tmp, len, " -> %s", line->elemv[2]);
 	tmp[len - 1] = 0;
@@ -1398,15 +1396,11 @@ static int irc_353(struct link_server *server, struct line *line)
 			eon++;
 
 		len = eon - names;
-		tmp = malloc(len + 1);
-		if (!tmp)
-			fatal("malloc");
+		tmp = bip_malloc(len + 1);
 		memcpy(tmp, names, len);
 		tmp[len] = 0;
 
-		nick = malloc(sizeof(struct nick));
-		if (!nick)
-			fatal("malloc");
+		nick = bip_malloc(sizeof(struct nick));
 		nick->name = tmp;
 		nick->ovmask = ovmask;
 
@@ -1698,7 +1692,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 
 static char *irc_timestamp(void)
 {
-	char *ts = malloc(21);
+	char *ts = bip_malloc(21);
 	snprintf(ts, 20, "%ld", (long int)time(NULL));
 	return ts;
 }
@@ -2191,10 +2185,7 @@ void oidentd_dump(bip_t *bip)
 			return;
 		}
 
-		content = (char *)malloc(stats.st_size + 1);
-
-		if (content == NULL)
-			fatal("out of memory");
+		content = (char *)bip_malloc(stats.st_size + 1);
 
 		if (fread(content, 1, stats.st_size, f) !=
 				(size_t)stats.st_size) {

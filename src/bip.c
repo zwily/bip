@@ -75,7 +75,7 @@ static void hash_binary(char *hex, unsigned char **password, unsigned int *seed)
 	if (strlen(hex) != 40)
 		fatal("Incorrect password format %s\n", hex);
 
-	md5 = malloc(20);
+	md5 = bip_malloc(20);
 	for (i = 0; i < 20; i++) {
 		sscanf(hex + 2 * i, "%02x", &buf);
 		md5[i] = buf;
@@ -133,7 +133,7 @@ void conf_die(bip_t *bip, char *fmt, ...)
 	va_list ap;
 	int size = ERRBUFSZ;
 	int n;
-	char *error = malloc(size);
+	char *error = bip_malloc(size);
 
 	for (;;) {
 		va_start(ap, fmt);
@@ -1201,7 +1201,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 #ifdef HAVE_OIDENTD
-	bip.oidentdpath = malloc(strlen(home) + 1 +
+	bip.oidentdpath = bip_malloc(strlen(home) + 1 +
 			strlen(OIDENTD_FILENAME) + 1);
 	strcpy(bip.oidentdpath, home);
 	strcat(bip.oidentdpath, "/");
@@ -1210,13 +1210,13 @@ int main(int argc, char **argv)
 
 
 	if (!conf_biphome) {
-		conf_biphome = malloc(strlen(home) + strlen("/.bip") + 1);
+		conf_biphome = bip_malloc(strlen(home) + strlen("/.bip") + 1);
 		strcpy(conf_biphome, home);
 		strcat(conf_biphome, "/.bip");
 	}
 
 	if (!confpath) {
-		confpath = malloc(strlen(conf_biphome) + 1 +
+		confpath = bip_malloc(strlen(conf_biphome) + 1 +
 				strlen(S_CONF) + 1);
 		*confpath = 0;
 		strcat(confpath, conf_biphome);
@@ -1234,14 +1234,16 @@ int main(int argc, char **argv)
 
 	if (!conf_log_root) {
 		char *ap = "/logs";
-		conf_log_root = malloc(strlen(conf_biphome) + strlen(ap) + 1);
+		conf_log_root = bip_malloc(strlen(conf_biphome) +
+				strlen(ap) + 1);
 		strcpy(conf_log_root, conf_biphome);
 		strcat(conf_log_root, ap);
 		mylog(LOG_INFO, "Default log root: %s", conf_log_root);
 	}
 	if (!conf_pid_file) {
 		char *pid = "/bip.pid";
-		conf_pid_file = malloc(strlen(conf_biphome) + strlen(pid) + 1);
+		conf_pid_file = bip_malloc(strlen(conf_biphome) +
+				strlen(pid) + 1);
 		strcpy(conf_pid_file, conf_biphome);
 		strcat(conf_pid_file, pid);
 		mylog(LOG_INFO, "Default pid file: %s", conf_pid_file);
@@ -1254,7 +1256,7 @@ int main(int argc, char **argv)
 
 		if (!conf_ssl_certfile) {
 			char *ap = "/bip.pem";
-			conf_ssl_certfile = malloc(strlen(conf_biphome) +
+			conf_ssl_certfile = bip_malloc(strlen(conf_biphome) +
 					strlen(ap) + 1);
 			strcpy(conf_ssl_certfile, conf_biphome);
 			strcat(conf_ssl_certfile, ap);
@@ -2082,7 +2084,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			}
 			line->elemv = realloc(line->elemv,
 					(line->elemc + 1) * sizeof(char *));
-			line->elemv[line->elemc] = malloc(slen + 1);
+			line->elemv[line->elemc] = bip_malloc(slen + 1);
 			memcpy(line->elemv[line->elemc], ptr, slen);
 			line->elemv[line->elemc][slen] = 0;
 			line->elemc++;
@@ -2094,7 +2096,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			line->elemv = realloc(line->elemv,
 				      (line->elemc + 1) * sizeof(char *));
 			slen = eptr - ptr;
-			line->elemv[line->elemc] = malloc(slen + 1);
+			line->elemv[line->elemc] = bip_malloc(slen + 1);
 			memcpy(line->elemv[line->elemc], ptr, slen);
 			line->elemv[line->elemc][slen] = 0;
 			line->elemc++;

@@ -22,9 +22,7 @@ void irc_line_init(struct line *l)
 struct line *irc_line_new()
 {
 	struct line *l;
-	l = malloc(sizeof(struct line));
-	if (!l)
-		fatal("malloc");
+	l = bip_malloc(sizeof(struct line));
 	irc_line_init(l);
 	return l;
 }
@@ -53,7 +51,7 @@ struct line *irc_line_dup(struct line *line)
 	struct line *nl = irc_line_new();
 	nl->origin = line->origin ? strdup(line->origin) : NULL;
 	nl->elemc = line->elemc;
-	nl->elemv = malloc(sizeof(char *) * line->elemc);
+	nl->elemv = bip_malloc(sizeof(char *) * line->elemc);
 	for (i = 0; i < line->elemc; i++)
 		nl->elemv[i] = strdup(line->elemv[i]);
 	nl->colon = line->colon;
@@ -86,7 +84,7 @@ char *irc_line_to_string(struct line *l)
 		len += strlen(l->elemv[i]) + 1;
 	len += 1; /* remove one trailing space and add \r\n */
 	len++; /* last args ":" */
-	ret = malloc(len + 1);
+	ret = bip_malloc(len + 1);
 	ret[0] = 0;
 
 	if (l->origin) {
@@ -127,9 +125,7 @@ struct line *irc_line(char *str)
 		if (!*space)
 			return NULL;
 		len = space - str - 1; /* leading ':' */
-		line->origin = malloc(len + 1);
-		if (!line->origin)
-			fatal("malloc");
+		line->origin = bip_malloc(len + 1);
 		memcpy(line->origin, str + 1, len);
 		line->origin[len] = 0;
 		str = space;
@@ -158,9 +154,7 @@ struct line *irc_line(char *str)
 				space++;
 		}
 		len = space - str;
-		tmp = line->elemv[curelem] = malloc(len + 1);
-		if (!tmp)
-			fatal("malloc");
+		tmp = line->elemv[curelem] = bip_malloc(len + 1);
 		memcpy(tmp, str, len);
 		tmp[len] = 0;
 		if (curelem == 0)

@@ -380,14 +380,14 @@ unsigned char *chash_double(char *str, unsigned int seed)
 
 	length = strlen(str);
 	length += 4;
-	ptr = malloc(length);
+	ptr = bip_malloc(length);
 	ptr[0] = seed >> 24 & 0xff;
 	ptr[1] = seed >> 16 & 0xff;
 	ptr[2] = seed >> 8 & 0xff;
 	ptr[3] = seed & 0xff;
 	memcpy(ptr + 4, str, length - 4);
 
-	md5 = malloc(16 + 4);
+	md5 = bip_malloc(16 + 4);
 	memcpy(md5, ptr, 4);
 
 	md5_starts(&ctx);
