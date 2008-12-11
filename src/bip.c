@@ -147,7 +147,7 @@ void conf_die(bip_t *bip, char *fmt, ...)
 			size = n + 1;
 		else
 			size *= 2;
-		error = realloc(error, size);
+		error = bip_realloc(error, size);
 	}
 	va_start(ap, fmt);
 	_mylog(LOG_ERROR, fmt, ap);
@@ -341,7 +341,7 @@ static int add_network(bip_t *bip, list_t *data)
 		n->serverv = NULL;
 		n->serverc = 0;
 	} else {
-		n = calloc(sizeof(struct network), 1);
+		n = bip_calloc(sizeof(struct network), 1);
 		hash_insert(&bip->networks, name, n);
 	}
 
@@ -356,7 +356,7 @@ static int add_network(bip_t *bip, list_t *data)
 			break;
 #endif
 		case LEX_SERVER:
-			n->serverv = realloc(n->serverv, (n->serverc + 1)
+			n->serverv = bip_realloc(n->serverv, (n->serverc + 1)
 						* sizeof(struct server));
 			n->serverc++;
 			memset(&n->serverv[n->serverc - 1], 0,
@@ -667,7 +667,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 	}
 	u = hash_get(&bip->users, name);
 	if (!u) {
-		u = calloc(sizeof(struct user), 1);
+		u = bip_calloc(sizeof(struct user), 1);
 		hash_insert(&bip->users, name, u);
 		hash_init(&u->connections, HASH_NOCASE);
 		u->admin = 0;
@@ -2073,7 +2073,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 				ptr++;
 				continue;
 			}
-			line->elemv = realloc(line->elemv,
+			line->elemv = bip_realloc(line->elemv,
 					(line->elemc + 1) * sizeof(char *));
 			line->elemv[line->elemc] = bip_malloc(slen + 1);
 			memcpy(line->elemv[line->elemc], ptr, slen);
@@ -2084,7 +2084,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 		eptr = ptr + strlen(ptr);
 		slen = eptr - ptr;
 		if (slen != 0) {
-			line->elemv = realloc(line->elemv,
+			line->elemv = bip_realloc(line->elemv,
 				      (line->elemc + 1) * sizeof(char *));
 			slen = eptr - ptr;
 			line->elemv[line->elemc] = bip_malloc(slen + 1);

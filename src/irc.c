@@ -75,9 +75,7 @@ int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line);
 struct channel *channel_new(const char *name)
 {
 	struct channel *chan;
-	chan = calloc(sizeof(struct channel), 1);
-	if (!chan)
-		fatal("calloc");
+	chan = bip_calloc(sizeof(struct channel), 1);
 	chan->name = strdup(name);
 	hash_init(&chan->nicks, HASH_NOCASE);
 	return chan;
@@ -351,10 +349,6 @@ void rotate_who_client(struct link *link)
 	}
 }
 
-/*
- * parses:join part mode kick kill privmsg quit nick names
- * returns: -1 invalid protocol
- */
 int irc_dispatch_server(bip_t *bip, struct link_server *server,
 		struct line *line)
 {
@@ -584,10 +578,8 @@ static void bind_to_link(struct link *l, struct link_client *ic)
 
 	LINK(ic) = l;
 	l->l_clientc++;
-	l->l_clientv = realloc(l->l_clientv, l->l_clientc *
+	l->l_clientv = bip_realloc(l->l_clientv, l->l_clientc *
 			sizeof(struct link_client *));
-	if (!l->l_clientv)
-		fatal("realloc");
 	l->l_clientv[i] = ic;
 }
 
@@ -612,14 +604,12 @@ void unbind_from_link(struct link_client *ic)
 		l->l_clientv[i - 1] = l->l_clientv[i];
 
 	l->l_clientc--;
-	l->l_clientv = realloc(l->l_clientv, l->l_clientc *
+	l->l_clientv = bip_realloc(l->l_clientv, l->l_clientc *
 			sizeof(struct link_client *));
-	if (l->l_clientc == 0) { /* realloc was equiv to free() */
+	if (l->l_clientc == 0) { /* bip_realloc was equiv to free() */
 		l->l_clientv = NULL;
 		return;
 	}
-	if (!l->l_clientv)
-		fatal("realloc");
 }
 
 int irc_cli_bip(bip_t *bip, struct link_client *ic, struct line *line)
@@ -1272,9 +1262,7 @@ static int irc_join(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
 
-	nick = calloc(sizeof(struct nick), 1);
-	if (!nick)
-		fatal("calloc");
+	nick = bip_calloc(sizeof(struct nick), 1);
 	nick->name = s_nick;	/* not freeing s_nick */
 	hash_insert(&channel->nicks, s_nick, nick);
 	return OK_COPY;
@@ -1529,7 +1517,7 @@ static void mode_add_letter_uniq(struct link_server *s, char c)
 		if (s->user_mode[i] == c)
 			return;
 	}
-	s->user_mode = realloc(s->user_mode, s->user_mode_len + 1);
+	s->user_mode = bip_realloc(s->user_mode, s->user_mode_len + 1);
 	s->user_mode[s->user_mode_len++] = c;
 }
 
@@ -1541,7 +1529,8 @@ static void mode_remove_letter(struct link_server *s, char c)
 			for (; i < s->user_mode_len - 1; i++)
 				s->user_mode[i] = s->user_mode[i + 1];
 			s->user_mode_len--;
-			s->user_mode = realloc(s->user_mode, s->user_mode_len);
+			s->user_mode = bip_realloc(s->user_mode,
+					s->user_mode_len);
 			return;
 		}
 	}
@@ -1935,7 +1924,7 @@ static struct link_client *irc_accept_new(connection_t *conn)
 	if (!newconn)
 		return NULL;
 
-	ircc = calloc(sizeof(struct link_client), 1);
+	ircc = bip_calloc(sizeof(struct link_client), 1);
 	CONN(ircc) = newconn;
 	TYPE(ircc) = IRC_TYPE_LOGING_CLIENT;
 	CONN(ircc)->user_data = ircc;
@@ -2037,7 +2026,7 @@ struct link_client *irc_client_new(void)
 {
 	struct link_client *c;
 
-	c = calloc(sizeof(struct link_client), 1);
+	c = bip_calloc(sizeof(struct link_client), 1);
 	list_init(&c->who_queue, list_ptr_cmp);
 
 	return c;
@@ -2047,9 +2036,7 @@ struct link_server *irc_server_new(struct link *link, connection_t *conn)
 {
 	struct link_server *s;
 
-	s = calloc(sizeof(struct link_server), 1);
-	if (!s)
-		fatal("calloc");
+	s = bip_calloc(sizeof(struct link_server), 1);
 
 	TYPE(s) = IRC_TYPE_SERVER;
 	hash_init(&s->channels, HASH_NOCASE);
@@ -2499,9 +2486,7 @@ void irc_client_free(struct link_client *cli)
 struct link *irc_link_new()
 {
 	struct link *link;
-	link = calloc(sizeof(struct link), 1);
-	if (!link)
-		fatal("calloc");
+	link = bip_calloc(sizeof(struct link), 1);
 
 	link->l_server = NULL;
 	hash_init(&link->chan_infos, HASH_NOCASE);

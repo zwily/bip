@@ -247,9 +247,7 @@ static int log_add_file(log_t *logdata, char *destination, char *filename)
 	lfg = hash_get(&logdata->logfgs, destination);
 
 	if (!lfg) {
-		lfg = calloc(sizeof(logfilegroup_t), 1);
-		if (!lfg)
-			fatal("out of memory");
+		lfg = bip_calloc(sizeof(logfilegroup_t), 1);
 		list_init(&lfg->file_group, NULL);
 		lfg->name = strdup(destination);
 		if (!lfg->name)
@@ -1174,9 +1172,7 @@ log_t *log_new(struct user *user, char *network)
 {
 	log_t *logdata;
 
-	logdata = (log_t*)calloc(sizeof(log_t), 1);
-	if (!logdata)
-		fatal("out of memory");
+	logdata = (log_t *)bip_calloc(sizeof(log_t), 1);
 	logdata->user = user;
 	logdata->network = strdup(network);
 	hash_init(&logdata->logfgs, HASH_NOCASE);

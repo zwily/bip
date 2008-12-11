@@ -124,5 +124,7 @@ char *checkmode2text(int v);
 #endif
 #define bool2text(v) ((v) ? "true" : "false")
 void *bip_malloc(size_t size);
+void *bip_calloc(size_t nmemb, size_t size);
+void *bip_realloc(void *ptr, size_t size);
 
 #endif

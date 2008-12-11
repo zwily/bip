@@ -61,9 +61,7 @@ struct line *irc_line_dup(struct line *line)
 void _irc_line_append(struct line *l, char *s)
 {
 	l->elemc++;
-	l->elemv = realloc(l->elemv, l->elemc * sizeof(char *));
-	if (!l)
-		fatal("realloc");
+	l->elemv = bip_realloc(l->elemv, l->elemc * sizeof(char *));
 	l->elemv[l->elemc - 1] = s;
 }
 
@@ -114,9 +112,7 @@ struct line *irc_line(char *str)
 	size_t len;
 	int curelem = 0;
 
-	line = calloc(sizeof(struct line), 1);
-	if (!line)
-		fatal("calloc");
+	line = bip_calloc(sizeof(struct line), 1);
 	if (str[0] == ':') {
 		space = str + 1;
 
@@ -138,10 +134,8 @@ struct line *irc_line(char *str)
 		char *tmp;
 
 		line->elemc++;
-		line->elemv = realloc(line->elemv,
+		line->elemv = bip_realloc(line->elemv,
 				line->elemc * sizeof(char *));
-		if (!line->elemv)
-			fatal("realloc");
 
 		space = str;
 		if (*space == ':') {

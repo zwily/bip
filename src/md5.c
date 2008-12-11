@@ -348,29 +348,6 @@ int main( int argc, char *argv[] )
 
 #include <stdlib.h>
 
-/*
-unsigned char *md5dup(unsigned char *data, size_t len)
-{
-	md5_context ctx;
-	unsigned char *md5 = malloc(16);
-	md5_starts(&ctx);
-	md5_update(&ctx, data, len);
-	md5_finish(&ctx, md5);
-	return md5;
-}
-
-unsigned char *strmd5(char *str)
-{
-	size_t length;
-	if (!str)
-		return NULL;
- 	length = strlen(str);
-	if (length == 0)
-		return NULL;
-	return md5dup((unsigned char*)str, length);
-}
-*/
-
 unsigned char *chash_double(char *str, unsigned int seed)
 {
 	size_t length;

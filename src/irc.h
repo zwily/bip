@@ -34,7 +34,7 @@ struct server {
 	unsigned short port;
 };
 
-#define server_new() calloc(sizeof(struct server), 1)
+#define server_new() bip_calloc(sizeof(struct server), 1)
 
 #define NICKOP 1
 #define NICKHALFOP (1<<1)
@@ -216,7 +216,7 @@ struct chan_info {
 	int backlog;
 };
 
-#define chan_info_new() calloc(sizeof(struct chan_info), 1)
+#define chan_info_new() bip_calloc(sizeof(struct chan_info), 1)
 
 struct link_server {
 	struct link_connection _link_c;

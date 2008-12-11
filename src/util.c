@@ -39,6 +39,26 @@ void *bip_malloc(size_t size)
 	return r;
 }
 
+void *bip_calloc(size_t nmemb, size_t size)
+{
+	void *r = calloc(nmemb, size);
+	if (!r) {
+		fprintf(conf_global_log_file, 1, strlen("calloc"), "calloc");
+		exit(28);
+	}
+	return r;
+}
+
+void *bip_realloc(void *ptr, size_t size)
+{
+	void *r = realloc(ptr, size);
+	if (size > 0 && ptr == NULL) {
+		fprintf(conf_global_log_file, 1, strlen("realloc"), "realloc");
+		exit(28);
+	}
+	return r;
+}
+
 /*
  * <nick> ::= <letter> { <letter> | <number> | <special> }
  * <special> ::= '-' | '[' | ']' | '\' | '`' | '^' | '{' | '}'
