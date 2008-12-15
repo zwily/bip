@@ -334,7 +334,7 @@ void write_line_fast(connection_t *cn, char *line)
 	r = write_socket(cn, line);
 	switch (r) {
 	case WRITE_KEEP:
-		list_add_first(cn->outgoing, strdup(line));
+		list_add_first(cn->outgoing, bip_strdup(line));
 		break;
 	case WRITE_ERROR:
 		cn->connected = CONN_ERROR;
@@ -349,7 +349,7 @@ void write_line_fast(connection_t *cn, char *line)
 
 void write_line(connection_t *cn, char *line)
 {
-	list_add_last(cn->outgoing, strdup(line));
+	list_add_last(cn->outgoing, bip_strdup(line));
 }
 
 list_t *read_lines(connection_t *cn, int *error)

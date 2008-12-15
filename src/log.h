@@ -62,29 +62,35 @@ typedef struct log {
 } log_t;
 
 void log_close_all(log_t *logdata);
-log_t *log_new(struct user *user, char *network);
+log_t *log_new(struct user *user, const char *network);
 void logdata_free(log_t *logdata);
 int log_compare_files(logfile_t *f1, char *f2);
 
-void log_join(log_t *logdata, char *ircmask, char *channel);
-void log_part(log_t *logdata, char *ircmask, char *channel, char *message);
-void log_kick(log_t *logdata, char *ircmask, char *channel, char *who,
-		char *message);
-void log_quit(log_t *logdata, char *ircmask, char *channel, char *message);
-void log_nick(log_t *logdata, char *ircmask, char *channel, char *newnick);
-void log_privmsg(log_t *logdata, char *ircmask, char *destination,
-		char *message);
-void log_notice(log_t *logdata, char *ircmask, char *channel, char *message);
-void log_cli_privmsg(log_t *logdata, char *ircmask, char *destination,
-		char *message);
-void log_cli_notice(log_t *logdata, char *ircmask, char *channel,
-		char *message);
-void log_write(log_t *logdata, char *str, char *destination);
-void log_mode(log_t *logdata, char *ircmask, char *channel,
-		char *modes, char **modargv, unsigned modargc);
-void log_topic(log_t *logdata, char *ircmask, char *channel, char *message);
-void log_init_topic(log_t *logdata, char *channel, char *message);
-void log_init_topic_time(log_t *logdata, char *channel, char *who, char *when);
+void log_join(log_t *logdata, const char *ircmask, const char *channel);
+void log_part(log_t *logdata, const char *ircmask, const char *channel,
+		const char *message);
+void log_kick(log_t *logdata, const char *ircmask, const char *channel,
+		const char *who, const char *message);
+void log_quit(log_t *logdata, const char *ircmask, const char *channel,
+		const char *message);
+void log_nick(log_t *logdata, const char *ircmask, const char *channel,
+		const char *newnick);
+void log_privmsg(log_t *logdata, const char *ircmask, const char *destination,
+		const char *message);
+void log_notice(log_t *logdata, const char *ircmask, const char *channel,
+		const char *message);
+void log_cli_privmsg(log_t *logdata, const char *ircmask,
+		const char *destination, const char *message);
+void log_cli_notice(log_t *logdata, const char *ircmask, const char *channel,
+		const char *message);
+void log_write(log_t *logdata, const char *str, const char *destination);
+void log_mode(log_t *logdata, const char *ircmask, const char *channel,
+		const char *modes, const const char **modargv, int modargc);
+void log_topic(log_t *logdata, const char *ircmask, const char *channel,
+		const char *message);
+void log_init_topic(log_t *logdata, const char *channel, const char *message);
+void log_init_topic_time(log_t *logdata, const char *channel, const char *who,
+		const char *when);
 void log_connected(log_t *logdata);
 void log_disconnected(log_t *logdata);
 void log_ping_timeout(log_t *logdata);

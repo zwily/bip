@@ -75,12 +75,12 @@ typedef struct hash_iterator {
 		} \
 	} while(0);
 
-void list_init(list_t *list, int (*cmp)(void*,void*));
-int list_ptr_cmp(void *a, void *b);
-list_t *list_new(int (*cmp)(void *, void *));
-void *list_remove(list_t *list, void *ptr);
-void *list_remove_if_exists(list_t *list, void *ptr);
-void *list_get(list_t *list, void *ptr);
+void list_init(list_t *list, int (*cmp)(const void*, const void*));
+int list_ptr_cmp(const void *a, const void *b);
+list_t *list_new(int (*cmp)(const void *, const void *));
+void *list_remove(list_t *list, const void *ptr);
+void *list_remove_if_exists(list_t *list, const void *ptr);
+void *list_get(list_t *list, const void *ptr);
 void list_add_first(list_t *list, void *ptr);
 void list_add_first_uniq(list_t *list, void *ptr);
 void list_add_last(list_t *list, void *ptr);
@@ -101,10 +101,10 @@ void hash_init(hash_t *h, int);
 void hash_free(hash_t *h);
 void hash_clean(hash_t *h);
 hash_t *hash_new(int options);
-void hash_insert(hash_t *hash, char *key, void *ptr);
-void *hash_get(hash_t *, char *key);
-void *hash_remove(hash_t *hash, char *key);
-void *hash_remove_if_exists(hash_t *hash, char *key);
+void hash_insert(hash_t *hash, const char *key, void *ptr);
+void *hash_get(hash_t *, const char *key);
+void *hash_remove(hash_t *hash, const char *key);
+void *hash_remove_if_exists(hash_t *hash, const char *key);
 int hash_is_empty(hash_t *h);
 void hash_it_init(hash_t *hash, hash_iterator_t *i);
 void hash_it_next(hash_iterator_t *hi);
@@ -114,7 +114,7 @@ void *hash_it_remove(hash_iterator_t *li);
 
 int is_valid_nick(char *str);
 int is_valid_username(char *str);
-char *strmaydup(char *s);
+char *bip_strmaydup(char *s);
 
 void strucase(char *s);
 int ischannel(char p);
@@ -126,5 +126,6 @@ char *checkmode2text(int v);
 void *bip_malloc(size_t size);
 void *bip_calloc(size_t nmemb, size_t size);
 void *bip_realloc(void *ptr, size_t size);
+char *bip_strdup(const char *str);
 
 #endif

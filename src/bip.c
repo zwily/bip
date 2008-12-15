@@ -382,7 +382,7 @@ static int add_network(bip_t *bip, list_t *data)
 	return 1;
 }
 
-void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
+void adm_bip_delconn(bip_t *bip, struct link_client *ic, const char *conn_name)
 {
 	struct user *user = LINK(ic)->user;
 	struct link *l;
@@ -396,8 +396,8 @@ void adm_bip_delconn(bip_t *bip, struct link_client *ic, char *conn_name)
 	link_kill(bip, l);
 }
 
-void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
-		char *network_name)
+void adm_bip_addconn(bip_t *bip, struct link_client *ic, const char *conn_name,
+		const char *network_name)
 {
 	struct user *user = LINK(ic)->user;
 	struct network *network;
@@ -417,7 +417,7 @@ void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
 
 	struct link *l;
 	l = irc_link_new();
-	l->name = strdup(conn_name);
+	l->name = bip_strdup(conn_name);
 	hash_insert(&user->connections, conn_name, l);
 	list_add_last(&bip->link_list, l);
 	l->user = user;
@@ -429,7 +429,7 @@ void adm_bip_addconn(bip_t *bip, struct link_client *ic, char *conn_name,
 #endif
 
 
-#define SCOPY(member) l->member = (LINK(ic)->member ? strdup(LINK(ic)->member) : NULL)
+#define SCOPY(member) l->member = (LINK(ic)->member ? bip_strdup(LINK(ic)->member) : NULL)
 #define ICOPY(member) l->member = LINK(ic)->member
 
 	SCOPY(connect_nick);
@@ -593,7 +593,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			conf_die(bip, "No nick set and no default nick.");
 			return 0;
 		}
-		l->connect_nick = strdup(user->default_nick);
+		l->connect_nick = bip_strdup(user->default_nick);
 	}
 	if (!l->username) {
 		if (!user->default_username) {
@@ -601,7 +601,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 					"username.");
 			return 0;
 		}
-		l->username = strdup(user->default_username);
+		l->username = bip_strdup(user->default_username);
 	}
 	if (!l->realname) {
 		if (!user->default_realname) {
@@ -609,7 +609,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 					"realname.");
 			return 0;
 		}
-		l->realname = strdup(user->default_realname);
+		l->realname = bip_strdup(user->default_realname);
 	}
 
 	l->in_use = 1;
@@ -1147,7 +1147,7 @@ int main(int argc, char **argv)
 	bip_init(&bip);
 	_bip = &bip;
 
-	conf_ip = strdup("0.0.0.0");
+	conf_ip = bip_strdup("0.0.0.0");
 	conf_port = 7778;
 	conf_css = 0;
 
@@ -1160,7 +1160,7 @@ int main(int argc, char **argv)
 	signal(SIGXCPU, rlimit_cpu_reached);
 
 	conf_log_root = NULL;
-	conf_log_format = strdup(DEFAULT_LOG_FORMAT);
+	conf_log_format = bip_strdup(DEFAULT_LOG_FORMAT);
 	conf_log_level = DEFAULT_LOG_LEVEL;
 	conf_daemonize = 1;
 	conf_global_log_file = stderr;
@@ -1172,13 +1172,13 @@ int main(int argc, char **argv)
 	while ((ch = getopt(argc, argv, "hvnf:s:")) != -1) {
 		switch (ch) {
 		case 'f':
-			confpath = strdup(optarg);
+			confpath = bip_strdup(optarg);
 			break;
 		case 'n':
 			conf_daemonize = 0;
 			break;
 		case 's':
-			conf_biphome = strdup(optarg);
+			conf_biphome = bip_strdup(optarg);
 			break;
 		case 'v':
 			version();
@@ -1495,7 +1495,7 @@ void adm_list_all_connections(struct link_client *ic)
 
 #define STRORNULL(s) ((s) == NULL ? "unset" : (s))
 
-void adm_info_user(struct link_client *ic, char *name)
+void adm_info_user(struct link_client *ic, const char *name)
 {
 	struct user *u;
 	char buf[RET_STR_LEN + 1];
@@ -1771,10 +1771,10 @@ int adm_trust(struct link_client *ic, struct line *line)
 		return ERR_PROTOCOL;
 	}
 
-	if (line->elemc != 3)
+	if (irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
 
-	if (!strcasecmp(line->elemv[2], "OK")) {
+	if (irc_line_elem_case_equals(line, 2, "OK")) {
 		/* OK, attempt to trust the cert! */
 		BIO *bio = BIO_new_file(LINK(ic)->user->ssl_check_store, "a+");
 		X509 *trustcert = sk_X509_shift(LINK(ic)->untrusted_certs);
@@ -1789,7 +1789,7 @@ int adm_trust(struct link_client *ic, struct line *line)
 
 		BIO_free_all(bio);
 		X509_free(trustcert);
-	} else if (!strcasecmp(line->elemv[2], "NO")) {
+	} else if (irc_line_elem_case_equals(line, 2, "NO")) {
 		/* NO, discard the cert! */
 		write_line_fast(CONN(ic), ":irc.bip.net NOTICE pouet "
 				":==== Certificate discarded.\r\n");
@@ -1847,7 +1847,7 @@ void adm_blreset(struct link_client *ic)
 	bip_notify(ic, "backlog resetted for this network.");
 }
 
-void adm_follow_nick(struct link_client *ic, char *val)
+void adm_follow_nick(struct link_client *ic, const char *val)
 {
 	struct link *link = LINK(ic);
 	if (strcasecmp(val, "TRUE") == 0) {
@@ -1859,7 +1859,7 @@ void adm_follow_nick(struct link_client *ic, char *val)
 	}
 }
 
-void adm_ignore_first_nick(struct link_client *ic, char *val)
+void adm_ignore_first_nick(struct link_client *ic, const char *val)
 {
 	struct link *link = LINK(ic);
 	if (strcasecmp(val, "TRUE") == 0) {
@@ -1877,7 +1877,7 @@ void set_on_connect_send(struct link_client *ic, char *val)
 	char *s;
 
 	if (val != NULL) {
-		list_add_last(&link->on_connect_send, strdup(val));
+		list_add_last(&link->on_connect_send, bip_strdup(val));
 		bip_notify(ic, "added to on_connect_send.");
 	} else {
 		s = list_remove_last(&link->on_connect_send);
@@ -1893,26 +1893,26 @@ void adm_on_connect_send(struct link_client *ic, struct line *line,
 {
 	char buf[ON_CONNECT_MAX_STRSIZE];
 	int t_written = 0;
-	unsigned int i;
+	int i;
 
 	if (!line) {
 		set_on_connect_send(ic, NULL);
 		return;
 	}
 
-	if (line->elemc < 3)
+	if (irc_line_include(line, 2))
 		return;
 
-	for (i = privmsg + 2; i < line->elemc; i++) {
+	for (i = privmsg + 2; i < irc_line_count(line); i++) {
 		if (t_written) {
 			t_written += snprintf(buf,
 					ON_CONNECT_MAX_STRSIZE - 1 - t_written,
-					" %s", line->elemv[i]);
+					" %s", irc_line_elem(line, i));
 			if (t_written >= ON_CONNECT_MAX_STRSIZE)
 				goto noroom;
 		} else {
 			t_written = snprintf(buf, ON_CONNECT_MAX_STRSIZE - 1,
-					"%s", line->elemv[i]);
+					"%s", irc_line_elem(line, i));
 			if (t_written >= ON_CONNECT_MAX_STRSIZE)
 				goto noroom;
 		}
@@ -1926,7 +1926,7 @@ noroom:
 	goto ok;
 }
 
-void adm_away_nick(struct link_client *ic, char *val)
+void adm_away_nick(struct link_client *ic, const char *val)
 {
 	struct link *link = LINK(ic);
 	if (link->away_nick) {
@@ -1934,30 +1934,34 @@ void adm_away_nick(struct link_client *ic, char *val)
 		link->away_nick = NULL;
 	}
 	if (val != NULL) {
-		link->away_nick = strdup(val);
+		link->away_nick = bip_strdup(val);
 		bip_notify(ic, "away_nick set.");
 	} else {
 		bip_notify(ic, "away_nick cleared.");
 	}
 }
 
-void adm_bip_help(struct link_client *ic, int admin, char *subhelp)
+void adm_bip_help(struct link_client *ic, int admin, const char *subhelp)
 {
 	if (subhelp == NULL) {
 		if (admin) {
-			bip_notify(ic, "/BIP RELOAD # Re-read bip configuration "
-				"and apply changes.");
-			bip_notify(ic, "/BIP INFO user <username> # show a user's "
-				"configuration");
-			bip_notify(ic, "/BIP LIST networks|users|connections|all_links"
-				"|all_connections");
-			bip_notify(ic, "/BIP ADD_CONN <connection name> <network>");
+			bip_notify(ic, "/BIP RELOAD # Re-read bip "
+					"configuration and apply changes.");
+			bip_notify(ic, "/BIP INFO user <username> "
+					"# show a user's configuration");
+			bip_notify(ic, "/BIP LIST networks|users|connections|"
+					"all_links|all_connections");
+			bip_notify(ic, "/BIP ADD_CONN <connection name> "
+					"<network>");
 			bip_notify(ic, "/BIP DEL_CONN <connection name>");
 		} else {
 			bip_notify(ic, "/BIP LIST networks|connections");
 		}
-		bip_notify(ic, "/BIP JUMP # jump to next server (in same network)");
-		bip_notify(ic, "/BIP BLRESET # reset backlog (this connection only). Add -q flag and the operation is quiet.");
+		bip_notify(ic, "/BIP JUMP # jump to next server (in same "
+				"network)");
+		bip_notify(ic, "/BIP BLRESET # reset backlog (this "
+				"connection only). Add -q flag and the "
+				"operation is quiet.");
 #ifdef HAVE_LIBSSL
 		bip_notify(ic, "/BIP TRUST # trust this server certificate");
 #endif
@@ -2052,20 +2056,23 @@ void adm_bip_help(struct link_client *ic, int admin, char *subhelp)
 	}
 }
 
-int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
-		unsigned int privmsg)
+int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 {
 	int admin = LINK(ic)->user->admin;
 
 	if (privmsg) {
-		char *linestr = line->elemv[2];
-		char *ptr = line->elemv[2], *eptr;
+		char *linestr, *elemstr;
+		char *ptr, *eptr;
 		int slen;
 
-		if (line->elemc != 3)
+		if (irc_line_count(line) != 3)
 			return OK_FORGET;
 
-		line->elemc--;
+		linestr = irc_line_pop(line);
+		ptr = linestr;
+
+		/* all elem size <= linestr size */
+		elemstr = bip_malloc(strlen(linestr) + 1);
 
 		while((eptr = strstr(ptr, " "))) {
 			slen = eptr - ptr;
@@ -2073,34 +2080,28 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 				ptr++;
 				continue;
 			}
-			line->elemv = bip_realloc(line->elemv,
-					(line->elemc + 1) * sizeof(char *));
-			line->elemv[line->elemc] = bip_malloc(slen + 1);
-			memcpy(line->elemv[line->elemc], ptr, slen);
-			line->elemv[line->elemc][slen] = 0;
-			line->elemc++;
+			memcpy(elemstr, ptr, slen);
+			elemstr[slen] = 0;
+			irc_line_append(line, elemstr);
 			ptr = eptr + 1;
 		}
 		eptr = ptr + strlen(ptr);
 		slen = eptr - ptr;
 		if (slen != 0) {
-			line->elemv = bip_realloc(line->elemv,
-				      (line->elemc + 1) * sizeof(char *));
-			slen = eptr - ptr;
-			line->elemv[line->elemc] = bip_malloc(slen + 1);
-			memcpy(line->elemv[line->elemc], ptr, slen);
-			line->elemv[line->elemc][slen] = 0;
-			line->elemc++;
+			memcpy(elemstr, ptr, slen);
+			elemstr[slen] = 0;
+			irc_line_append(line, elemstr);
 		}
+		free(elemstr);
 		free(linestr);
 	}
 
-	if (line->elemc < privmsg + 2)
+	if (!irc_line_include(line, privmsg + 1))
 		return OK_FORGET;
 
-	mylog(LOG_INFO, "/BIP %s from %s", line->elemv[privmsg + 1],
+	mylog(LOG_INFO, "/BIP %s from %s", irc_line_elem(line, privmsg + 1),
 			LINK(ic)->user->name);
-	if (strcasecmp(line->elemv[privmsg + 1], "RELOAD") == 0) {
+	if (strcasecmp(irc_line_elem(line, privmsg + 1), "RELOAD") == 0) {
 		if (!admin) {
 			bip_notify(ic, "-- You're not allowed to reload bip");
 			return OK_FORGET;
@@ -2108,40 +2109,42 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 		bip_notify(ic, "-- Reloading bip...");
 		bip->reloading_client = ic;
 		sighup = 1;
-	} else if (strcasecmp(line->elemv[privmsg + 1], "LIST") == 0) {
-		if (line->elemc != privmsg + 3) {
+	} else if (strcasecmp(irc_line_elem(line, privmsg + 1), "LIST") == 0) {
+		if (irc_line_count(line) != privmsg + 3) {
 			bip_notify(ic, "-- LIST command needs one argument");
 			return OK_FORGET;
 		}
 
-		if (admin && strcasecmp(line->elemv[privmsg + 2],
+		if (admin && strcasecmp(irc_line_elem(line, privmsg + 2),
 					"users") == 0) {
 			adm_list_users(ic);
-		} else if (strcasecmp(line->elemv[privmsg + 2],
+		} else if (strcasecmp(irc_line_elem(line, privmsg + 2),
 					"networks") == 0) {
 			adm_list_networks(ic);
-		} else if (strcasecmp(line->elemv[privmsg + 2],
+		} else if (strcasecmp(irc_line_elem(line, privmsg + 2),
 					"connections") == 0) {
 			adm_list_connections(ic, NULL);
-		} else if (admin && strcasecmp(line->elemv[privmsg + 2],
+		} else if (admin && strcasecmp(irc_line_elem(line, privmsg + 2),
 					"all_connections") == 0) {
 			adm_list_all_connections(ic);
-		} else if (admin && strcasecmp(line->elemv[privmsg + 2],
+		} else if (admin && strcasecmp(irc_line_elem(line, privmsg + 2),
 					"all_links") == 0) {
 			adm_list_all_links(ic);
 		} else {
 			bip_notify(ic, "-- Invalid LIST request");
 		}
-	} else if (strcasecmp(line->elemv[privmsg + 1], "INFO") == 0) {
-		if (line->elemc < privmsg + 3) {
-			bip_notify(ic, "-- INFO command needs at least one argument");
+	} else if (strcasecmp(irc_line_elem(line, privmsg + 1), "INFO") == 0) {
+		if (!irc_line_include(line, privmsg + 2)) {
+			bip_notify(ic, "-- INFO command needs at least one "
+					"argument");
 			return OK_FORGET;
 		}
 
-		if (admin && strcasecmp(line->elemv[privmsg + 2],
+		if (admin && irc_line_elem_case_equals(line, privmsg + 3,
 					"user") == 0) {
-			if (line->elemc == privmsg + 4) {
-				adm_info_user(ic, line->elemv[privmsg + 3]);
+			if (irc_line_count(line) == privmsg + 4) {
+				adm_info_user(ic,
+					irc_line_elem(line, privmsg + 3));
 			} else {
 				bip_notify(ic, "-- INFO USER command needs one"
 					" argument");
@@ -2150,7 +2153,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 			TODO
 		} else if (strcasecmp(line->elemv[privmsg + 2],
 				      "network") == 0) {
-			if (line->elemc == privmsg + 4) {
+			if (irc_line_count(line) == privmsg + 4) {
 				adm_info_network(ic, line->elemv[privmsg + 3]);
 			} else {
 				bip_notify(ic, "/BIP INFO network needs one "
@@ -2160,80 +2163,83 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line,
 		} else {
 			bip_notify(ic, "-- Invalid INFO request");
 		}
-	} else if (strcasecmp(line->elemv[privmsg + 1], "JUMP") == 0) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "JUMP")) {
 		if (LINK(ic)->l_server) {
 			WRITE_LINE1(CONN(LINK(ic)->l_server), NULL, "QUIT",
 					"jumpin' jumpin'");
 			connection_close(CONN(LINK(ic)->l_server));
 		}
 		bip_notify(ic, "-- Jumping to next server");
-	} else if (strcasecmp(line->elemv[privmsg + 1], "BLRESET") == 0) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "BLRESET")) {
 		if (line->elemc == privmsg + 3 &&
-				strcmp(line->elemv[privmsg + 2], "-q") == 0) {
+				irc_line_elem_equals(line, privmsg + 2, "-q")) {
 			log_reinit_all(LINK(ic)->log);
 		} else {
 			adm_blreset(ic);
 		}
-	} else if (strcasecmp(line->elemv[privmsg + 1], "HELP") == 0) {
-		if (line->elemc == privmsg + 2)
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "HELP")) {
+		if (irc_line_count(line) == privmsg + 2)
 			adm_bip_help(ic, admin, NULL);
-		else if (line->elemc == privmsg + 3)
-			adm_bip_help(ic, admin, line->elemv[privmsg + 2]);
+		else if (irc_line_count(line) == privmsg + 3)
+			adm_bip_help(ic, admin,
+					irc_line_elem(line, privmsg + 2));
 		else
 			bip_notify(ic,
 				"-- HELP command needs at most one argument");
-	} else if (strcasecmp(line->elemv[privmsg + 1], "FOLLOW_NICK") == 0) {
-		if (line->elemc != privmsg + 3) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "FOLLOW_NICK")) {
+		if (irc_line_count(line) != privmsg + 3) {
 			bip_notify(ic,
 				"-- FOLLOW_NICK command needs one argument");
 			return OK_FORGET;
 		}
-		adm_follow_nick(ic, line->elemv[privmsg + 2]);
+		adm_follow_nick(ic, irc_line_elem(line, privmsg + 2));
 	} else if (strcasecmp(line->elemv[privmsg + 1],
 				"IGNORE_FIRST_NICK") == 0) {
-		if (line->elemc != privmsg + 3) {
+		if (irc_line_count(line) != privmsg + 3) {
 			bip_notify(ic, "-- IGNORE_FIRST_NICK "
 				"command needs one argument");
 			return OK_FORGET;
 		}
-		adm_ignore_first_nick(ic, line->elemv[privmsg + 2]);
-	} else if (strcasecmp(line->elemv[privmsg + 1],
-				"ON_CONNECT_SEND") == 0) {
-		if (line->elemc == privmsg + 2) {
+		adm_ignore_first_nick(ic, irc_line_elem(line, privmsg + 2));
+	} else if (irc_line_elem_case_equals(line, privmsg + 1,
+				"ON_CONNECT_SEND")) {
+		if (irc_line_count(line) == privmsg + 2) {
 			adm_on_connect_send(ic, NULL, 0);
-		} else if (line->elemc >= privmsg + 3) {
+		} else if (irc_line_include(line, privmsg + 2)) {
 			adm_on_connect_send(ic, line, privmsg);
 		} else {
 			bip_notify(ic, "-- ON_CONNECT_SEND command needs at "
 				"least one argument");
 		}
-	} else if (strcasecmp(line->elemv[privmsg + 1], "AWAY_NICK") == 0) {
-		if (line->elemc == privmsg + 2) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "AWAY_NICK")) {
+		if (irc_line_count(line) == privmsg + 2) {
 			adm_away_nick(ic, NULL);
-		} else if (line->elemc == privmsg + 3) {
-			adm_away_nick(ic, line->elemv[privmsg + 2]);
+		} else if (irc_line_count(line) == privmsg + 3) {
+			adm_away_nick(ic, irc_line_elem(line, privmsg + 2));
 		} else {
 			bip_notify(ic, "-- AWAY_NICK command needs zero or one"
 				" argument");
 		}
-	} else if (admin &&
-			strcasecmp(line->elemv[privmsg + 1], "ADD_CONN") == 0) {
-		if (line->elemc != privmsg + 4) {
+	} else if (admin && irc_line_elem_case_equals(line, privmsg + 1,
+				"ADD_CONN")) {
+		if (irc_line_count(line) != privmsg + 4) {
 			bip_notify(ic, "/BIP ADD_CONN <connection name> "
 					"<network name>");
 		} else {
-			adm_bip_addconn(bip, ic, line->elemv[privmsg + 2],
-					line->elemv[privmsg + 3]);
+			adm_bip_addconn(bip, ic,
+					irc_line_elem(line, privmsg + 2),
+					irc_line_elem(line, privmsg + 3));
 		}
-	} else if (admin &&
-			strcasecmp(line->elemv[privmsg + 1], "DEL_CONN") == 0) {
-		if (line->elemc != privmsg + 3) {
+	} else if (admin && irc_line_elem_case_equals(line, privmsg + 1,
+				"DEL_CONN")) {
+		if (irc_line_count(line) != privmsg + 3) {
 			bip_notify(ic, "/BIP DEL_CONN <connection name>");
 		} else {
-			adm_bip_delconn(bip, ic, line->elemv[privmsg + 2]);
+			adm_bip_delconn(bip, ic,
+					irc_line_elem(line, privmsg + 2));
 		}
 #ifdef HAVE_LIBSSL
-	} else if (strcasecmp(line->elemv[privmsg + 1], "TRUST") == 0) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "TRUST")) {
 		return adm_trust(ic, line);
 #endif
 	} else {

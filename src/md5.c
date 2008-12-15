@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "md5.h"
+#include "util.h"
 
 #define GET_UINT32(n,b,i)                       \
 {                                               \

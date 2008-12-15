@@ -27,17 +27,6 @@ struct line *irc_line_new()
 	return l;
 }
 
-void irc_line_clear(struct line *l)
-{
-	unsigned i;
-	for (i = 0; i < l->elemc; i++)
-		free(l->elemv[i]);
-	free(l->elemv);
-	if (l->origin)
-		free(l->origin);
-	memset(l, 0, sizeof(struct line));
-}
-
 void irc_line_write(struct line *l, connection_t *c)
 {
 	char *bytes = irc_line_to_string(l);
@@ -47,33 +36,45 @@ void irc_line_write(struct line *l, connection_t *c)
 
 struct line *irc_line_dup(struct line *line)
 {
-	unsigned i;
+	int i;
 	struct line *nl = irc_line_new();
-	nl->origin = line->origin ? strdup(line->origin) : NULL;
+	nl->origin = line->origin ? bip_strdup(line->origin) : NULL;
 	nl->elemc = line->elemc;
 	nl->elemv = bip_malloc(sizeof(char *) * line->elemc);
 	for (i = 0; i < line->elemc; i++)
-		nl->elemv[i] = strdup(line->elemv[i]);
+		nl->elemv[i] = bip_strdup(line->elemv[i]);
 	nl->colon = line->colon;
 	return nl;
 }
 
-void _irc_line_append(struct line *l, char *s)
+char *irc_line_pop(struct line *l)
+{
+	char *ret;
+
+	if (irc_line_count(l) == 0)
+		return NULL;
+	ret = (char *)l->elemv[l->elemc - 1];
+	l->elemc--;
+
+	return ret;
+}
+
+void _irc_line_append(struct line *l, const char *s)
 {
 	l->elemc++;
 	l->elemv = bip_realloc(l->elemv, l->elemc * sizeof(char *));
-	l->elemv[l->elemc - 1] = s;
+	l->elemv[l->elemc - 1] = (char *)s;
 }
 
-void irc_line_append(struct line *l, char *s)
+void irc_line_append(struct line *l, const char *s)
 {
-	_irc_line_append(l, strdup(s));
+	_irc_line_append(l, bip_strdup(s));
 }
 
 char *irc_line_to_string(struct line *l)
 {
 	size_t len = 0;
-	unsigned i;
+	int i;
 	char *ret;
 
 	if (l->origin)
@@ -100,6 +101,35 @@ char *irc_line_to_string(struct line *l)
 	strcat(ret, l->elemv[i]);
 	strcat(ret, "\r\n");
 	return ret;
+}
+
+int irc_line_count(struct line *line)
+{
+	return line->elemc;
+}
+
+int irc_line_include(struct line *line, int elem)
+{
+	if (elem < 0)
+		fatal("internal error: irc_line_elem got negative elem");
+	return elem < line->elemc;
+}
+
+const char *irc_line_elem(struct line *line, int elem)
+{
+	if (!irc_line_include(line, elem))
+		fatal("internal error: irc_line_elem got too large elem");
+	return line->elemv[elem];
+}
+
+int irc_line_elem_equals(struct line *line, int elem, const char *cmp)
+{
+	return !strcmp(irc_line_elem(line, elem), cmp);
+}
+
+int irc_line_elem_case_equals(struct line *line, int elem, const char *cmp)
+{
+	return !strcasecmp(irc_line_elem(line, elem), cmp);
 }
 
 /*
@@ -148,11 +178,12 @@ struct line *irc_line(char *str)
 				space++;
 		}
 		len = space - str;
-		tmp = line->elemv[curelem] = bip_malloc(len + 1);
+		tmp = bip_malloc(len + 1);
 		memcpy(tmp, str, len);
 		tmp[len] = 0;
 		if (curelem == 0)
-			strucase(line->elemv[curelem]);
+			strucase(tmp);
+		line->elemv[curelem] = (const char *)tmp;
 
 		curelem++;
 
@@ -165,9 +196,10 @@ struct line *irc_line(char *str)
 
 void irc_line_free(struct line *l)
 {
-	unsigned i;
+	int i;
+
 	for (i = 0; i < l->elemc; i++)
-		free(l->elemv[i]);
+		free((char *)l->elemv[i]);
 	free(l->elemv);
 	if (l->origin)
 		free(l->origin);

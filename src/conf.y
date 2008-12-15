@@ -22,6 +22,8 @@ extern int linec;
 
 #define YYMALLOC bip_malloc
 
+extern int yyerror(char *);
+
 int yywrap()
 {
 	return 1;

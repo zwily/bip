@@ -78,20 +78,25 @@
 
 struct line {
 	char *origin;
-	unsigned int elemc;
-	char **elemv;
+	int elemc;
+	const char **elemv;
 	int colon;
 };
 
 void irc_line_init(struct line *l);
 struct line *irc_line_new();
-void irc_line_clear(struct line *l);
 void irc_line_write(struct line *l, connection_t *c);
-void irc_line_append(struct line *l, char *s);
+void irc_line_append(struct line *l, const char *s);
 struct line *irc_line(char *str);
 char *irc_line_to_string(struct line *l);
 void irc_line_free(struct line *l);
 struct line *irc_line_dup(struct line *line);
-void _irc_line_append(struct line *l, char *s);
+void _irc_line_append(struct line *l, const char *s);
+int irc_line_include(struct line *line, int elem);
+const char *irc_line_elem(struct line *line, int elem);
+int irc_line_count(struct line *line);
+char *irc_line_pop(struct line *l);
+int irc_line_elem_equals(struct line *line, int elem, const char *cmp);
+int irc_line_elem_case_equals(struct line *line, int elem, const char *cmp);
 
 #endif

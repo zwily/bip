@@ -33,9 +33,10 @@ void dummy_lex_FFS(void)
 #endif
 void conf_die(bip_t *, char *, ...);
 
-int yyerror(void)
+int yyerror(char *err)
 {
-	conf_die(_bip, "Parse error near %s, line %d", yytext, linec + 1);
+	conf_die(_bip, "Parse error '%s' near '%s', line %d", err, yytext,
+		linec + 1);
 	conf_error = 1;
 	return 1;
 }

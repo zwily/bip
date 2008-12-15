@@ -29,33 +29,45 @@ extern int conf_log_system;
 extern int errno;
 extern FILE *conf_global_log_file;
 
+void memory_fatal(void)
+{
+	fflush(conf_global_log_file);
+#define OOMMSG "Out of memory.\n"
+	fwrite(OOMMSG, 1, strlen(OOMMSG), conf_global_log_file);
+#undef OOMMSG
+	fflush(conf_global_log_file);
+	exit(28);
+}
+
 void *bip_malloc(size_t size)
 {
 	void *r = malloc(size);
-	if (!r) {
-		fprintf(conf_global_log_file, 1, strlen("malloc"), "malloc");
-		exit(28);
-	}
+	if (!r)
+		memory_fatal();
 	return r;
 }
 
 void *bip_calloc(size_t nmemb, size_t size)
 {
 	void *r = calloc(nmemb, size);
-	if (!r) {
-		fprintf(conf_global_log_file, 1, strlen("calloc"), "calloc");
-		exit(28);
-	}
+	if (!r)
+		memory_fatal();
 	return r;
 }
 
 void *bip_realloc(void *ptr, size_t size)
 {
 	void *r = realloc(ptr, size);
-	if (size > 0 && ptr == NULL) {
-		fprintf(conf_global_log_file, 1, strlen("realloc"), "realloc");
-		exit(28);
-	}
+	if (size > 0 && r == NULL)
+		memory_fatal();
+	return r;
+}
+
+char *bip_strdup(const char *str)
+{
+	char *r = strdup(str);
+	if (!r)
+		memory_fatal();
 	return r;
 }
 
@@ -208,21 +220,21 @@ struct list_item {
 	void *ptr;
 };
 
-int list_ptr_cmp(void *a, void *b)
+int list_ptr_cmp(const void *a, const void *b)
 {
 	if (a == b)
 		return 0;
 	return -1;
 }
 
-void list_init(list_t *l, int (*cmp)(void *, void *))
+void list_init(list_t *l, int (*cmp)(const void *, const void *))
 {
 	l->first = NULL;
 	l->last = NULL;
 	l->cmp = cmp;
 }
 
-list_t *list_new(int (*cmp)(void *, void *))
+list_t *list_new(int (*cmp)(const void *, const void *))
 {
 	list_t *l;
 	l = bip_malloc(sizeof(list_t));
@@ -325,7 +337,7 @@ void *list_remove_last(list_t *list)
 	return ptr;
 }
 
-void *list_remove_if_exists(list_t *list, void *ptr)
+void *list_remove_if_exists(list_t *list, const void *ptr)
 {
 	list_iterator_t li;
 	int debug = 0;
@@ -347,7 +359,7 @@ void *list_remove_if_exists(list_t *list, void *ptr)
 	return NULL;
 }
 
-void *list_remove(list_t *list, void *ptr)
+void *list_remove(list_t *list, const void *ptr)
 {
 	void *ret;
 	if (!(ret = list_remove_if_exists(list, ptr)))
@@ -355,7 +367,7 @@ void *list_remove(list_t *list, void *ptr)
 	return ret;
 }
 
-void *list_get(list_t *list, void *ptr)
+void *list_get(list_t *list, const void *ptr)
 {
 	struct list_item *it;
 
@@ -447,7 +459,7 @@ struct hash_item {
 	void *item;
 };
 
-static int hash_item_nocase_cmp(struct hash_item *a, char *b)
+static int hash_item_nocase_cmp(const struct hash_item *a, const char *b)
 {
 	return strcasecmp(a->key, b);
 }
@@ -466,11 +478,13 @@ void hash_init(hash_t *h, int options)
 		switch (options) {
 		case HASH_NOCASE:
 			list_init(&h->lists[i],
-				(int (*)(void*,void*))hash_item_nocase_cmp);
+				(int (*)(const void*, const void*))
+					hash_item_nocase_cmp);
 			break;
 		case HASH_DEFAULT:
 			list_init(&h->lists[i],
-					(int (*)(void*,void*))hash_item_cmp);
+				(int (*)(const void*,const void*))
+					hash_item_cmp);
 			break;
 		default:
 			fatal("wrong hash option %d", options);
@@ -506,7 +520,7 @@ hash_t *hash_new(int options)
 }
 
 /* Now we have a real hash, but we use only the last byte of it :p */
-static unsigned char hash_func(char *pkey)
+static unsigned char hash_func(const char *pkey)
 {
 	char c;
 	unsigned long hash = 5381; /* 5381 & 0xff makes more sense */
@@ -516,7 +530,7 @@ static unsigned char hash_func(char *pkey)
 	return (unsigned char)hash;
 }
 
-void hash_insert(hash_t *hash, char *key, void *ptr)
+void hash_insert(hash_t *hash, const char *key, void *ptr)
 {
 	struct hash_item *it;
 
@@ -524,12 +538,12 @@ void hash_insert(hash_t *hash, char *key, void *ptr)
 		fatal("Element with key %s already in hash %x\n", key, hash);
 
 	it = bip_malloc(sizeof(struct hash_item));
-	it->key = strdup(key);
+	it->key = bip_strdup(key);
 	it->item = ptr;
 	list_add_first(&hash->lists[hash_func(key)], it);
 }
 
-void *hash_get(hash_t *hash, char *key)
+void *hash_get(hash_t *hash, const char *key)
 {
 	struct hash_item *hi;
 	list_t *list = &hash->lists[hash_func(key)];
@@ -539,14 +553,14 @@ void *hash_get(hash_t *hash, char *key)
 	return hi->item;
 }
 
-void *hash_remove_if_exists(hash_t *hash, char *key)
+void *hash_remove_if_exists(hash_t *hash, const char *key)
 {
 	if (hash_get(hash, key) == NULL)
 		return NULL;
 	return hash_remove(hash, key);
 }
 
-void *hash_remove(hash_t *hash, char *key)
+void *hash_remove(hash_t *hash, const char *key)
 {
 	struct hash_item *it;
 	void *ptr;
@@ -633,11 +647,11 @@ void hash_dump(hash_t *h)
 		printf("%s => %p\n", hash_it_key(&it), hash_it_item(&it));
 }
 
-char *strmaydup(char *s)
+char *bip_strmaydup(char *s)
 {
 	if (!s)
 		return s;
-	return strdup(s);
+	return bip_strdup(s);
 }
 
 void strucase(char *s)
