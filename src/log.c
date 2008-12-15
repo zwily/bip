@@ -35,8 +35,6 @@ static char *_log_wrap(const char *dest, const char *line);
 #define PMSG_ARROW " \002->\002 "
 
 
-/* TODO: change fatal("out of memory") to cleanup & return NULL */
-
 int check_dir(char *filename, int is_fatal)
 {
 	int err;
@@ -158,8 +156,6 @@ char *log_build_filename(log_t *logdata, const char *destination)
 	replace_var(logfile, "%m", month, MAX_PATH_LEN);
 
 	logdir = bip_strdup(logfile);
-	if (!logdir)
-		fatal("out of memory");
 
 	/* strrchr works on bytes, not on char (if sizeof(char) != 1) */
 	tmp = strrchr(logdir, '/');
@@ -234,8 +230,6 @@ static int log_add_file(log_t *logdata, const char *destination, const char *fil
 		lf = bip_malloc(sizeof(logfile_t));
 		lf->file = f;
 		lf->filename = bip_strdup(filename);
-		if (!lf->filename)
-			fatal("out of memory");
 
 		fseek(lf->file, 0, SEEK_END);
 		if (ftell(f) < 0)
@@ -251,8 +245,6 @@ static int log_add_file(log_t *logdata, const char *destination, const char *fil
 		lfg = bip_calloc(sizeof(logfilegroup_t), 1);
 		list_init(&lfg->file_group, NULL);
 		lfg->name = bip_strdup(destination);
-		if (!lfg->name)
-			fatal("out of memory");
 		lfg->skip_advance = 0;
 		hash_insert(&logdata->logfgs, destination, lfg);
 	}
@@ -457,8 +449,6 @@ static void _log_privmsg(log_t *logdata, const char *ircmask, int src,
 		if (strncmp(real_message, "\001ACTION ", 8) != 0)
 			return;
 		msg = bip_strdup(real_message);
-		if (!msg)
-			fatal("out of memory");
 		*(msg + strlen(msg) - 1) = '\0';
 		if (ischannel(*destination) || strchr(destination, '@')) {
 			snprintf(logdata->buffer, LOGLINE_MAXLEN,
@@ -1188,8 +1178,6 @@ log_t *log_new(struct user *user, const char *network)
 	logdata->buffer = (char *)bip_malloc(LOGLINE_MAXLEN + 1);
 	logdata->buffer[LOGLINE_MAXLEN - 1] = 0; // debug
 	logdata->buffer[LOGLINE_MAXLEN] = 0;
-	if (!logdata->user || !logdata->network || !logdata->buffer)
-		fatal("out of memory");
 	logdata->connected = 0;
 	if (!log_all_logs)
 		log_all_logs = list_new(list_ptr_cmp);
