@@ -94,6 +94,7 @@ void *list_it_item(list_iterator_t *ti);
 void *list_it_remove(list_iterator_t *li);
 void list_free(list_t *t);
 void list_copy(list_t *src, list_t *dest);
+/* dest must not be refed after wards */
 void list_append(list_t *src, list_t *dest);
 int list_is_empty(list_t *l);
 
@@ -109,8 +110,9 @@ int hash_is_empty(hash_t *h);
 void hash_it_init(hash_t *hash, hash_iterator_t *i);
 void hash_it_next(hash_iterator_t *hi);
 void *hash_it_item(hash_iterator_t *h);
-char *hash_it_key(hash_iterator_t *h);
+const char *hash_it_key(hash_iterator_t *h);
 void *hash_it_remove(hash_iterator_t *li);
+list_t *hash_keys(hash_t *hash);
 
 int is_valid_nick(char *str);
 int is_valid_username(char *str);

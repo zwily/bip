@@ -19,6 +19,11 @@ void irc_line_init(struct line *l)
 	memset(l, 0, sizeof(struct line));
 }
 
+void _irc_line_deinit(struct line *l)
+{
+	free(l->elemv);
+}
+
 struct line *irc_line_new()
 {
 	struct line *l;
@@ -101,6 +106,19 @@ char *irc_line_to_string(struct line *l)
 	strcat(ret, l->elemv[i]);
 	strcat(ret, "\r\n");
 	return ret;
+}
+
+char *irc_line_to_string_to(struct line *line, char *nick)
+{
+	char *tmp;
+	char *l;
+
+	tmp = (char *)irc_line_elem(line, 1);
+	line->elemv[1] = nick;
+	l = irc_line_to_string(line);
+	line->elemv[1] = tmp;
+
+	return l;
 }
 
 int irc_line_count(struct line *line)
@@ -205,3 +223,30 @@ void irc_line_free(struct line *l)
 		free(l->origin);
 	free(l);
 }
+
+void irc_line_extract_args(struct line *line, int from,
+		char ***elemv, int *elemc)
+{
+	int i;
+
+	*elemc = irc_line_count(line) - from;
+	if (*elemc == 0) {
+		*elemv = NULL;
+		return;
+	}
+	*elemv = bip_malloc(*elemc * sizeof(char *));
+	for (i = 0; i < *elemc; i++)
+		*elemv[i] = bip_strdup(irc_line_elem(line, i + from));
+}
+
+void irc_line_free_args(char **elemv, int elemc)
+{
+	int i;
+
+	if (elemc == 0)
+		return;
+	for (i = 0; i < elemc; i++)
+		free(elemv[i]);
+	free(elemv);
+}
+

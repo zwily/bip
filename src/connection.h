@@ -99,6 +99,7 @@ void connection_free(connection_t *cn);
 void connection_close(connection_t *cn);
 
 void write_line(connection_t *cn, char *line);
+void write_lines(connection_t *cn, list_t *lines);
 void write_line_fast(connection_t *cn, char *line);
 list_t *read_lines(connection_t *cn, int *error);
 list_t *wait_event(list_t *cn_list, int *msec, int *nc);

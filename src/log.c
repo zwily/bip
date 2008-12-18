@@ -24,7 +24,6 @@ extern int conf_log;
 
 extern FILE *conf_global_log_file;
 
-int log_set_backlog_offset(log_t *logdata, char *dest);
 static int _log_write(log_t *logdata, logfilegroup_t *lf, const char *d,
 		const char *str);
 void logfile_free(logfile_t *lf);
@@ -33,7 +32,6 @@ static char *_log_wrap(const char *dest, const char *line);
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
 #define PMSG_ARROW " \002->\002 "
-
 
 int check_dir(char *filename, int is_fatal)
 {
@@ -119,13 +117,13 @@ void replace_var(char *str, char *var, char *value, unsigned int max)
 	char *pos;
 	unsigned int lenvar = strlen(var);
 	unsigned int lenval = strlen(value);
+
 	while((pos = strstr(str, var))) {
 		/* Make room */
-		if (strlen(str) + (lenval - lenvar) >= max)
+		if (strlen(str) + lenval - lenvar >= max)
 			return;
-		memmove(pos + lenval, pos + lenvar,
-				(strlen(pos + lenvar) + 1)*sizeof(char));
-		memcpy(pos, value, lenval*sizeof(char));
+		memmove(pos + lenval, pos + lenvar, strlen(pos + lenvar) + 1);
+		memcpy(pos, value, lenval);
 	}
 }
 
@@ -282,9 +280,6 @@ logfilegroup_t *log_find_file(log_t *logdata, const char *destination)
 	struct tm *ltime;
 	struct link *l;
 
-	if (!ischannel(*destination))
-		destination = "privates";
-
 	lfg = hash_get(&logdata->logfgs, destination);
 
 	if (lfg && !conf_log)
@@ -425,13 +420,13 @@ void log_nick(log_t *logdata, const char *ircmask, const char *channel,
 	log_write(logdata, channel, logdata->buffer);
 }
 
-static void _log_privmsg(log_t *logdata, const char *ircmask, int src,
-		const char *destination, const char *message)
+static void do_log_privmsg(log_t *logdata, const char *storage, int src,
+		const char *from, const char *message)
 {
 	char dir = '<';
-	if (!ircmask)
-		ircmask = "Server message";
 
+	if (!from)
+		from = "Server message";
 	if (src)
 		dir = '>';
 
@@ -450,40 +445,34 @@ static void _log_privmsg(log_t *logdata, const char *ircmask, int src,
 			return;
 		msg = bip_strdup(real_message);
 		*(msg + strlen(msg) - 1) = '\0';
-		if (ischannel(*destination) || strchr(destination, '@')) {
-			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
 					"%s %c * %s %s", timestamp(), dir,
-					ircmask, msg + 8);
-		} else {
-			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s (%s) %c * %s %s", timestamp(),
-					destination, dir, ircmask, msg + 8);
-		}
+					from, msg + 8);
 		free(msg);
 	} else {
-		if (ischannel(*destination) || strchr(destination, '@')) {
-			snprintf(logdata->buffer, LOGLINE_MAXLEN,
+		snprintf(logdata->buffer, LOGLINE_MAXLEN,
 					"%s %c %s: %s", timestamp(), dir,
-					ircmask, message);
-		} else {
-			snprintf(logdata->buffer, LOGLINE_MAXLEN,
-					"%s %c %s (%s): %s", timestamp(),
-					dir, ircmask, destination, message);
-		}
+					from, message);
 	}
-	log_write(logdata, destination, logdata->buffer);
+	log_write(logdata, storage, logdata->buffer);
 }
 
 void log_privmsg(log_t *logdata, const char *ircmask, const char *destination,
 		const char *message)
 {
-	_log_privmsg(logdata, ircmask, 0, destination, message);
+	if (!ischannel(*destination)) {
+		char *nick = nick_from_ircmask(ircmask);
+		do_log_privmsg(logdata, nick, 0, ircmask, message);
+		free(nick);
+	} else {
+		do_log_privmsg(logdata, destination, 0, ircmask, message);
+	}
 }
 
 void log_cli_privmsg(log_t *logdata, const char *ircmask,
 		const char *destination, const char *message)
 {
-	_log_privmsg(logdata, ircmask, 1, destination, message);
+	do_log_privmsg(logdata, destination, 1, ircmask, message);
 }
 
 static void _log_notice(log_t *logdata, const char *ircmask, int src,
@@ -560,7 +549,7 @@ void log_init_topic_time(log_t *logdata, const char *channel, const char *who,
 }
 
 void log_mode(log_t *logdata, const char *ircmask, const char *channel,
-		const char *modes, const const char **modargv, int modargc)
+		const char *modes, char **modargv, int modargc)
 {
 	int i;
 	char *tmpbuf = bip_malloc(LOGLINE_MAXLEN + 1);
@@ -599,9 +588,14 @@ void log_disconnected(log_t *logdata)
 
 void log_ping_timeout(log_t *logdata)
 {
+	list_t *l = log_backlogs(logdata);
+	char *s;
+
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- Ping timeout with server...", timestamp());
-	log_write(logdata, "privates", logdata->buffer);
+	while ((s = list_remove_first(l)))
+		log_write(logdata, s, logdata->buffer);
+	list_free(l);
 	log_disconnected(logdata);
 }
 
@@ -697,7 +691,7 @@ void log_advance_backlogs(log_t* ld, logfilegroup_t *lfg)
 	}
 }
 
-int log_has_backlog(log_t *logdata, char *destination)
+int log_has_backlog(log_t *logdata, const char *destination)
 {
 	logfilegroup_t *lfg = hash_get(&logdata->logfgs, destination);
 
@@ -824,7 +818,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		lod = strlen(dest);
 	}
 
-	if (out && strcmp(dest, "privates") == 0) {
+	if (out && !ischannel(*dest)) {
 		const char *stmp;
 		size_t ltmp;
 
@@ -889,7 +883,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	return ret;
 }
 
-char *log_backread(log_t *logdata, char *destination, int *skip)
+char *log_backread(log_t *logdata, const char *destination, int *skip)
 {
 	char *buf;
 	size_t pos = 0;
@@ -1206,3 +1200,68 @@ void log_free(log_t *log)
 	free(log);
 }
 
+list_t *log_backlogs(log_t *log)
+{
+	return hash_keys(&log->logfgs);
+}
+
+list_t *backlog_lines_from_last_mark(log_t *log, const char *bl)
+{
+	char *line;
+	int skip;
+	list_t *ret;
+	struct line l;
+
+	ret = list_new(NULL);
+
+	if (log_has_backlog(log, bl)) {
+		skip = 0;
+		while ((line = log_backread(log, bl, &skip))) {
+			if (!skip)
+				list_add_last(ret, line);
+		}
+
+		if (ischannel(*bl)) {
+			/* clean this up */
+			irc_line_init(&l);
+			l.origin = P_IRCMASK;
+			_irc_line_append(&l, "PRIVMSG");
+			_irc_line_append(&l, bl);
+			_irc_line_append(&l, "End of backlog");
+			list_add_last(ret, irc_line_to_string(&l));
+			_irc_line_deinit(&l);
+		}
+	}
+	return ret;
+}
+
+#if 0
+	for (hash_it_init(&LINK(ic)->l_server->channels, &hi);
+			hash_it_item(&hi); hash_it_next(&hi)) {
+		struct channel *chan = (struct channel *)hash_it_item(&hi);
+		if (log_has_backlog(LINK(ic)->log, chan->name)) {
+			char *line;
+			int skip = 0;
+			while ((line =
+			    log_backread(LINK(ic)->log, chan->name, &skip))) {
+				if (!skip)
+					write_line(CONN(ic), line);
+				free(line);
+			}
+			WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
+					"End of backlog.");
+		} else {
+			mylog(LOG_DEBUG, "Nothing to backlog for %s/%s",
+				user->name, chan->name);
+		}
+	}
+
+	/* backlog privates */
+	char *str;
+	int skip = 0;
+	while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &skip))) {
+		if (!skip)
+			write_line(CONN(ic), str);
+		free(str);
+	}
+#endif

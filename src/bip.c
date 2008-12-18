@@ -2150,15 +2150,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 					" argument");
 			}
 #if 0
-			TODO
-		} else if (strcasecmp(line->elemv[privmsg + 2],
-				      "network") == 0) {
-			if (irc_line_count(line) == privmsg + 4) {
-				adm_info_network(ic, line->elemv[privmsg + 3]);
-			} else {
-				bip_notify(ic, "/BIP INFO network needs one "
-					"argument");
-			}
+			TODO network info
 #endif
 		} else {
 			bip_notify(ic, "-- Invalid INFO request");
@@ -2193,8 +2185,8 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 			return OK_FORGET;
 		}
 		adm_follow_nick(ic, irc_line_elem(line, privmsg + 2));
-	} else if (strcasecmp(line->elemv[privmsg + 1],
-				"IGNORE_FIRST_NICK") == 0) {
+	} else if (irc_line_elem_case_equals(line, privmsg + 1,
+				"IGNORE_FIRST_NICK")) {
 		if (irc_line_count(line) != privmsg + 3) {
 			bip_notify(ic, "-- IGNORE_FIRST_NICK "
 				"command needs one argument");

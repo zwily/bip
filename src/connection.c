@@ -347,6 +347,11 @@ void write_line_fast(connection_t *cn, char *line)
 	}
 }
 
+void write_lines(connection_t *cn, list_t *lines)
+{
+	list_append(cn->outgoing, lines);
+}
+
 void write_line(connection_t *cn, char *line)
 {
 	list_add_last(cn->outgoing, bip_strdup(line));

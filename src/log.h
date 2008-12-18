@@ -61,10 +61,8 @@ typedef struct log {
 	struct user *user;
 } log_t;
 
-void log_close_all(log_t *logdata);
 log_t *log_new(struct user *user, const char *network);
 void logdata_free(log_t *logdata);
-int log_compare_files(logfile_t *f1, char *f2);
 
 void log_join(log_t *logdata, const char *ircmask, const char *channel);
 void log_part(log_t *logdata, const char *ircmask, const char *channel,
@@ -85,7 +83,7 @@ void log_cli_notice(log_t *logdata, const char *ircmask, const char *channel,
 		const char *message);
 void log_write(log_t *logdata, const char *str, const char *destination);
 void log_mode(log_t *logdata, const char *ircmask, const char *channel,
-		const char *modes, const const char **modargv, int modargc);
+		const char *modes, char **modargv, int modargc);
 void log_topic(log_t *logdata, const char *ircmask, const char *channel,
 		const char *message);
 void log_init_topic(log_t *logdata, const char *channel, const char *message);
@@ -96,12 +94,15 @@ void log_disconnected(log_t *logdata);
 void log_ping_timeout(log_t *logdata);
 void log_client_disconnected(log_t *logdata);
 void log_client_connected(log_t *logdata);
-char *log_backread(log_t *logdata, char *destination, int *skip);
-int log_has_backlog(log_t *logdata, char *destination);
+char *log_backread(log_t *logdata, const char *destination, int *skip);
+int log_has_backlog(log_t *logdata, const char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);
 void log_reset(logfilegroup_t *);
-int check_dir(char *filename, int is_fatal);
 void log_reinit_all(log_t *logdata);
 void log_free(log_t *log);
+int check_dir(char *filename, int is_fatal);
+
+list_t *log_backlogs(log_t *log);
+list_t *backlog_lines_from_last_mark(log_t *log, const char *bl);
 #endif

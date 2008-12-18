@@ -47,6 +47,7 @@ static int irc_367(struct link_server *server, struct line *l);
 static int irc_368(struct link_server *server, struct line *l);
 void irc_server_shutdown(struct link_server *s);
 static int origin_is_me(struct line *l, struct link_server *server);
+static void ls_set_nick(struct link_server *ircs, char *nick);
 
 #ifdef HAVE_OIDENTD
 #define OIDENTD_FILENAME ".oidentd.conf"
@@ -81,9 +82,9 @@ struct channel *channel_new(const char *name)
 	return chan;
 }
 
-char *nick_from_ircmask(char *mask)
+char *nick_from_ircmask(const char *mask)
 {
-	char *nick = mask;
+	const char *nick = mask;
 	char *ret;
 	size_t len;
 
@@ -219,11 +220,12 @@ static void irc_server_join(struct link_server *s)
 static void irc_server_connected(struct link_server *server)
 {
 	int i;
+
         LINK(server)->s_state = IRCS_CONNECTED;
         LINK(server)->s_conn_attempt = 0;
 
-	mylog(LOG_INFO, "Connected user %s to %s", LINK(server)->user->name,
-		LINK(server)->name);
+	mylog(LOG_INFO, "Connected to server %s for user %s",
+			LINK(server)->name, LINK(server)->user->name);
 
         irc_server_join(server);
         log_connected(LINK(server)->log);
@@ -238,15 +240,16 @@ static void irc_server_connected(struct link_server *server)
 		free(LINK(server)->cli_nick);
 		LINK(server)->cli_nick = NULL;
 	}
+
 	/* basic helper for nickserv and co */
 	list_iterator_t itocs;
 	for (list_it_init(&LINK(server)->on_connect_send, &itocs);
 				list_it_item(&itocs); list_it_next(&itocs)) {
-                ssize_t len = strlen(list_it_item(&itocs)) + 2;
-                char *str = bip_malloc(len + 1);
-                sprintf(str, "%s\r\n", (char *)list_it_item(&itocs));
-                write_line(CONN(server), str);
-                free(str);
+		ssize_t len = strlen(list_it_item(&itocs)) + 2;
+		char *str = bip_malloc(len + 1);
+		sprintf(str, "%s\r\n", (char *)list_it_item(&itocs));
+		write_line(CONN(server), str);
+		free(str);
         }
 
 	if (LINK(server)->l_clientc == 0) {
@@ -263,13 +266,33 @@ static void irc_server_connected(struct link_server *server)
  * Given the way irc nets disrespect the rfc, we completely forget
  * about this damn ircmask...
 :irc.iiens.net 352 pwet * ~a je.suis.t1r.net irc.iiens.net pwet H :0 d
+-> nohar!~nohar@haruka.t1r.net
 */
 static int irc_352(struct link_server *server, struct line *line)
 {
 	(void)server;
-	if (!irc_line_include(line, 7))
+	if (!irc_line_include(line, 6))
 		return ERR_PROTOCOL;
 
+#if 0
+	if (irc_line_elem_case_equals(line, 6, server->nick)) {
+		const char *nick = server->nick;
+		const char *iname = irc_line_elem(line, 3);
+		const char *ihost = irc_line_elem(line, 4);
+		char *ircmask = bip_malloc(strlen(nick) + strlen(iname) +
+				strlen(ihost) + 3);
+		strcpy(ircmask, nick);
+		strcat(ircmask, "!");
+		strcat(ircmask, iname);
+		strcat(ircmask, "@");
+		strcat(ircmask, ihost);
+		if (server->ircmask)
+			free(server->ircmask);
+		server->ircmask = ircmask;
+	}
+#endif
+
+#if 0
 	if (!origin_is_me(line, server)) {
 		struct channel *channel;
 		struct nick *nick;
@@ -283,6 +306,7 @@ static int irc_352(struct link_server *server, struct line *line)
 			return OK_COPY_WHO;
 	}
 
+#endif
 	return OK_COPY_WHO;
 }
 
@@ -365,24 +389,24 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 		if (LINK(server)->s_state != IRCS_CONNECTED) {
 			size_t nicklen = strlen(server->nick);
 			char *newnick = bip_malloc(nicklen + 2);
+
 			strcpy(newnick, server->nick);
 			if (strlen(server->nick) < 9) {
 				strcat(newnick, "`");
-			} else if (newnick[7] != '`') {
-				if (newnick[8] != '`') {
-					newnick[8] = '`';
-					newnick[9] = 0;
-				} else {
-					newnick[7] = '`';
-					newnick[9] = 0;
-				}
 			} else {
-				newnick[8] = rand() * ('z' - 'a') / RAND_MAX +
-					'a';
+				if (newnick[7] != '`') {
+					if (newnick[8] != '`') {
+						newnick[8] = '`';
+					} else {
+						newnick[7] = '`';
+					}
+				} else {
+					newnick[8] = rand() *
+						('z' - 'a') / RAND_MAX + 'a';
+				}
 				newnick[9] = 0;
 			}
-			free(server->nick);
-			server->nick = newnick;
+			ls_set_nick(server, newnick);
 
 			WRITE_LINE1(CONN(server), NULL, "NICK", server->nick);
 			ret = OK_FORGET;
@@ -482,19 +506,21 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 /* send join and related stuff to client */
 static void irc_send_join(struct link_client *ic, struct channel *chan)
 {
-	char *ircmask; /* fake an irc mask for rbot */
 	struct user *user;
+	char *ircmask;
 
 	user = LINK(ic)->user;
 	if (!user)
 		fatal("irc_send_join: No user associated");
 
+	/* user ircmask here for rbot */
 	ircmask = bip_malloc(strlen(LINK(ic)->l_server->nick) +
-			strlen("!bip@bip.bip.bip") + 1);
+			strlen(BIP_FAKEMASK) + 1);
 	strcpy(ircmask, LINK(ic)->l_server->nick);
-	strcat(ircmask, "!bip@bip.bip.bip");
+	strcat(ircmask, BIP_FAKEMASK);
 	WRITE_LINE1(CONN(ic), ircmask, "JOIN", chan->name);
 	free(ircmask);
+
 	if (chan->topic)
 		WRITE_LINE3(CONN(ic), P_SERV, "332", LINK(ic)->l_server->nick,
 				chan->name, chan->topic);
@@ -517,38 +543,15 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	WRITE_LINE3(CONN(ic), P_SERV, "366", LINK(ic)->l_server->nick,
 			chan->name, "End of /NAMES list.");
 
-	/* XXX: could be more efficient */
-	if (!user->backlog) {
-		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
-			user->name);
-	} else if (log_has_backlog(LINK(ic)->log, chan->name)) {
-		char *line;
-		int skip = 0;
-		while ((line =
-		    log_backread(LINK(ic)->log, chan->name, &skip))) {
-			if (!skip)
-				write_line(CONN(ic), line);
-			free(line);
-		}
-		WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
-				"End of backlog.");
-	} else {
-		mylog(LOG_DEBUG, "Nothing to backlog for %s/%s",
-			user->name, chan->name);
-	}
 }
 
 static void write_init_string(connection_t *c, struct line *line, char *nick)
 {
-	char *tmp;
 	char *l;
 
-	tmp = (char *)irc_line_elem(line, 1);
-	line->elemv[1] = nick;
-	l = irc_line_to_string(line);
+	l = irc_line_to_string_to(line, nick);
 	write_line(c, l);
 	free(l);
-	line->elemv[1] = tmp;
 }
 
 static void bind_to_link(struct link *l, struct link_client *ic)
@@ -654,16 +657,33 @@ static void irc_cli_make_join(struct link_client *ic)
 			if (!hash_get(&LINK(ic)->chan_infos, chan->name))
 				irc_send_join(ic, chan);
 		}
-
-		/* backlog privates */
-		char *str;
-		int skip = 0;
-		while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &skip))) {
-			if (!skip)
-				write_line(CONN(ic), str);
-			free(str);
-		}
 	}
+}
+
+static void irc_cli_backlog(struct link_client *ic)
+{
+	struct user *user;
+
+	user = LINK(ic)->user;
+	if (!user)
+		fatal("irc_send_join: No user associated");
+	if (!user->backlog) {
+		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
+				user->name);
+		return;
+	}
+
+	list_t *backlogl;
+	char *bl;
+
+	backlogl = log_backlogs(LINK(ic)->log);
+	while ((bl = list_remove_first(backlogl))) {
+		mylog(LOG_INFO, "backlogging: %s", bl);
+		write_lines(CONN(ic),
+			backlog_lines_from_last_mark(LINK(ic)->log, bl));
+		free(bl);
+	}
+	list_free(backlogl);
 }
 
 static int irc_cli_startup(bip_t *bip, struct link_client *ic,
@@ -774,6 +794,7 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 	}
 
 	irc_cli_make_join(ic);
+	irc_cli_backlog(ic);
 
 	log_client_connected(LINK(ic)->log);
 	free(init_nick);
@@ -1559,17 +1580,20 @@ static int irc_mode(struct link_server *server, struct line *line)
 	int add = 1;
 	unsigned cur_arg = 0;
 	struct nick *nick;
+	char **elemv;
+	int elemc;
+
 
 	if (!irc_line_include(line, 2))
 		return ERR_PROTOCOL;
 
 	/* nick mode change */
 	if (irc_line_elem_equals(line, 1, server->nick)) {
+		irc_line_extract_args(line, 3, &elemv, &elemc);
 		log_mode(LINK(server)->log, line->origin,
 				irc_line_elem(line, 1),
-				irc_line_elem(line, 2),
-				(const const char **)(line->elemv + 3),
-				irc_line_count(line) - 3);
+				irc_line_elem(line, 2), elemv, elemc);
+		irc_line_free_args(elemv, elemc);
 		irc_user_mode(server, line);
 		return OK_COPY;
 	}
@@ -1582,10 +1606,11 @@ static int irc_mode(struct link_server *server, struct line *line)
 	/* we can't get mode message for chans we're not on */
 	if (!channel)
 		return ERR_PROTOCOL;
+
+	irc_line_extract_args(line, 3, &elemv, &elemc);
 	log_mode(LINK(server)->log, line->origin, irc_line_elem(line, 1),
-			irc_line_elem(line, 2),
-			(const const char **)(line->elemv + 3),
-			irc_line_count(line) - 3);
+			irc_line_elem(line, 2), elemv, elemc);
+	irc_line_free_args(elemv, elemc);
 
 	/*
 	 * MODE -a+b.. #channel args
@@ -1779,9 +1804,12 @@ static void irc_privmsg_check_ctcp(struct link_server *server,
 
 static int irc_privmsg(struct link_server *server, struct line *line)
 {
-	if (LINK(server)->s_state == IRCS_CONNECTED)
-		log_privmsg(LINK(server)->log, line->origin, irc_line_elem(line, 1),
-				irc_line_elem(line, 2));
+	if (!irc_line_include(line, 2))
+		return ERR_PROTOCOL;
+	if (LINK(server)->s_state == IRCS_CONNECTED) {
+		log_privmsg(LINK(server)->log, line->origin,
+				irc_line_elem(line, 1), irc_line_elem(line, 2));
+	}
 	irc_privmsg_check_ctcp(server, line);
 	return OK_COPY;
 }
@@ -1874,6 +1902,33 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 	return OK_COPY;
 }
 
+static void ls_set_nick(struct link_server *ircs, char *nick)
+{
+	if (ircs->nick)
+		free(ircs->nick);
+	ircs->nick = nick;
+#if 0
+	if (ircs->ircmask) {
+		char *eom = strchr(ircs->ircmask, '!');
+		if (!eom) {
+			free(ircs->ircmask);
+			goto fake;
+		}
+		eom = bip_strdup(eom);
+		free(ircs->ircmask);
+		ircs->ircmask = bip_malloc(strlen(nick) + strlen(eom) + 1);
+		strcpy(ircs->ircmask, nick);
+		strcat(ircs->ircmask, eom);
+		free(eom);
+		return;
+	}
+fake:
+	ircs->ircmask = bip_malloc(strlen(nick) + strlen(BIP_FAKEMASK) + 1);
+	strcpy(ircs->ircmask, nick);
+	strcat(ircs->ircmask, BIP_FAKEMASK);
+#endif
+}
+
 static void irc_server_startup(struct link_server *ircs)
 {
 	char *nick;
@@ -1906,7 +1961,7 @@ static void irc_server_startup(struct link_server *ircs)
 		nick = bip_strdup(LINK(ircs)->connect_nick);
 	}
 
-	ircs->nick = nick;
+	ls_set_nick(ircs, nick);
 	WRITE_LINE1(CONN(ircs), NULL, "NICK", ircs->nick);
 }
 
@@ -1952,7 +2007,7 @@ void server_cleanup(struct link_server *server)
 	for (hash_it_init(&server->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi))
 		channel_free(hash_it_item(&hi));
-	hash_init(&server->channels, HASH_NOCASE);
+	hash_clean(&server->channels);
 
 	if (CONN(server)) {
 		connection_free(CONN(server));

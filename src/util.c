@@ -444,10 +444,17 @@ void list_free(list_t *t)
 
 void list_append(list_t *src, list_t *dest)
 {
-	list_iterator_t it;
-
-	for (list_it_init(src, &it); list_it_item(&it); list_it_next(&it))
-		list_add_last(dest, list_it_item(&it));
+	if (dest->last == NULL)
+		return;
+	if (src->first == NULL) {
+		src->first = dest->first;
+		src->last = dest->last;
+		return;
+	}
+	dest->first->prev = src->last;
+	src->last->next = dest->first;
+	src->last = dest->last;
+	free(dest);
 }
 
 /*
@@ -618,7 +625,7 @@ void *hash_it_item(hash_iterator_t *h)
 	return hi->item;
 }
 
-char *hash_it_key(hash_iterator_t *h)
+const char *hash_it_key(hash_iterator_t *h)
 {
 	struct hash_item *hi;
 	hi = list_it_item(&h->lit);
@@ -645,6 +652,19 @@ void hash_dump(hash_t *h)
 	hash_iterator_t it;
 	for (hash_it_init(h, &it); hash_it_item(&it) ;hash_it_next(&it))
 		printf("%s => %p\n", hash_it_key(&it), hash_it_item(&it));
+}
+
+list_t *hash_keys(hash_t *hash)
+{
+	hash_iterator_t hi;
+	list_t *ret;
+
+	ret = list_new(NULL);
+
+	for (hash_it_init(hash, &hi); hash_it_item(&hi); hash_it_next(&hi))
+		list_add_last(ret, bip_strdup(hash_it_key(&hi)));
+
+	return ret;
 }
 
 char *bip_strmaydup(char *s)
