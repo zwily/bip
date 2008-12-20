@@ -113,7 +113,7 @@ list_t *channel_name_list(struct channel *c)
 
 	ret = list_new(NULL);
 	*str = 0;
-	for (hash_it_init(&c->ovmasks, &hi); hash_it_item(&hi);
+	for (hash_it_init(&c->ovmasks, &hi); hash_it_key(&hi);
 			hash_it_next(&hi)){
 		const char *nick = hash_it_key(&hi);
 		long int ovmask = (long int)hash_it_item(&hi);
@@ -1385,6 +1385,7 @@ static int irc_353(struct link_server *server, struct line *line)
 		/* we just ignore names for nicks that are crazy long */
 		if (len + 2 < NAMESIZE)
 			hash_insert(&channel->ovmasks, nick, (void *)ovmask);
+		free(nick);
 
 		while (*eon && *eon == ' ')
 			eon++;
