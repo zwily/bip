@@ -686,3 +686,102 @@ int ischannel(char p)
 {
 	return (p == '#' || p == '&' || p == '+' || p == '!');
 }
+
+void array_init(array_t *a)
+{
+	memset(a, 0, sizeof(array_t));
+}
+
+array_t *array_new(void)
+{
+	array_t *a;
+
+	a = bip_malloc(sizeof(array_t));
+	array_init(a);
+	return a;
+}
+
+int array_includes(array_t *a, int index)
+{
+	assert(index >= 0);
+	return a->elemc > index;
+}
+
+void array_ensure(array_t *a, int index)
+{
+	assert(index >= 0);
+
+	if (array_includes(a, index))
+		return;
+	a->elemv = bip_realloc(a->elemv, sizeof(void *) * (index + 1));
+	memset(a->elemv + a->elemc, 0, sizeof(void *) * (index + 1 - a->elemc));
+	a->elemc = index + 1;
+}
+
+void array_set(array_t *a, int index, void *ptr)
+{
+	array_ensure(a, index);
+	a->elemv[index] = ptr;
+}
+
+void *array_get(array_t *a, int index)
+{
+	assert(array_includes(a, index));
+	return a->elemv[index];
+}
+
+array_t *array_extract(array_t *a, int index, int upto)
+{
+	array_t *ret;
+	int i;
+
+	assert(array_includes(a, index));
+	if (upto == -1)
+		upto = a->elemc;
+	assert((index == 0 && upto == 0) || array_includes(a, upto - 1));
+	assert(index <= upto);
+
+	ret = array_new();
+	if (index == upto)
+		return ret;
+
+	/* here we have index < upto */
+	array_ensure(ret, upto - index - 1);
+	for (i = index; i < upto; i++)
+		ret->elemv[i] = a->elemv[i + index];
+	return ret;
+}
+
+void array_push(array_t *a, void *ptr)
+{
+	array_ensure(a, a->elemc + 1);
+	a->elemv[a->elemc - 1] = ptr;
+}
+
+void *array_pop(array_t *a)
+{
+	if (a->elemc == 0)
+		return NULL;
+	if (a->elemc == 1) {
+		void *ptr = a->elemv[0];
+		free(a->elemv);
+		a->elemv = NULL;
+		a->elemc = 0;
+		return ptr;
+	}
+	return a->elemv[--a->elemc];
+}
+
+void array_deinit(array_t *a)
+{
+	if (a->elemv)
+		free(a->elemv);
+	array_init(a);
+}
+
+void array_free(array_t *a)
+{
+	if (a->elemv)
+		free(a->elemv);
+	free(a);
+}

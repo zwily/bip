@@ -271,7 +271,7 @@ static void irc_server_connected(struct link_server *server)
 static int irc_352(struct link_server *server, struct line *line)
 {
 	(void)server;
-	if (!irc_line_include(line, 6))
+	if (!irc_line_includes(line, 6))
 		return ERR_PROTOCOL;
 
 #if 0
@@ -359,11 +359,11 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 	/* shut gcc up */
 	(void)bip;
 
-	if (!irc_line_include(line, 0))
+	if (!irc_line_includes(line, 0))
 		return ERR_PROTOCOL;
 
 	if (irc_line_elem_equals(line, 0, "PING")) {
-		if (!irc_line_include(line, 1))
+		if (!irc_line_includes(line, 1))
 			return ERR_PROTOCOL;
 		struct line *resp = irc_line_new();
 		char *resps;
@@ -867,7 +867,7 @@ static int irc_cli_quit(struct link_client *ic, struct line *line)
 static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 		struct line *line)
 {
-	if (!irc_line_include(line, 2))
+	if (!irc_line_includes(line, 2))
 		return OK_FORGET;
 
 	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
@@ -882,7 +882,7 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 
 static int irc_cli_notice(struct link_client *ic, struct line *line)
 {
-	if (!irc_line_include(line, 2))
+	if (!irc_line_includes(line, 2))
 		return OK_FORGET;
 	log_cli_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
 				irc_line_elem(line, 1), irc_line_elem(line, 2));
@@ -1055,7 +1055,7 @@ static int irc_cli_part(struct link_client *irc, struct line *line)
 static int irc_dispatch_trust_client(struct link_client *ic, struct line *line)
 {
 	int r = OK_COPY;
-	if (!irc_line_include(line, 1))
+	if (!irc_line_includes(line, 1))
 		return ERR_PROTOCOL;
 
 	if (strcasecmp(irc_line_elem(line, 0), "BIP") == 0 &&
@@ -1074,7 +1074,7 @@ static int irc_dispatch_client(bip_t *bip, struct link_client *ic,
 		return ERR_PROTOCOL;
 
 	if (irc_line_elem_equals(line, 0, "PING")) {
-		if (!irc_line_include(line, 1))
+		if (!irc_line_includes(line, 1))
 			return ERR_PROTOCOL;
 		WRITE_LINE1(CONN(ic), LINK(ic)->name, "PONG",
 				irc_line_elem(line, 1));
@@ -1137,7 +1137,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 	if (src == dest)
 		return;
 
-	if (!irc_line_include(line, 1) ||
+	if (!irc_line_includes(line, 1) ||
 			!irc_line_elem_equals(line, 0, "PRIVMSG")) {
 		str = irc_line_to_string(line);
 		write_line(CONN(dest), str);
@@ -1306,7 +1306,7 @@ static int irc_332(struct link_server *server, struct line *line)
 static int irc_333(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	if (!irc_line_include(line, 2))
+	if (!irc_line_includes(line, 2))
 		return ERR_PROTOCOL;
 
 	channel = hash_get(&server->channels, irc_line_elem(line, 2));
@@ -1580,20 +1580,21 @@ static int irc_mode(struct link_server *server, struct line *line)
 	int add = 1;
 	unsigned cur_arg = 0;
 	struct nick *nick;
-	char **elemv;
-	int elemc;
+	array_t *mode_args = NULL;
 
 
-	if (!irc_line_include(line, 2))
+	if (!irc_line_includes(line, 2))
 		return ERR_PROTOCOL;
 
 	/* nick mode change */
 	if (irc_line_elem_equals(line, 1, server->nick)) {
-		irc_line_extract_args(line, 3, &elemv, &elemc);
+		if (irc_line_includes(line, 3))
+			mode_args = array_extract(&line->words, 3, -1);
 		log_mode(LINK(server)->log, line->origin,
-				irc_line_elem(line, 1),
-				irc_line_elem(line, 2), elemv, elemc);
-		irc_line_free_args(elemv, elemc);
+				irc_line_elem(line, 1), irc_line_elem(line, 2),
+				mode_args);
+		if (mode_args)
+			array_free(mode_args);
 		irc_user_mode(server, line);
 		return OK_COPY;
 	}
@@ -1607,10 +1608,13 @@ static int irc_mode(struct link_server *server, struct line *line)
 	if (!channel)
 		return ERR_PROTOCOL;
 
-	irc_line_extract_args(line, 3, &elemv, &elemc);
+	mode_args = NULL;
+	if (irc_line_includes(line, 3))
+		mode_args = array_extract(&line->words, 3, -1);
 	log_mode(LINK(server)->log, line->origin, irc_line_elem(line, 1),
-			irc_line_elem(line, 2), elemv, elemc);
-	irc_line_free_args(elemv, elemc);
+			irc_line_elem(line, 2), mode_args);
+	if (mode_args)
+		array_free(mode_args);
 
 	/*
 	 * MODE -a+b.. #channel args
@@ -1626,12 +1630,12 @@ static int irc_mode(struct link_server *server, struct line *line)
 			add = 1;
 			break;
 		case 'b':
-			if (!irc_line_include(line, cur_arg + 3))
+			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
 			cur_arg++;
 			break;
 		case 'o':
-			if (!irc_line_include(line, cur_arg + 3))
+			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
 
 			nick = hash_get(&channel->nicks,
@@ -1645,7 +1649,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 			cur_arg++;
 			break;
 		case 'h':
-			if (!irc_line_include(line, cur_arg + 3))
+			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
 
 			nick = hash_get(&channel->nicks,
@@ -1659,7 +1663,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 			cur_arg++;
 			break;
 		case 'v':
-			if (!irc_line_include(line, cur_arg + 3))
+			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
 
 			nick = hash_get(&channel->nicks,
@@ -1674,7 +1678,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 			break;
 		case 'k':
 			if (add) {
-				if (!irc_line_include(line, cur_arg + 3))
+				if (!irc_line_includes(line, cur_arg + 3))
 					return ERR_PROTOCOL;
 
 				channel->key = bip_strdup(
@@ -1695,7 +1699,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 		case 'e':
 		case 'q':
 		case 'I':
-			if (!irc_line_include(line, cur_arg + 3))
+			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
 			cur_arg++;
 			break;
@@ -1804,7 +1808,7 @@ static void irc_privmsg_check_ctcp(struct link_server *server,
 
 static int irc_privmsg(struct link_server *server, struct line *line)
 {
-	if (!irc_line_include(line, 2))
+	if (!irc_line_includes(line, 2))
 		return ERR_PROTOCOL;
 	if (LINK(server)->s_state == IRCS_CONNECTED) {
 		log_privmsg(LINK(server)->log, line->origin,
@@ -1896,7 +1900,7 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 		nick_free(nick);
 
 		log_quit(LINK(server)->log, line->origin, channel->name,
-		    irc_line_include(line, 1) ? irc_line_elem(line, 1) : NULL);
+		    irc_line_includes(line, 1) ? irc_line_elem(line, 1) : NULL);
 	}
 	free(s_nick);
 	return OK_COPY;
@@ -2439,7 +2443,7 @@ void bip_on_event(bip_t *bip, connection_t *conn)
 			continue;
 		}
 
-		line = irc_line(line_s);
+		line = irc_line_new_from_string(line_s);
 		if (!line) {
 			mylog(LOG_ERROR, "Error in protocol, closing...");
 			free(line_s);

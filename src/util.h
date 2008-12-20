@@ -59,6 +59,11 @@ typedef struct hash_iterator {
 	hash_t *hash;
 } hash_iterator_t;
 
+typedef struct array {
+	int elemc;
+	void **elemv;
+} array_t;
+
 #define MOVE_STRING(dest, src) do {\
 	if (dest)\
 		free(dest);\
@@ -74,6 +79,19 @@ typedef struct hash_iterator {
 			(a) = NULL; \
 		} \
 	} while(0);
+
+#define assert(condition) \
+	do { \
+		if (!(condition)) \
+			fatal("Failed assetion in " __FILE__ "(%d): " \
+				#condition, __LINE__); \
+	} while(0)
+
+#define assert_msg(condition, msg) \
+	do { \
+		if (!(condition)) \
+			fatal(msg); \
+	} while(0)
 
 void list_init(list_t *list, int (*cmp)(const void*, const void*));
 int list_ptr_cmp(const void *a, const void *b);
@@ -129,5 +147,23 @@ void *bip_malloc(size_t size);
 void *bip_calloc(size_t nmemb, size_t size);
 void *bip_realloc(void *ptr, size_t size);
 char *bip_strdup(const char *str);
+#define array_each(a, idx, ptr) for ((idx) = 0; \
+		(idx) < (a)->elemc && (((ptr) = array_get((a), (idx))) || 1); \
+		(idx)++)
 
+void array_init(array_t *a);
+array_t *array_new(void);
+int array_includes(array_t *a, int index);
+void array_ensure(array_t *a, int index);
+void array_set(array_t *a, int index, void *ptr);
+void *array_get(array_t *a, int index);
+array_t *array_extract(array_t *a, int index, int upto);
+void array_push(array_t *a, void *ptr);
+void *array_pop(array_t *a);
+void array_deinit(array_t *a);
+void array_free(array_t *a);
+static inline int array_count(array_t *a)
+{
+	return a->elemc;
+}
 #endif

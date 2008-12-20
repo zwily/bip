@@ -78,8 +78,7 @@
 
 struct line {
 	char *origin;
-	int elemc;
-	const char **elemv;
+	array_t words;
 	int colon;
 };
 
@@ -88,20 +87,18 @@ void _irc_line_deinit(struct line *l);
 struct line *irc_line_new();
 void irc_line_write(struct line *l, connection_t *c);
 void irc_line_append(struct line *l, const char *s);
-struct line *irc_line(char *str);
+struct line *irc_line_new_from_string(char *str);
 char *irc_line_to_string(struct line *l);
 char *irc_line_to_string_to(struct line *line, char *nick);
 void irc_line_free(struct line *l);
 struct line *irc_line_dup(struct line *line);
 void _irc_line_append(struct line *l, const char *s);
-int irc_line_include(struct line *line, int elem);
+int irc_line_includes(struct line *line, int elem);
 const char *irc_line_elem(struct line *line, int elem);
 int irc_line_count(struct line *line);
 char *irc_line_pop(struct line *l);
 int irc_line_elem_equals(struct line *line, int elem, const char *cmp);
 int irc_line_elem_case_equals(struct line *line, int elem, const char *cmp);
-void irc_line_extract_args(struct line *line, int from,
-		char ***elemv, int *elemc);
 void irc_line_free_args(char **elemv, int elemc);
 
 #endif

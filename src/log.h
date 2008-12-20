@@ -37,7 +37,7 @@ typedef struct logfile {
 	size_t len;
 } logfile_t;
 
-typedef struct logfilegroup
+typedef struct logstore
 {
 	char *name;
 	list_t file_group;
@@ -47,7 +47,7 @@ typedef struct logfilegroup
 	int memc;
 	list_iterator_t backlog_it;
 	int track_backlog;
-} logfilegroup_t;
+} logstore_t;
 
 typedef struct log {
 	hash_t logfgs;
@@ -83,7 +83,7 @@ void log_cli_notice(log_t *logdata, const char *ircmask, const char *channel,
 		const char *message);
 void log_write(log_t *logdata, const char *str, const char *destination);
 void log_mode(log_t *logdata, const char *ircmask, const char *channel,
-		const char *modes, char **modargv, int modargc);
+		const char *modes, array_t *mode_args);
 void log_topic(log_t *logdata, const char *ircmask, const char *channel,
 		const char *message);
 void log_init_topic(log_t *logdata, const char *channel, const char *message);
@@ -98,7 +98,7 @@ char *log_backread(log_t *logdata, const char *destination, int *skip);
 int log_has_backlog(log_t *logdata, const char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);
-void log_reset(logfilegroup_t *);
+void log_reset(logstore_t *);
 void log_reinit_all(log_t *logdata);
 void log_free(log_t *log);
 int check_dir(char *filename, int is_fatal);

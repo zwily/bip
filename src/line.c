@@ -13,20 +13,23 @@
 
 #include "config.h"
 #include "line.h"
+#include "util.h"
 
 void irc_line_init(struct line *l)
 {
 	memset(l, 0, sizeof(struct line));
+	array_init(&l->words);
 }
 
 void _irc_line_deinit(struct line *l)
 {
-	free(l->elemv);
+	array_deinit(&l->words);
 }
 
 struct line *irc_line_new()
 {
 	struct line *l;
+
 	l = bip_malloc(sizeof(struct line));
 	irc_line_init(l);
 	return l;
@@ -43,32 +46,23 @@ struct line *irc_line_dup(struct line *line)
 {
 	int i;
 	struct line *nl = irc_line_new();
+	char *ptr;
+
 	nl->origin = line->origin ? bip_strdup(line->origin) : NULL;
-	nl->elemc = line->elemc;
-	nl->elemv = bip_malloc(sizeof(char *) * line->elemc);
-	for (i = 0; i < line->elemc; i++)
-		nl->elemv[i] = bip_strdup(line->elemv[i]);
+	array_each(&line->words, i, ptr)
+		array_set(&nl->words, i, bip_strdup(ptr));
 	nl->colon = line->colon;
 	return nl;
 }
 
 char *irc_line_pop(struct line *l)
 {
-	char *ret;
-
-	if (irc_line_count(l) == 0)
-		return NULL;
-	ret = (char *)l->elemv[l->elemc - 1];
-	l->elemc--;
-
-	return ret;
+	return (char *)array_pop(&l->words);
 }
 
 void _irc_line_append(struct line *l, const char *s)
 {
-	l->elemc++;
-	l->elemv = bip_realloc(l->elemv, l->elemc * sizeof(char *));
-	l->elemv[l->elemc - 1] = (char *)s;
+	array_push(&l->words, (char *)s);
 }
 
 void irc_line_append(struct line *l, const char *s)
@@ -84,8 +78,8 @@ char *irc_line_to_string(struct line *l)
 
 	if (l->origin)
 		len = strlen(l->origin) + 2;
-	for (i = 0; i < l->elemc; i++)
-		len += strlen(l->elemv[i]) + 1;
+	for (i = 0; i < array_count(&l->words); i++)
+		len += strlen(array_get(&l->words, i)) + 1;
 	len += 1; /* remove one trailing space and add \r\n */
 	len++; /* last args ":" */
 	ret = bip_malloc(len + 1);
@@ -96,14 +90,14 @@ char *irc_line_to_string(struct line *l)
 		strcat(ret, l->origin);
 		strcat(ret, " ");
 	}
-	for (i = 0; i < l->elemc - 1; i++) {
-		strcat(ret, l->elemv[i]);
+	for (i = 0; i < array_count(&l->words) - 1; i++) {
+		strcat(ret, array_get(&l->words, i));
 		strcat(ret, " ");
 	}
-	if (strchr(l->elemv[i], ' ') || l->colon)
+	if (strchr(array_get(&l->words, i), ' ') || l->colon)
 		strcat(ret, ":");
 
-	strcat(ret, l->elemv[i]);
+	strcat(ret, array_get(&l->words, i));
 	strcat(ret, "\r\n");
 	return ret;
 }
@@ -114,30 +108,26 @@ char *irc_line_to_string_to(struct line *line, char *nick)
 	char *l;
 
 	tmp = (char *)irc_line_elem(line, 1);
-	line->elemv[1] = nick;
+	array_set(&line->words, 1, nick);
 	l = irc_line_to_string(line);
-	line->elemv[1] = tmp;
+	array_set(&line->words, 1, tmp);
 
 	return l;
 }
 
 int irc_line_count(struct line *line)
 {
-	return line->elemc;
+	return array_count(&line->words);
 }
 
-int irc_line_include(struct line *line, int elem)
+int irc_line_includes(struct line *line, int elem)
 {
-	if (elem < 0)
-		fatal("internal error: irc_line_elem got negative elem");
-	return elem < line->elemc;
+	return array_includes(&line->words, elem);
 }
 
 const char *irc_line_elem(struct line *line, int elem)
 {
-	if (!irc_line_include(line, elem))
-		fatal("internal error: irc_line_elem got too large elem");
-	return line->elemv[elem];
+	return array_get(&line->words, elem);
 }
 
 int irc_line_elem_equals(struct line *line, int elem, const char *cmp)
@@ -153,21 +143,22 @@ int irc_line_elem_case_equals(struct line *line, int elem, const char *cmp)
 /*
  * takes a null terminated string as input w/o \r\n
  */
-struct line *irc_line(char *str)
+struct line *irc_line_new_from_string(char *str)
 {
 	struct line *line;
 	char *space;
 	size_t len;
-	int curelem = 0;
 
-	line = bip_calloc(sizeof(struct line), 1);
+	line = irc_line_new();
 	if (str[0] == ':') {
 		space = str + 1;
 
 		while (*space && *space != ' ')
 			space++;
-		if (!*space)
+		if (!*space) {
+			irc_line_free(line);
 			return NULL;
+		}
 		len = space - str - 1; /* leading ':' */
 		line->origin = bip_malloc(len + 1);
 		memcpy(line->origin, str + 1, len);
@@ -180,10 +171,6 @@ struct line *irc_line(char *str)
 
 	while (*str) {
 		char *tmp;
-
-		line->elemc++;
-		line->elemv = bip_realloc(line->elemv,
-				line->elemc * sizeof(char *));
 
 		space = str;
 		if (*space == ':') {
@@ -199,11 +186,9 @@ struct line *irc_line(char *str)
 		tmp = bip_malloc(len + 1);
 		memcpy(tmp, str, len);
 		tmp[len] = 0;
-		if (curelem == 0)
+		if (array_count(&line->words) == 0)
 			strucase(tmp);
-		line->elemv[curelem] = (const char *)tmp;
-
-		curelem++;
+		array_push(&line->words, tmp);
 
 		str = space;
 		while (*str == ' ')
@@ -216,27 +201,12 @@ void irc_line_free(struct line *l)
 {
 	int i;
 
-	for (i = 0; i < l->elemc; i++)
-		free((char *)l->elemv[i]);
-	free(l->elemv);
+	for (i = 0; i < array_count(&l->words); i++)
+		free(array_get(&l->words, i));
+	array_deinit(&l->words);
 	if (l->origin)
 		free(l->origin);
 	free(l);
-}
-
-void irc_line_extract_args(struct line *line, int from,
-		char ***elemv, int *elemc)
-{
-	int i;
-
-	*elemc = irc_line_count(line) - from;
-	if (*elemc == 0) {
-		*elemv = NULL;
-		return;
-	}
-	*elemv = bip_malloc(*elemc * sizeof(char *));
-	for (i = 0; i < *elemc; i++)
-		*elemv[i] = bip_strdup(irc_line_elem(line, i + from));
 }
 
 void irc_line_free_args(char **elemv, int elemc)

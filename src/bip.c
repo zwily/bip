@@ -1900,7 +1900,7 @@ void adm_on_connect_send(struct link_client *ic, struct line *line,
 		return;
 	}
 
-	if (irc_line_include(line, 2))
+	if (irc_line_includes(line, 2))
 		return;
 
 	for (i = privmsg + 2; i < irc_line_count(line); i++) {
@@ -2096,7 +2096,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 		free(linestr);
 	}
 
-	if (!irc_line_include(line, privmsg + 1))
+	if (!irc_line_includes(line, privmsg + 1))
 		return OK_FORGET;
 
 	mylog(LOG_INFO, "/BIP %s from %s", irc_line_elem(line, privmsg + 1),
@@ -2134,7 +2134,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 			bip_notify(ic, "-- Invalid LIST request");
 		}
 	} else if (strcasecmp(irc_line_elem(line, privmsg + 1), "INFO") == 0) {
-		if (!irc_line_include(line, privmsg + 2)) {
+		if (!irc_line_includes(line, privmsg + 2)) {
 			bip_notify(ic, "-- INFO command needs at least one "
 					"argument");
 			return OK_FORGET;
@@ -2163,7 +2163,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 		}
 		bip_notify(ic, "-- Jumping to next server");
 	} else if (irc_line_elem_case_equals(line, privmsg + 1, "BLRESET")) {
-		if (line->elemc == privmsg + 3 &&
+		if (irc_line_count(line) == privmsg + 3 &&
 				irc_line_elem_equals(line, privmsg + 2, "-q")) {
 			log_reinit_all(LINK(ic)->log);
 		} else {
@@ -2197,7 +2197,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 				"ON_CONNECT_SEND")) {
 		if (irc_line_count(line) == privmsg + 2) {
 			adm_on_connect_send(ic, NULL, 0);
-		} else if (irc_line_include(line, privmsg + 2)) {
+		} else if (irc_line_includes(line, privmsg + 2)) {
 			adm_on_connect_send(ic, line, privmsg);
 		} else {
 			bip_notify(ic, "-- ON_CONNECT_SEND command needs at "
