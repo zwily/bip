@@ -561,7 +561,7 @@ void log_mode(log_t *logdata, const char *ircmask, const char *channel,
 			channel, modes);
 	for (i = 0; i < array_count(mode_args); i++) {
 		snprintf(tmpbuf2, LOGLINE_MAXLEN, "%s %s", tmpbuf,
-				array_get(mode_args, i));
+				(char *)array_get(mode_args, i));
 		tmp = tmpbuf;
 		tmpbuf = tmpbuf2;
 		tmpbuf2 = tmp;

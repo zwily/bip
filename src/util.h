@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 /* Warning: must be in order, 0 = less output */
 #define LOG_FATAL 0
@@ -153,17 +154,51 @@ char *bip_strdup(const char *str);
 
 void array_init(array_t *a);
 array_t *array_new(void);
-int array_includes(array_t *a, int index);
 void array_ensure(array_t *a, int index);
-void array_set(array_t *a, int index, void *ptr);
-void *array_get(array_t *a, int index);
 array_t *array_extract(array_t *a, int index, int upto);
-void array_push(array_t *a, void *ptr);
-void *array_pop(array_t *a);
 void array_deinit(array_t *a);
 void array_free(array_t *a);
 static inline int array_count(array_t *a)
 {
 	return a->elemc;
 }
+
+static inline int array_includes(array_t *a, int index)
+{
+	assert(index >= 0);
+	return a->elemc > index;
+}
+
+static inline void array_set(array_t *a, int index, void *ptr)
+{
+	array_ensure(a, index);
+	a->elemv[index] = ptr;
+}
+
+static inline void *array_get(array_t *a, int index)
+{
+	assert(array_includes(a, index));
+	return a->elemv[index];
+}
+
+static inline void array_push(array_t *a, void *ptr)
+{
+	array_ensure(a, a->elemc + 1);
+	a->elemv[a->elemc - 1] = ptr;
+}
+
+static inline void *array_pop(array_t *a)
+{
+	if (a->elemc == 0)
+		return NULL;
+	if (a->elemc == 1) {
+		void *ptr = a->elemv[0];
+		free(a->elemv);
+		a->elemv = NULL;
+		a->elemc = 0;
+		return ptr;
+	}
+	return a->elemv[--a->elemc];
+}
+
 #endif
