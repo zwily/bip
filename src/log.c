@@ -415,6 +415,9 @@ void log_quit(log_t *logdata, const char *ircmask, const char *channel,
 void log_nick(log_t *logdata, const char *ircmask, const char *channel,
 		const char *newnick)
 {
+	char *oldnick = nick_from_ircmask(ircmask);
+	if (hash_includes(&logdata->logfgs, oldnick))
+		hash_rename_key(&logdata->logfgs, oldnick, newnick);
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- %s is now known as %s",
 			timestamp(), ircmask, newnick);
@@ -559,16 +562,17 @@ void log_mode(log_t *logdata, const char *ircmask, const char *channel,
 
 	snprintf(tmpbuf, LOGLINE_MAXLEN, "%s -!- mode/%s [%s", timestamp(),
 			channel, modes);
-	for (i = 0; i < array_count(mode_args); i++) {
-		snprintf(tmpbuf2, LOGLINE_MAXLEN, "%s %s", tmpbuf,
-				(char *)array_get(mode_args, i));
-		tmp = tmpbuf;
-		tmpbuf = tmpbuf2;
-		tmpbuf2 = tmp;
+	if (mode_args) {
+		for (i = 0; i < array_count(mode_args); i++) {
+			snprintf(tmpbuf2, LOGLINE_MAXLEN, "%s %s", tmpbuf,
+					(char *)array_get(mode_args, i));
+			tmp = tmpbuf;
+			tmpbuf = tmpbuf2;
+			tmpbuf2 = tmp;
+		}
 	}
 
-	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s] by %s", tmpbuf,
-			ircmask);
+	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s] by %s", tmpbuf, ircmask);
 	log_write(logdata, channel, logdata->buffer);
 
 	free(tmpbuf);

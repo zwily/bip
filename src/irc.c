@@ -78,7 +78,7 @@ struct channel *channel_new(const char *name)
 	struct channel *chan;
 	chan = bip_calloc(sizeof(struct channel), 1);
 	chan->name = bip_strdup(name);
-	hash_init(&chan->nicks, HASH_NOCASE);
+	hash_init(&chan->ovmasks, HASH_NOCASE);
 	return chan;
 }
 
@@ -108,23 +108,21 @@ list_t *channel_name_list(struct channel *c)
 {
 	list_t *ret;
 	hash_iterator_t hi;
-	size_t s = NAMESIZE;
-	ret = list_new(NULL);
-
 	size_t len = 0;
-	char *str = bip_malloc(NAMESIZE);
+	char *str = bip_malloc(NAMESIZE + 1);
+
+	ret = list_new(NULL);
 	*str = 0;
-	for (hash_it_init(&c->nicks, &hi); hash_it_item(&hi);
+	for (hash_it_init(&c->ovmasks, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)){
-		struct nick *n = hash_it_item(&hi);
+		const char *nick = hash_it_key(&hi);
+		long int ovmask = (long int)hash_it_item(&hi);
 
-		if (strlen(n->name) + 2 >= NAMESIZE)
-			fatal("nick too big for me"); /* FIXME */
+		assert(strlen(nick) + 2 < NAMESIZE);
 
-		if (len + strlen(n->name) + 2 + (n->ovmask ? 1 : 0)
-				>= NAMESIZE) {
+		if (len + strlen(nick) + 2 + (ovmask ? 1 : 0) >= NAMESIZE) {
 			list_add_last(ret, str);
-			str = bip_malloc(s);
+			str = bip_malloc(NAMESIZE + 1);
 			*str = 0;
 			len = 0;
 		}
@@ -132,20 +130,17 @@ list_t *channel_name_list(struct channel *c)
 			strncat(str, " ", NAMESIZE);
 			len++;
 		}
-		if (n->ovmask & NICKOP) {
+		if (ovmask & NICKOP)
 			strncat(str, "@", NAMESIZE);
-			len++;
-		} else if (n->ovmask & NICKHALFOP) {
+		else if (ovmask & NICKHALFOP)
 			strncat(str, "%", NAMESIZE);
-			len++;
-		} else if (n->ovmask & NICKVOICED) {
+		else if (ovmask & NICKVOICED)
 			strncat(str, "+", NAMESIZE);
-			len++;
-		}
-		strncat(str, n->name, NAMESIZE);
-		len += strlen(n->name);
-		if (len >= NAMESIZE)
-			fatal("internal error 5");
+		len++;
+
+		strncat(str, nick, NAMESIZE);
+		len += strlen(nick);
+		assert(len < NAMESIZE);
 	}
 	list_add_last(ret, str);
 	return ret;
@@ -542,7 +537,6 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 
 	WRITE_LINE3(CONN(ic), P_SERV, "366", LINK(ic)->l_server->nick,
 			chan->name, "End of /NAMES list.");
-
 }
 
 static void write_init_string(connection_t *c, struct line *line, char *nick)
@@ -666,7 +660,7 @@ static void irc_cli_backlog(struct link_client *ic)
 
 	user = LINK(ic)->user;
 	if (!user)
-		fatal("irc_send_join: No user associated");
+		fatal("irc_cli_backlog: No user associated");
 	if (!user->backlog) {
 		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
 				user->name);
@@ -871,7 +865,7 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 		return OK_FORGET;
 
 	log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
-				irc_line_elem(line, 1), irc_line_elem(line, 2));
+			irc_line_elem(line, 1), irc_line_elem(line, 2));
 	if (irc_line_elem_equals(line, 1, "-bip"))
 		return adm_bip(bip, ic, line, 1);
 
@@ -1254,7 +1248,6 @@ static int irc_join(struct link_server *server, struct line *line)
 	char *s_nick;
 	const char *s_chan;
 	struct channel *channel;
-	struct nick *nick;
 
 	if (irc_line_count(line) != 2 && irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
@@ -1278,9 +1271,7 @@ static int irc_join(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
 
-	nick = bip_calloc(sizeof(struct nick), 1);
-	nick->name = s_nick;	/* not freeing s_nick */
-	hash_insert(&channel->nicks, s_nick, nick);
+	hash_insert(&channel->ovmasks, s_nick, 0);
 	return OK_COPY;
 }
 
@@ -1329,20 +1320,12 @@ static int irc_333(struct link_server *server, struct line *line)
 	return OK_COPY;
 }
 
-static void nick_free(struct nick *nick)
-{
-	if (nick->name)
-		free(nick->name);
-	free(nick);
-}
-
 static int irc_353(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	struct nick *nick;
 	const char *names, *eon;
 	size_t len;
-	char *tmp;
+	char *nick;
 
 	if (irc_line_count(line) != 5)
 		return ERR_PROTOCOL;
@@ -1354,12 +1337,7 @@ static int irc_353(struct link_server *server, struct line *line)
 
 	if (!channel->running_names) {
 		channel->running_names = 1;
-		hash_iterator_t hi;
-		for (hash_it_init(&channel->nicks, &hi); hash_it_item(&hi);
-				hash_it_next(&hi)) {
-			nick_free(hash_it_item(&hi));
-		}
-		hash_clean(&channel->nicks);
+		hash_clean(&channel->ovmasks);
 	}
 
 	/* TODO check that type is one of "=" / "*" / "@" */
@@ -1368,7 +1346,7 @@ static int irc_353(struct link_server *server, struct line *line)
 	names = irc_line_elem(line, 4);
 
 	while (*names) {
-		int ovmask = 0;
+		long int ovmask = 0;
 		int flagchars = 1;
 		/* some ircds (e.g. unreal) may display several flags for the
                    same nick */
@@ -1400,15 +1378,14 @@ static int irc_353(struct link_server *server, struct line *line)
 			eon++;
 
 		len = eon - names;
-		tmp = bip_malloc(len + 1);
-		memcpy(tmp, names, len);
-		tmp[len] = 0;
+		nick = bip_malloc(len + 1);
+		memcpy(nick, names, len);
+		nick[len] = 0;
 
-		nick = bip_malloc(sizeof(struct nick));
-		nick->name = tmp;
-		nick->ovmask = ovmask;
+		/* we just ignore names for nicks that are crazy long */
+		if (len + 2 < NAMESIZE)
+			hash_insert(&channel->ovmasks, nick, (void *)ovmask);
 
-		hash_insert(&channel->nicks, nick->name, nick);
 		while (*eon && *eon == ' ')
 			eon++;
 		names = eon;
@@ -1475,10 +1452,7 @@ static void channel_free(struct channel *c)
 	if (c->create_ts)
 		free(c->create_ts);
 
-	hash_iterator_t hi;
-	for (hash_it_init(&c->nicks, &hi); hash_it_item(&hi); hash_it_next(&hi))
-		nick_free(hash_it_item(&hi));
-	hash_clean(&c->nicks);
+	hash_clean(&c->ovmasks);
 	free(c);
 }
 
@@ -1487,7 +1461,6 @@ static int irc_part(struct link_server *server, struct line *line)
 	char *s_nick;
 	const char *s_chan;
 	struct channel *channel;
-	struct nick *nick;
 
 	if (irc_line_count(line) != 2 && irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
@@ -1512,18 +1485,14 @@ static int irc_part(struct link_server *server, struct line *line)
 	if (!line->origin)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
-	nick = hash_get(&channel->nicks, s_nick);
-	if (!nick) {
-		free(s_nick);
+	if (!hash_includes(&channel->ovmasks, s_nick))
 		return ERR_PROTOCOL;
-	}
-	nick = hash_remove(&channel->nicks, s_nick);
-	free(s_nick);
+	hash_remove(&channel->ovmasks, s_nick);
 
 	log_part(LINK(server)->log, line->origin, s_chan,
-			irc_line_count(line) == 3 ? irc_line_elem(line, 2) : NULL);
+			irc_line_count(line) == 3 ?
+				irc_line_elem(line, 2) : NULL);
 
-	nick_free(nick);
 	return OK_COPY;
 }
 
@@ -1579,9 +1548,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 	const char *mode;
 	int add = 1;
 	unsigned cur_arg = 0;
-	struct nick *nick;
 	array_t *mode_args = NULL;
-
 
 	if (!irc_line_includes(line, 2))
 		return ERR_PROTOCOL;
@@ -1621,6 +1588,8 @@ static int irc_mode(struct link_server *server, struct line *line)
 	 *         ^            ^
 	 *       mode         cur_arg
 	 */
+	const char *nick;
+	long int ovmask;
 	for (mode = irc_line_elem(line, 2); *mode; mode++) {
 		switch (*mode) {
 		case '-':
@@ -1637,43 +1606,48 @@ static int irc_mode(struct link_server *server, struct line *line)
 		case 'o':
 			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
+			nick = irc_line_elem(line, cur_arg + 3);
 
-			nick = hash_get(&channel->nicks,
-					irc_line_elem(line, cur_arg + 3));
-			if (!nick)
+			if (!hash_includes(&channel->ovmasks, nick))
 				return ERR_PROTOCOL;
+			ovmask = (long int)hash_remove(&channel->ovmasks, nick);
 			if (add)
-				nick->ovmask |= NICKOP;
+				ovmask |= NICKOP;
 			else
-				nick->ovmask &= ~NICKOP;
+				ovmask &= ~NICKOP;
+			hash_insert(&channel->ovmasks, nick, (void *)ovmask);
 			cur_arg++;
 			break;
 		case 'h':
 			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
+			nick = irc_line_elem(line, cur_arg + 3);
 
-			nick = hash_get(&channel->nicks,
-					irc_line_elem(line, cur_arg + 3));
-			if (!nick)
+			if (!hash_includes(&channel->ovmasks, nick))
 				return ERR_PROTOCOL;
+
+			ovmask = (long int)hash_get(&channel->ovmasks, nick);
 			if (add)
-				nick->ovmask |= NICKHALFOP;
+				ovmask |= NICKHALFOP;
 			else
-				nick->ovmask &= ~NICKHALFOP;
+				ovmask &= ~NICKHALFOP;
+			hash_insert(&channel->ovmasks, nick, (void *)ovmask);
 			cur_arg++;
 			break;
 		case 'v':
 			if (!irc_line_includes(line, cur_arg + 3))
 				return ERR_PROTOCOL;
+			nick = irc_line_elem(line, cur_arg + 3);
 
-			nick = hash_get(&channel->nicks,
-					irc_line_elem(line, cur_arg + 3));
-			if (!nick)
+			if (!hash_includes(&channel->ovmasks, nick))
 				return ERR_PROTOCOL;
+
+			ovmask = (long int)hash_get(&channel->ovmasks, nick);
 			if (add)
-				nick->ovmask |= NICKVOICED;
+				ovmask |= NICKVOICED;
 			else
-				nick->ovmask &= ~NICKVOICED;
+				ovmask &= ~NICKVOICED;
+			hash_insert(&channel->ovmasks, nick, (void *)ovmask);
 			cur_arg++;
 			break;
 		case 'k':
@@ -1749,14 +1723,14 @@ static int irc_topic(struct link_server *server, struct line *line)
 		free(channel->create_ts);
 	channel->create_ts = irc_timestamp();
 
-	log_topic(LINK(server)->log, line->origin, irc_line_elem(line, 1), topic);
+	log_topic(LINK(server)->log, line->origin, irc_line_elem(line, 1),
+			topic);
 	return OK_COPY;
 }
 
 static int irc_kick(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	struct nick *nick;
 
 	if (irc_line_count(line) != 3 && irc_line_count(line) != 4)
 		return ERR_PROTOCOL;
@@ -1766,22 +1740,21 @@ static int irc_kick(struct link_server *server, struct line *line)
 	if (!channel)
 		return ERR_PROTOCOL;
 
-	nick = hash_get(&channel->nicks, irc_line_elem(line, 2));
-	if (!nick)
+	if (!hash_includes(&channel->ovmasks, irc_line_elem(line, 2)))
 		return ERR_PROTOCOL;
 
-	if (strcmp(nick->name, server->nick) == 0) {
+	if (strcasecmp(irc_line_elem(line, 2), server->nick) == 0) {
 		log_kick(LINK(server)->log, line->origin, channel->name,
-				nick->name,
-				irc_line_count(line) == 4 ? irc_line_elem(line, 3) : NULL);
+				irc_line_elem(line, 2),
+				irc_line_count(line) == 4 ?
+					irc_line_elem(line, 3) : NULL);
 
 		hash_remove(&server->channels, channel->name);
 		channel_free(channel);
 		return OK_COPY;
 	}
 
-	hash_remove(&channel->nicks, nick->name);
-	nick_free(nick);
+	hash_remove(&channel->ovmasks, irc_line_elem(line, 2));
 	log_kick(LINK(server)->log, line->origin, irc_line_elem(line, 1),
 		irc_line_elem(line, 2),
 		irc_line_count(line) == 4 ? irc_line_elem(line, 3) : NULL);
@@ -1834,9 +1807,9 @@ static int irc_quit(struct link_server *server, struct line *line)
 static int irc_nick(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	struct nick *nick;
 	hash_iterator_t hi;
 	char *org_nick;
+	const char *dst_nick;
 
 	if (irc_line_count(line) != 2)
 		return ERR_PROTOCOL;
@@ -1845,24 +1818,20 @@ static int irc_nick(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 
 	org_nick = nick_from_ircmask(line->origin);
+	dst_nick = irc_line_elem(line, 1);
 
 	for (hash_it_init(&server->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		channel = hash_it_item(&hi);
-		nick = hash_get(&channel->nicks, org_nick);
-		if (!nick)
+		if (!hash_includes(&channel->ovmasks, org_nick))
 			continue;
-		hash_remove(&channel->nicks, org_nick);
-		free(nick->name);
-		nick->name = bip_strdup(irc_line_elem(line, 1));
-		hash_insert(&channel->nicks, nick->name, nick);
-		log_nick(LINK(server)->log, org_nick, channel->name,
-				irc_line_elem(line, 1));
+		hash_rename_key(&channel->ovmasks, org_nick, dst_nick);
+		log_nick(LINK(server)->log, org_nick, channel->name, dst_nick);
 	}
 
 	if (origin_is_me(line, server)) {
 		free(server->nick);
-		server->nick = bip_strdup(irc_line_elem(line, 1));
+		server->nick = bip_strdup(dst_nick);
 		if (LINK(server)->follow_nick &&
 				(LINK(server)->away_nick == NULL ||
 				strcmp(server->nick, LINK(server)->away_nick))
@@ -1879,7 +1848,6 @@ static int irc_nick(struct link_server *server, struct line *line)
 static int irc_generic_quit(struct link_server *server, struct line *line)
 {
 	struct channel *channel;
-	struct nick *nick;
 	hash_iterator_t hi;
 	char *s_nick;
 
@@ -1889,18 +1857,15 @@ static int irc_generic_quit(struct link_server *server, struct line *line)
 	if (!line->origin)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
-
 	for (hash_it_init(&server->channels, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		channel = hash_it_item(&hi);
-		nick = hash_get(&channel->nicks, s_nick);
-		if (!nick)
+		if (!hash_includes(&channel->ovmasks, s_nick))
 			continue;
-		hash_remove(&channel->nicks, s_nick);
-		nick_free(nick);
-
+		hash_remove(&channel->ovmasks, s_nick);
 		log_quit(LINK(server)->log, line->origin, channel->name,
-		    irc_line_includes(line, 1) ? irc_line_elem(line, 1) : NULL);
+			irc_line_includes(line, 1) ?
+				irc_line_elem(line, 1) : NULL);
 	}
 	free(s_nick);
 	return OK_COPY;

@@ -15,7 +15,7 @@
 #define IRC_H
 #include "connection.h"
 #include "line.h"
-
+#include "log.h"
 
 #define ERR_PROTOCOL (-1)
 #define ERR_AUTH (-2)
@@ -40,11 +40,6 @@ struct server {
 #define NICKHALFOP (1<<1)
 #define NICKVOICED (1<<2)
 
-struct nick {
-	char *name;
-	int ovmask;
-};
-
 struct channel {
 	char *name;
 	char *mode;
@@ -54,7 +49,7 @@ struct channel {
 	char type;
 	char *creator;
 	char *create_ts;
-	hash_t nicks;
+	hash_t ovmasks;
 	int running_names;
 };
 

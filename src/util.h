@@ -122,6 +122,7 @@ void hash_free(hash_t *h);
 void hash_clean(hash_t *h);
 hash_t *hash_new(int options);
 void hash_insert(hash_t *hash, const char *key, void *ptr);
+int hash_includes(hash_t *hash, const char *key);
 void *hash_get(hash_t *, const char *key);
 void *hash_remove(hash_t *hash, const char *key);
 void *hash_remove_if_exists(hash_t *hash, const char *key);
@@ -132,6 +133,7 @@ void *hash_it_item(hash_iterator_t *h);
 const char *hash_it_key(hash_iterator_t *h);
 void *hash_it_remove(hash_iterator_t *li);
 list_t *hash_keys(hash_t *hash);
+void hash_rename_key(hash_t *h, const char *oldk, const char *newk);
 
 int is_valid_nick(char *str);
 int is_valid_username(char *str);
@@ -183,8 +185,10 @@ static inline void *array_get(array_t *a, int index)
 
 static inline void array_push(array_t *a, void *ptr)
 {
-	array_ensure(a, a->elemc + 1);
-	a->elemv[a->elemc - 1] = ptr;
+	int idx = a->elemc;
+
+	array_ensure(a, idx);
+	a->elemv[idx] = ptr;
 }
 
 static inline void *array_pop(array_t *a)

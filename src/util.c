@@ -550,6 +550,14 @@ void hash_insert(hash_t *hash, const char *key, void *ptr)
 	list_add_first(&hash->lists[hash_func(key)], it);
 }
 
+int hash_includes(hash_t *hash, const char *key)
+{
+	struct hash_item *hi;
+	list_t *list = &hash->lists[hash_func(key)];
+	hi = list_get(list, key);
+	return hi != NULL;
+}
+
 void *hash_get(hash_t *hash, const char *key)
 {
 	struct hash_item *hi;
@@ -665,6 +673,11 @@ list_t *hash_keys(hash_t *hash)
 		list_add_last(ret, bip_strdup(hash_it_key(&hi)));
 
 	return ret;
+}
+
+void hash_rename_key(hash_t *h, const char *oldk, const char *newk)
+{
+	hash_insert(h, newk, hash_remove(h, oldk));
 }
 
 char *bip_strmaydup(char *s)
