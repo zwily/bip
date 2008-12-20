@@ -14,7 +14,6 @@
 
 #include "conf.h"
 int linec;
-#define YY_NO_UNPUT
 #include "util.h"
 extern list_t *root_list;
 void yyparse(void);
@@ -23,14 +22,6 @@ int conf_error;
 typedef struct bip bip_t;
 extern bip_t *_bip;
 
-#if 0
-/* SPANK ME WITH A SHOVEL */
-static void yyunput(int c, char *buf);
-void dummy_lex_FFS(void)
-{
-	yyunput(0, NULL);
-}
-#endif
 void conf_die(bip_t *, char *, ...);
 
 int yyerror(char *err)

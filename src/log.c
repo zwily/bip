@@ -211,24 +211,66 @@ void log_reinit(logstore_t *store)
 	log_reset(store);
 }
 
+static char *filename_uniq(const char *filename)
+{
+	struct stat filestat;
+	int i;
+
+	if (stat(filename, &filestat) != -1) {
+		char *buf = bip_malloc(strlen(filename) + 4 + 1);
+		for (i = 0; i < 256; i++) {
+			sprintf(buf, "%s.%d", filename, i);
+			if (stat(buf, &filestat) == -1)
+				return buf;
+		}
+		free(buf);
+	}
+	return bip_strdup(filename);
+}
+
+static int log_has_file(log_t *logdata, const char *fname)
+{
+	hash_iterator_t hi;
+	list_iterator_t li;
+	logstore_t *store;
+
+	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
+			hash_it_next(&hi)) {
+		store = hash_it_item(&hi);
+		for (list_it_init(&store->file_group, &li); list_it_item(&li);
+				list_it_next(&li)) {
+			struct logfile *lf = list_it_item(&li);
+			if (strcmp(fname, lf->filename) == 0)
+				return 1;
+		}
+	}
+	return 0;
+}
+
 static int log_add_file(log_t *logdata, const char *destination,
 		const char *filename)
 {
 	FILE *f;
 	logfile_t *lf = NULL;
 	logstore_t *store;
+	char *uniq_fname;
 
 	if (conf_log) {
-		f = fopen(filename, "a+");
+		if (log_has_file(logdata, filename))
+			uniq_fname = filename_uniq(filename);
+		else
+			uniq_fname = bip_strdup(filename);
+		f = fopen(uniq_fname, "a+");
 		if (!f) {
-			mylog(LOG_ERROR, "fopen(%s) %s", filename,
+			mylog(LOG_ERROR, "fopen(%s) %s", uniq_fname,
 					strerror(errno));
+			free(uniq_fname);
 			return 0;
 		}
 
 		lf = bip_malloc(sizeof(logfile_t));
 		lf->file = f;
-		lf->filename = bip_strdup(filename);
+		lf->filename = uniq_fname;
 
 		fseek(lf->file, 0, SEEK_END);
 		if (ftell(f) < 0)
@@ -416,8 +458,11 @@ void log_nick(log_t *logdata, const char *ircmask, const char *channel,
 		const char *newnick)
 {
 	char *oldnick = nick_from_ircmask(ircmask);
+
 	if (hash_includes(&logdata->logfgs, oldnick))
 		hash_rename_key(&logdata->logfgs, oldnick, newnick);
+	free(oldnick);
+
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- %s is now known as %s",
 			timestamp(), ircmask, newnick);

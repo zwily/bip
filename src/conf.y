@@ -29,7 +29,7 @@ int yywrap()
 	return 1;
 }
 
-int yydebug = 1;
+//int yydebug = 1;
 
 list_t *root_list;
 
