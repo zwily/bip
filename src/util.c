@@ -742,7 +742,7 @@ array_t *array_extract(array_t *a, int index, int upto)
 
 	/* here we have index < upto */
 	array_ensure(ret, upto - index - 1);
-	for (i = index; i < upto; i++)
+	for (i = 0; i < ret->elemc; i++)
 		ret->elemv[i] = a->elemv[i + index];
 	return ret;
 }
