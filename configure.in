@@ -1,33 +1,44 @@
 AC_INIT(src/bip.c)
 AM_CONFIG_HEADER(src/config.h)
-AM_INIT_AUTOMAKE(bip,0.6.0)
+AM_INIT_AUTOMAKE(bip,0.8.0)
 AC_PROG_CC
 AC_PROG_INSTALL
 AM_PROG_LEX
 AC_PROG_YACC
 
-CFLAGS="-O2 -W -Wall"
-
-debug=false
 AC_ARG_ENABLE(debug,
 	[  --enable-debug                Turn on debugging],
-	[debug=true && CFLAGS="-O0 -g  -W -Wall"])
-AM_CONDITIONAL(DEBUG, test x$debug = xtrue)
+	[ enable_debug=$enableval ],
+	[ enable_debug=no ])
 
-oidentd=false
+AM_CONDITIONAL(DEBUG, test x$enable_debug = xtrue)
+
+case $enable_debug in
+yes)
+	CFLAGS="-O0 -g  -W -Wall"
+	;;
+no)
+	CFLAGS="-O2 -W -Wall"
+	;;
+*)
+	AC_MSG_ERROR(bad value ${enable_debug} for --enable-debug)
+esac
+
 AC_ARG_ENABLE(oidentd,
 	[  --enable-oidentd                Enable oidentd support (bip overwrites ~/.oidentd.conf with this on!)],
-AC_DEFINE([HAVE_OIDENTD], [], [Enable oidentd.conf management support])
-
+enable_oidentd=yes
+AC_DEFINE([HAVE_OIDENTD], [], [Enable oidentd.conf management support]),
+[enable_oidentd=no]
 	)
-	#[oidentd=true]
-AM_CONDITIONAL(OIDENTD, test x$debug = xtrue)
 
-requires_libssl="yes"
-AC_ARG_ENABLE(ssl,
-	      [  --disable-ssl           Drop OpenSSL support],
-	      [requires_libssl=no])
-if test "x$requires_libssl" = "xyes" ; then
+AM_CONDITIONAL(OIDENTD, test x$enable_identd = xyes)
+
+AC_ARG_ENABLE(openssl,
+	      [  --disable-openssl           Drop OpenSSL support],
+	      [ enable_openssl=$enableval ],
+	      [ enable_openssl=yes ])
+
+if test "x$enable_openssl" = "xyes" ; then
     AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [],
 		 [AC_MSG_ERROR([library 'crypto' is required for OpenSSL support])]) 
 
@@ -37,3 +48,7 @@ if test "x$requires_libssl" = "xyes" ; then
 		  -lcrypto) 
 fi
 AC_OUTPUT(Makefile src/Makefile samples/Makefile)
+
+echo OPENSSL: $enable_openssl
+echo DEBUG: $enable_debug
+echo OIDENTD: $enable_oidentd
