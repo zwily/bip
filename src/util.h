@@ -34,8 +34,13 @@ void mylog(int level, char *fmt, ...);
 void _mylog(int level, char *fmt, va_list ap);
 void fatal(char *fmt, ...);
 char *timestamp(void);
-struct list_item;
 struct hash_item;
+
+struct list_item {
+	struct list_item *next;
+	struct list_item *prev;
+	void *ptr;
+};
 
 typedef struct list {
 	struct list_item *first;
@@ -108,14 +113,32 @@ void *list_get_last(list_t *list);
 void *list_remove_first(list_t *list);
 void *list_remove_last(list_t *list);
 void list_it_init(list_t *list, list_iterator_t *ti);
-void list_it_next(list_iterator_t *ti);
-void *list_it_item(list_iterator_t *ti);
+void list_it_init_last(list_t *list, list_iterator_t *ti);
 void *list_it_remove(list_iterator_t *li);
 void list_free(list_t *t);
-void list_copy(list_t *src, list_t *dest);
 /* dest must not be refed after wards */
 void list_append(list_t *src, list_t *dest);
 int list_is_empty(list_t *l);
+
+static inline void list_it_next(list_iterator_t *ti)
+{
+	if (ti->cur) {
+		if (ti->next)
+			fatal("list_it_next: inconsistent interator state");
+		ti->cur = ti->cur->next;
+	} else if (ti->next) {
+		ti->cur = ti->next;
+		ti->next = NULL;
+	}
+}
+
+static inline void *list_it_item(list_iterator_t *ti)
+{
+	if (!ti->cur)
+		return NULL;
+	return ti->cur->ptr;
+}
+
 
 void hash_init(hash_t *h, int);
 void hash_free(hash_t *h);

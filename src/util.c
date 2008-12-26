@@ -214,12 +214,6 @@ void fatal(char *fmt, ...)
  * list handling functions
  */
 
-struct list_item {
-	struct list_item *next;
-	struct list_item *prev;
-	void *ptr;
-};
-
 int list_ptr_cmp(const void *a, const void *b)
 {
 	if (a == b)
@@ -393,23 +387,11 @@ void list_it_init(list_t *list, list_iterator_t *ti)
 	ti->next = NULL;
 }
 
-void list_it_next(list_iterator_t *ti)
+void list_it_init_last(list_t *list, list_iterator_t *ti)
 {
-	if (ti->cur) {
-		if (ti->next)
-			fatal("list_it_next: inconsistent interator state");
-		ti->cur = ti->cur->next;
-	} else if (ti->next) {
-		ti->cur = ti->next;
-		ti->next = NULL;
-	}
-}
-
-void *list_it_item(list_iterator_t *ti)
-{
-	if (!ti->cur)
-		return NULL;
-	return ti->cur->ptr;
+	ti->list = list;
+	ti->cur = list->last;
+	ti->next = NULL;
 }
 
 void *list_it_remove(list_iterator_t *li)

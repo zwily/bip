@@ -25,15 +25,13 @@
 #define MAX_PATH_LEN 1024
 #define LOGLINE_MAXLEN 2048
 
-#define S_PRIVATES "privates"
-
 struct list;
 
-typedef struct logfile {
+typedef struct logfile
+{
 	FILE *file;
 	char *filename;
 	struct tm last_log;
-	size_t backlog_offset;
 	size_t len;
 } logfile_t;
 
@@ -45,17 +43,18 @@ typedef struct logstore
 
 	list_t *memlog;
 	int memc;
-	list_iterator_t backlog_it;
 	int track_backlog;
+	list_iterator_t file_it;
+	size_t file_offset;
 } logstore_t;
 
-typedef struct log {
+typedef struct log
+{
 	hash_t logfgs;
 	char *network;
 	char *buffer;
 	int connected;
 	int backlogging;
-	list_iterator_t file_it;
 	int lastfile_seeked;
 
 	struct user *user;
@@ -94,7 +93,6 @@ void log_disconnected(log_t *logdata);
 void log_ping_timeout(log_t *logdata);
 void log_client_disconnected(log_t *logdata);
 void log_client_connected(log_t *logdata);
-char *log_backread(log_t *logdata, const char *destination, int *skip);
 int log_has_backlog(log_t *logdata, const char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);

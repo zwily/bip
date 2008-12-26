@@ -15,6 +15,7 @@
 #include "log.h"
 #include "irc.h"
 #include "util.h"
+#include <sys/time.h>
 
 extern int errno;
 extern int log_level;
@@ -26,8 +27,8 @@ extern FILE *conf_global_log_file;
 
 static int _log_write(log_t *logdata, logstore_t *lf, const char *d,
 		const char *str);
-void logfile_free(logfile_t *lf);
 static char *_log_wrap(const char *dest, const char *line);
+void logfile_free(logfile_t *lf);
 
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
@@ -181,6 +182,7 @@ void log_updatelast(logfile_t *lf)
 void log_reset(logstore_t *store)
 {
 	logfile_t *olf;
+
 	store->skip_advance = 0;
 
 	if (store->memlog) {
@@ -194,14 +196,15 @@ void log_reset(logstore_t *store)
 		logfile_free(olf);
 		list_remove_first(&store->file_group);
 	}
-	if (!olf)
-		return;
 
-	if (!olf->file)
-		fatal("internal, (NULL logfile)");
+	if (olf)
+		list_it_init_last(&store->file_group, &store->file_it);
+
+	assert(olf->file);
+
 	fseek(olf->file, 0, SEEK_END);
 	olf->len = ftell(olf->file);
-	olf->backlog_offset = olf->len;
+	store->file_offset = olf->len;
 }
 
 void log_reinit(logstore_t *store)
@@ -239,7 +242,7 @@ static int log_has_file(log_t *logdata, const char *fname)
 		store = hash_it_item(&hi);
 		for (list_it_init(&store->file_group, &li); list_it_item(&li);
 				list_it_next(&li)) {
-			struct logfile *lf = list_it_item(&li);
+			logfile_t *lf = list_it_item(&li);
 			if (strcmp(fname, lf->filename) == 0)
 				return 1;
 		}
@@ -251,9 +254,9 @@ static int log_add_file(log_t *logdata, const char *destination,
 		const char *filename)
 {
 	FILE *f;
-	logfile_t *lf = NULL;
 	logstore_t *store;
 	char *uniq_fname;
+	logfile_t *lf = NULL;
 
 	if (conf_log) {
 		if (log_has_file(logdata, filename))
@@ -276,7 +279,6 @@ static int log_add_file(log_t *logdata, const char *destination,
 		if (ftell(f) < 0)
 			fatal("ftell");
 		lf->len = ftell(f);
-		lf->backlog_offset = lf->len;
 		log_updatelast(lf);
 	}
 
@@ -288,6 +290,7 @@ static int log_add_file(log_t *logdata, const char *destination,
 		store->name = bip_strdup(destination);
 		store->skip_advance = 0;
 		hash_insert(&logdata->logfgs, destination, store);
+		list_it_init(&store->file_group, &store->file_it);
 	}
 
 	if (!conf_log && logdata->user->backlog) {
@@ -295,8 +298,10 @@ static int log_add_file(log_t *logdata, const char *destination,
 			store->memlog = list_new(NULL);
 	}
 
-	if (lf)
+	if (lf) {
 		list_add_last(&store->file_group, lf);
+		store->file_offset = lf->len;
+	}
 	return 1;
 }
 
@@ -341,25 +346,20 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 			return NULL;
 		}
 		store = hash_get(&logdata->logfgs, destination);
-		if (!store)
-			fatal("internal log_find_file");
+		assert(store);
 		/* ok we are allocating a new store now, let's set it up for
 		* backlogging if applicable */
-		if (!logdata->user)
-			fatal("log_find_file: no user associated to logdata");
-		if (!logdata->network)
-			fatal("log_find_file: no network id associated to "
-					"logdata");
+		assert(logdata->user);
+		assert(logdata->network);
 		l = hash_get(&logdata->user->connections, logdata->network);
-		if (!l)
-			fatal("log_beautify: no connection associated to "
-					"logdata");
+		assert(l);
+
 		struct chan_info *ci = hash_get(&l->chan_infos, destination);
-		if (ci && !ci->backlog) {
+
+		if (ci && !ci->backlog)
 			store->track_backlog = 0;
-		} else {
+		else
 			store->track_backlog = 1;
-		}
 
 		if (filename)
 			free(filename);
@@ -523,31 +523,6 @@ void log_cli_privmsg(log_t *logdata, const char *ircmask,
 {
 	do_log_privmsg(logdata, destination, 1, ircmask, message);
 }
-
-#if 0
-static void do_log_notice(log_t *logdata, const char *storate, int src,
-		const char *from, const char *message)
-{
-	char dir = '<';
-
-	if (!from)
-		from = "Server message";
-	if (src)
-		dir = '>';
-
-	if (*message == '\001' && *(message + strlen(message) - 1) == '\001')
-		return;
-	if (ischannel(*destination) || strchr(destination, '@')) {
-		snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s %c %s: %s",
-				timestamp(), dir, ircmask, message);
-	} else {
-		snprintf(logdata->buffer, LOGLINE_MAXLEN,
-				"%s %c %s (%s): %s", timestamp(),
-				dir, ircmask, destination, message);
-	}
-	log_write(logdata, storage, logdata->buffer);
-}
-#endif
 
 void log_notice(log_t *logdata, const char *ircmask, const char *destination,
 		const char *message)
@@ -723,7 +698,7 @@ void log_advance_backlogs(log_t* ld, logstore_t *store)
 	}
 
 	logfile_t *lf;
-	while ((lf = list_get_first(&store->file_group))) {
+	while ((lf = list_it_item(&store->file_it))) {
 		if (!lf->file) {
 			lf->file = fopen(lf->filename, "r");
 			if (!lf->file) {
@@ -733,13 +708,13 @@ void log_advance_backlogs(log_t* ld, logstore_t *store)
 				return;
 			}
 		}
-		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
+		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
 			log_reinit(store);
 			return;
 		}
 
 		while ((c = fgetc(lf->file)) != EOF) {
-			lf->backlog_offset++;
+			store->file_offset++;
 			if (c == '\n')
 				return;
 		}
@@ -747,8 +722,8 @@ void log_advance_backlogs(log_t* ld, logstore_t *store)
 			return;
 		fclose(lf->file);
 		lf->file = NULL;
-		list_remove_first(&store->file_group);
-		logfile_free(lf);
+		list_it_next(&store->file_it);
+		store->file_offset = 0;
 	}
 }
 
@@ -770,7 +745,7 @@ int log_has_backlog(log_t *logdata, const char *destination)
 	if (lf != list_get_last(&store->file_group))
 		return 1;
 
-	return lf->backlog_offset != lf->len;
+	return store->file_offset != lf->len;
 }
 
 
@@ -944,45 +919,79 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	return ret;
 }
 
-char *log_backread(log_t *logdata, const char *destination, int *skip)
+int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
 {
-	char *buf;
-	size_t pos = 0;
-	logfile_t *lf;
-	logstore_t *store;
-	int c;
-	char *ret;
+	char *buf, *logbr;
+	int close = 0;
 
-	*skip = 0;
+	if (!lf->file) {
+		lf->file = fopen(lf->filename, "r");
+		if (!lf->file) {
+			mylog(LOG_ERROR, "Can't open %s for reading",
+					lf->filename);
+			list_add_last(res, _log_wrap("Error opening logfile",
+					store->name));
+			return 0;
+		}
 
-	if (!logdata->user->always_backlog && logdata->connected)
+		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
+			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
+			list_add_last(res, _log_wrap(store->name,
+					"Error seeking in logfile"));
+			return 0;
+		}
+
+		close = 1;
+	}
+
+	buf = bip_malloc(LOGLINE_MAXLEN + 1);
+
+	for(;;) {
+		if (!fgets(buf, LOGLINE_MAXLEN, lf->file)) {
+			if (ferror(lf->file)) {
+				list_add_last(res, _log_wrap("Error reading "
+						"logfile", store->name));
+			}
+			/* error or oef */
+			break;
+		}
+		if (buf[0] == 0 || buf[0] == '\n')
+			continue;
+		logbr = log_beautify(log, buf, store->name);
+		if (logbr)
+			list_add_last(res, logbr);
+
+	}
+	if (close) {
+		fclose(lf->file);
+		lf->file = NULL;
+	}
+	free(buf);
+	return 1;
+}
+
+list_t *log_backread(log_t *log, const char *storename)
+{
+	list_t *ret;
+
+	if (!log->user->always_backlog && log->connected)
 		return NULL;
 
-	store = hash_get(&logdata->logfgs, destination);
+	logstore_t *store = hash_get(&log->logfgs, storename);
 	if (!store)
 		return NULL;
 
 	if (!store->track_backlog)
 		return NULL;
 
-	if (!logdata->backlogging) {
-		logdata->backlogging = 1;
-		mylog(LOG_DEBUG, "backlogging!");
-		if (store->memlog)
-			list_it_init(store->memlog, &store->backlog_it);
-		else
-			list_it_init(&store->file_group, &logdata->file_it);
-	}
-
 	if (store->memlog) {
-		char *ptr;
-		ptr = list_it_item(&store->backlog_it);
-		if (!ptr) {
-			logdata->backlogging = 0;
-			return NULL;
-		}
-		list_it_next(&store->backlog_it);
-		return bip_strdup(ptr);
+		list_iterator_t li;
+		ret = list_new(NULL);
+
+		for (list_it_init(store->memlog, &li); list_it_item(&li);
+				list_it_next(&li))
+			list_add_last(ret, bip_strdup(list_it_item(&li)));
+		return ret;
 	}
 
 	if (!conf_log) {
@@ -990,142 +999,19 @@ char *log_backread(log_t *logdata, const char *destination, int *skip)
 		return NULL;
 	}
 
-	buf = (char *)bip_malloc(LOGLINE_MAXLEN + 1);
+	list_iterator_t file_it;
+	logfile_t *logf;
 
-next_file:
-	/* check the files containing data to backlog */
-	lf = list_it_item(&logdata->file_it);
-	if (lf != list_get_last(&store->file_group)) {
-		mylog(LOG_DEBUGVERB, "%s not last file!", lf->filename);
-		/* if the file is not the current open for logging
-		 * (it is an old file that has been rotated)
-		 * open if necessary, backlog line per line, and close */
-		if (!lf->file) {
-			mylog(LOG_DEBUGVERB, "opening: %s!", lf->filename);
-			lf->file = fopen(lf->filename, "r");
-			if (!lf->file) {
-				mylog(LOG_ERROR, "Can't open %s for reading",
-						lf->filename);
-				log_reinit(store);
-				free(buf);
-				return _log_wrap("Error reading logfile",
-						destination);
-			}
-			mylog(LOG_DEBUGVERB, "seeking: %d!",
-					lf->backlog_offset);
-			if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
-				log_reinit(store);
-				free(buf);
-				return _log_wrap(destination,
-						"Error reading in logfile");
-			}
-		}
-		for(;;) {
-			c = fgetc(lf->file);
-			if (!logdata->user->always_backlog)
-				lf->backlog_offset++;
-			if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
-				/* change file if we reach EOF, if pos == maxlen
-				 * then the log file is corrupted so we also
-				 * drop this file */
-				if (pos == LOGLINE_MAXLEN)
-					mylog(LOG_DEBUG, "logline too long");
-				if (c == EOF || pos == LOGLINE_MAXLEN) {
-					mylog(LOG_DEBUGVERB, "EOF: %s (%d)!",
-						lf->filename,
-						logdata->user->always_backlog);
-
-					list_it_next(&logdata->file_it);
-					if (!logdata->user->always_backlog) {
-						list_remove_first(
-							&store->file_group);
-						logfile_free(lf);
-					} else {
-						fclose(lf->file);
-						lf->file = NULL;
-					}
-
-					pos = 0;
-					goto next_file;
-				}
-				buf[pos] = 0;
-				if (pos == 0) {
-					*skip = 1;
-					return buf;
-				}
-				ret = log_beautify(logdata, buf, destination);
-				if (ret == NULL) {
-					pos = 0;
-					continue;
-				}
-				free(buf);
-				return ret;
-			}
-			buf[pos++] = c;
-		}
-	}
-
-	/* the logfile to read is the one open for writing */
-	if (!logdata->lastfile_seeked) {
-		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
+	ret = list_new(NULL);
+	for (list_it_init(&store->file_group, &file_it);
+			(logf = list_it_item(&file_it));
+			list_it_next(&file_it)) {
+		if (!log_backread_file(log, store, logf, ret)) {
 			log_reinit(store);
-			return _log_wrap(destination,
-					"Error reading in logfile");
-		}
-		logdata->lastfile_seeked = 1;
-		mylog(LOG_DEBUG, "last file seeked!");
-	}
-
-	c = fgetc(lf->file);
-	if (c == EOF) {
-		mylog(LOG_DEBUG, "Nothing more to backlog");
-		logdata->lastfile_seeked = 0;
-		logdata->backlogging = 0;
-		free(buf);
-		return NULL;
-	}
-	if (!logdata->user->always_backlog)
-		lf->backlog_offset++;
-
-	if (c != '\n')
-		buf[pos++] = c;
-	for(;;) {
-		c = fgetc(lf->file);
-		if (!logdata->user->always_backlog)
-			lf->backlog_offset++;
-		if (c == EOF || c == '\n' || pos == LOGLINE_MAXLEN) {
-			if (pos == LOGLINE_MAXLEN) {
-				mylog(LOG_DEBUG, "logline too long");
-				fseek(lf->file, 0, SEEK_END);
-				/* in the corruption case we alwayse reset
-				 * backlog offset */
-				lf->backlog_offset = ftell(lf->file);
-				free(buf);
-				return NULL;
-			}
-
-			if (!logdata->user->always_backlog && c == EOF)
-				lf->backlog_offset--;
-			buf[pos] = 0;
-			if (pos == 0) {
-				*skip = 1;
-				return buf;
-			}
-			ret = log_beautify(logdata, buf, destination);
-			if (ret == NULL) {
-				mylog(LOG_DEBUGVERB, "Line not backlogged");
-				pos = 0;
-				continue;
-			}
-			mylog(LOG_DEBUGVERB, "backlog: %s", ret);
-			free(buf);
 			return ret;
 		}
-		buf[pos++] = c;
 	}
-	/* unreachable */
-	fatal("internal error 12");
-	return NULL;
+	return ret;
 }
 
 static char *_log_wrap(const char *dest, const char *line)
@@ -1254,7 +1140,7 @@ void log_free(log_t *log)
 	for (hash_it_init(&log->logfgs, &it); (store = hash_it_item(&it));
 			hash_it_next(&it)) {
 		log_reset(store);
-		if ((lf = list_remove_first(&store->file_group)))
+		while ((lf = list_remove_first(&store->file_group)))
 			logfile_free(lf);
 	}
 	hash_clean(&log->logfgs);
@@ -1266,21 +1152,111 @@ list_t *log_backlogs(log_t *log)
 	return hash_keys(&log->logfgs);
 }
 
+array_t *str_split(const char *str, const char *splt)
+{
+	const char *p = str;
+	const char *start = str;
+	int len;
+	char *extracted;
+	array_t *array = array_new();;
+
+	do {
+		if (!*p || strchr(splt, *p)) {
+			len = p - start;
+			extracted = bip_malloc(len + 1);
+			memcpy(extracted, start, len);
+			extracted[len] = 0;
+			array_push(array, extracted);
+			if (!*p)
+				return array;
+			else
+				start = p + 1;
+		}
+	} while (*p++);
+	fatal("never reached");
+	return NULL;
+}
+
+/* 26-12-2008 08:54:39 */
+int log_parse_date(char *strdate, int *year, int *month, int *mday, int *hour,
+		int *min, int *sec)
+{
+	array_t *fields;
+	char *sptr;
+	int ret = 0;
+
+	fields = str_split(strdate, ":- ");
+	if (array_count(fields) == 6) {
+		*year = atoi(array_get(fields, 2));
+		*month = atoi(array_get(fields, 1));
+		*mday = atoi(array_get(fields, 0));
+		*hour = atoi(array_get(fields, 3));
+		*min = atoi(array_get(fields, 4));
+		*sec = atoi(array_get(fields, 5));
+		ret = 1;
+	}
+	int i;
+	array_each(fields, i, sptr)
+		free(sptr);
+
+	array_free(fields);
+	return ret;
+}
+
+logfile_t *logstore_get_file_at(logstore_t *store, time_t at)
+{
+	list_iterator_t li;
+
+	for (list_it_init(&store->file_group, &li); list_it_item(&li);
+			list_it_next(&li)) {
+		logfile_t *lf = list_it_item(&li);
+
+		if (mktime(&lf->last_log) > at)
+			return lf;
+	}
+	return NULL;
+}
+
+#if 0
+list_t *backlog_hours(log_t *log, const char *storename, int hours)
+{
+	time_t blstarttime, linetime;
+	struct timeval tv;
+	struct tm tm;
+	logstore_t *store;
+	logfile_t *lf;
+	const char *line;
+
+	gettimeofday(&tv, NULL);
+	if (tv.tv_sec <= 3600 * 24 * hours)
+		return NULL;
+	blstarttime = tv.tv_sec - 3600 * 24 * hours;
+
+	store = hash_get(&log->logfgs, storename);
+	lf = logstore_get_file_at(store, blstarttime);
+
+	foreach_logline(lf, line) {
+		log_parse_date(line, &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+				&tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+		tm.tm_year -= 1900;
+		tm.tm_isdst = -1;
+
+		linetime = mktime(&tm);
+		if (linetime > blstarttime) {
+		}
+	}
+}
+#endif
+
 list_t *backlog_lines_from_last_mark(log_t *log, const char *bl)
 {
-	char *line;
-	int skip;
 	list_t *ret;
 	struct line l;
 
 	ret = list_new(NULL);
 
 	if (log_has_backlog(log, bl)) {
-		skip = 0;
-		while ((line = log_backread(log, bl, &skip))) {
-			if (!skip)
-				list_add_last(ret, line);
-		}
+		ret = log_backread(log, bl);
 
 		if (ischannel(*bl)) {
 			/* clean this up */
@@ -1296,33 +1272,3 @@ list_t *backlog_lines_from_last_mark(log_t *log, const char *bl)
 	return ret;
 }
 
-#if 0
-	for (hash_it_init(&LINK(ic)->l_server->channels, &hi);
-			hash_it_item(&hi); hash_it_next(&hi)) {
-		struct channel *chan = (struct channel *)hash_it_item(&hi);
-		if (log_has_backlog(LINK(ic)->log, chan->name)) {
-			char *line;
-			int skip = 0;
-			while ((line =
-			    log_backread(LINK(ic)->log, chan->name, &skip))) {
-				if (!skip)
-					write_line(CONN(ic), line);
-				free(line);
-			}
-			WRITE_LINE2(CONN(ic), P_IRCMASK, "PRIVMSG", chan->name,
-					"End of backlog.");
-		} else {
-			mylog(LOG_DEBUG, "Nothing to backlog for %s/%s",
-				user->name, chan->name);
-		}
-	}
-
-	/* backlog privates */
-	char *str;
-	int skip = 0;
-	while ((str = log_backread(LINK(ic)->log, S_PRIVATES, &skip))) {
-		if (!skip)
-			write_line(CONN(ic), str);
-		free(str);
-	}
-#endif
