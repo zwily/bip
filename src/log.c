@@ -524,15 +524,17 @@ void log_cli_privmsg(log_t *logdata, const char *ircmask,
 	do_log_privmsg(logdata, destination, 1, ircmask, message);
 }
 
-static void _log_notice(log_t *logdata, const char *ircmask, int src,
-		const char *destination, const char *message)
+#if 0
+static void do_log_notice(log_t *logdata, const char *storate, int src,
+		const char *from, const char *message)
 {
 	char dir = '<';
 
-	if (!ircmask)
-		ircmask = "Server message";
+	if (!from)
+		from = "Server message";
 	if (src)
 		dir = '>';
+
 	if (*message == '\001' && *(message + strlen(message) - 1) == '\001')
 		return;
 	if (ischannel(*destination) || strchr(destination, '@')) {
@@ -543,19 +545,26 @@ static void _log_notice(log_t *logdata, const char *ircmask, int src,
 				"%s %c %s (%s): %s", timestamp(),
 				dir, ircmask, destination, message);
 	}
-	log_write(logdata, destination, logdata->buffer);
+	log_write(logdata, storage, logdata->buffer);
 }
+#endif
 
 void log_notice(log_t *logdata, const char *ircmask, const char *destination,
 		const char *message)
 {
-	_log_notice(logdata, ircmask, 0, destination, message);
+	if (!ischannel(*destination)) {
+		char *nick = nick_from_ircmask(ircmask);
+		do_log_privmsg(logdata, nick, 0, ircmask, message);
+		free(nick);
+	} else {
+		do_log_privmsg(logdata, destination, 0, ircmask, message);
+	}
 }
 
 void log_cli_notice(log_t *logdata, const char *ircmask,
 		const char *destination, const char *message)
 {
-	_log_notice(logdata, ircmask, 1, destination, message);
+	do_log_privmsg(logdata, destination, 1, ircmask, message);
 }
 
 void log_topic(log_t *logdata, const char *ircmask, const char *channel,

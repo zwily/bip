@@ -880,6 +880,8 @@ static int irc_cli_notice(struct link_client *ic, struct line *line)
 		return OK_FORGET;
 	log_cli_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
 				irc_line_elem(line, 1), irc_line_elem(line, 2));
+	if (LINK(ic)->user->blreset_on_talk)
+		log_reinit_all(LINK(ic)->log);
 	return OK_COPY_CLI;
 }
 
@@ -1784,16 +1786,17 @@ static int irc_privmsg(struct link_server *server, struct line *line)
 {
 	if (!irc_line_includes(line, 2))
 		return ERR_PROTOCOL;
-	if (LINK(server)->s_state == IRCS_CONNECTED) {
+	if (LINK(server)->s_state == IRCS_CONNECTED)
 		log_privmsg(LINK(server)->log, line->origin,
 				irc_line_elem(line, 1), irc_line_elem(line, 2));
-	}
 	irc_privmsg_check_ctcp(server, line);
 	return OK_COPY;
 }
 
 static int irc_notice(struct link_server *server, struct line *line)
 {
+	if (!irc_line_includes(line, 2))
+		return ERR_PROTOCOL;
 	if (LINK(server)->s_state == IRCS_CONNECTED)
 		log_notice(LINK(server)->log, line->origin,
 				irc_line_elem(line, 1), irc_line_elem(line, 2));
