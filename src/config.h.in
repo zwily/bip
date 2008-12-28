@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.in by autoheader.  */
 
+/* Use Glibcs backtrace function on fatal() */
+#undef HAVE_BACKTRACE
+
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #undef HAVE_LIBCRYPTO
 
