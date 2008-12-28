@@ -442,19 +442,20 @@ void list_free(list_t *t)
 	free(t);
 }
 
-void list_append(list_t *src, list_t *dest)
+void list_append(list_t *dest, list_t *src)
 {
-	if (dest->last == NULL)
+	if (src->last == NULL)
 		return;
-	if (src->first == NULL) {
-		src->first = dest->first;
-		src->last = dest->last;
+	if (dest->first == NULL) {
+		dest->first = src->first;
+		dest->last = src->last;
+		src->first = src->last = NULL;
 		return;
 	}
-	dest->first->prev = src->last;
-	src->last->next = dest->first;
-	src->last = dest->last;
-	free(dest);
+	src->first->prev = dest->last;
+	dest->last->next = src->first;
+	dest->last = src->last;
+	src->first = src->last = NULL;
 }
 
 /*

@@ -112,9 +112,7 @@ void list_it_next(list_iterator_t *ti);
 void *list_it_item(list_iterator_t *ti);
 void *list_it_remove(list_iterator_t *li);
 void list_free(list_t *t);
-void list_copy(list_t *src, list_t *dest);
-/* dest must not be refed after wards */
-void list_append(list_t *src, list_t *dest);
+void list_append(list_t *dest, list_t *src);
 int list_is_empty(list_t *l);
 
 void hash_init(hash_t *h, int);
