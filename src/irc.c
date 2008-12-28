@@ -672,9 +672,11 @@ static void irc_cli_backlog(struct link_client *ic)
 
 	backlogl = log_backlogs(LINK(ic)->log);
 	while ((bl = list_remove_first(backlogl))) {
+		list_t *bllines;
+		bllines = backlog_lines_from_last_mark(LINK(ic)->log, bl);
 		mylog(LOG_INFO, "backlogging: %s", bl);
-		write_lines(CONN(ic),
-			backlog_lines_from_last_mark(LINK(ic)->log, bl));
+		write_lines(CONN(ic), bllines);
+		list_free(bllines);
 		free(bl);
 	}
 	list_free(backlogl);

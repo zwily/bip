@@ -116,8 +116,7 @@ void list_it_init(list_t *list, list_iterator_t *ti);
 void list_it_init_last(list_t *list, list_iterator_t *ti);
 void *list_it_remove(list_iterator_t *li);
 void list_free(list_t *t);
-/* dest must not be refed after wards */
-void list_append(list_t *src, list_t *dest);
+void list_append(list_t *dest, list_t *src);
 int list_is_empty(list_t *l);
 
 static inline void list_it_next(list_iterator_t *ti)
