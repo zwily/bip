@@ -33,23 +33,23 @@ void readpass(char *buffer, int buflen)
 		fprintf(stderr, "Unable to open tty: %s\n", strerror(errno));
 		exit(1);
 	}
-	
+
 	struct termios tt, ttback;
 	memset(&ttback, 0, sizeof(ttback));
 	if (tcgetattr(ttyfd, &ttback) < 0) {
-		printf("tcgetattr failed: %s\n", strerror(errno));
+		fprintf(stderr, "tcgetattr failed: %s\n", strerror(errno));
 		exit(1);
 	}
-	
+
 	memcpy(&tt, &ttback, sizeof(ttback));
 	tt.c_lflag &= ~(ICANON|ECHO);
 	if (tcsetattr(ttyfd, TCSANOW, &tt) < 0) {
-		printf("tcsetattr failed: %s\n", strerror(errno));
+		fprintf(stderr, "tcsetattr failed: %s\n", strerror(errno));
 		exit(1);
 	}
-	
+
 	write(ttyfd, "Password: ", 10);
-	
+
 	int idx = 0;
 	while (idx < buflen) {
 		read(ttyfd, buffer+idx, 1);
@@ -59,9 +59,9 @@ void readpass(char *buffer, int buflen)
 		}
 		idx++;
 	}
-	
+
 	write(ttyfd, "\n", 1);
-	
+
 	tcsetattr(ttyfd, TCSANOW, &ttback);
 	close(ttyfd);
 }
@@ -74,11 +74,12 @@ int main(void)
 	unsigned int seed;
 
 	readpass(str, 256);
+	str[255] = 0;
 
 	// the time used to type the pass is entropy
 	srand(time(NULL));
 	seed = rand();
-	
+
 	md5 = chash_double(str, seed);
         for (i = 0; i < 20; i++)
 		printf("%02x", md5[i]);
