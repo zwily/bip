@@ -1631,7 +1631,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 			if (!hash_includes(&channel->ovmasks, nick))
 				return ERR_PROTOCOL;
 
-			ovmask = (long int)hash_get(&channel->ovmasks, nick);
+			ovmask = (long int)hash_remove(&channel->ovmasks, nick);
 			if (add)
 				ovmask |= NICKHALFOP;
 			else
@@ -1647,7 +1647,7 @@ static int irc_mode(struct link_server *server, struct line *line)
 			if (!hash_includes(&channel->ovmasks, nick))
 				return ERR_PROTOCOL;
 
-			ovmask = (long int)hash_get(&channel->ovmasks, nick);
+			ovmask = (long int)hash_remove(&channel->ovmasks, nick);
 			if (add)
 				ovmask |= NICKVOICED;
 			else
