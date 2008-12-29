@@ -198,15 +198,34 @@ void mylog(int level, char *fmt, ...)
 	va_end(ap);
 }
 
+#ifdef HAVE_BACKTRACE
+#include <execinfo.h>
+
+void print_trace(void)
+{
+	void *array[32];
+	size_t size;
+	size_t i;
+
+	size = backtrace(array, 32);
+	fflush(conf_global_log_file);
+	backtrace_symbols_fd(array, size, fileno(conf_global_log_file));
+}
+#endif
+
 extern char *conf_pid_file;
 void fatal(char *fmt, ...)
 {
 	va_list ap;
+
 	va_start(ap, fmt);
-
 	_mylog(LOG_FATAL, fmt, ap);
-
 	va_end(ap);
+
+#ifdef HAVE_BACKTRACE
+	print_trace();
+#endif
+
 	exit(200);
 }
 

@@ -11,7 +11,7 @@ AC_ARG_ENABLE(debug,
 	[ enable_debug=$enableval ],
 	[ enable_debug=no ])
 
-AM_CONDITIONAL(DEBUG, test x$enable_debug = xtrue)
+AM_CONDITIONAL(DEBUG, test x$enable_debug = xyes)
 
 case $enable_debug in
 yes)
@@ -24,11 +24,20 @@ no)
 	AC_MSG_ERROR(bad value ${enable_debug} for --enable-debug)
 esac
 
+backtrace=
+if test x$enable_debug = xyes ; then
+	AC_CHECK_FUNC(backtrace_symbols_fd, [
+		AC_DEFINE(HAVE_BACKTRACE, [], [Use Glibcs backtrace function on fatal()])
+		LDFLAGS="-rdynamic $LDFLAGS"
+		backtrace="(with backtrace)"
+	])
+fi
+
 AC_ARG_ENABLE(oidentd,
 	[  --enable-oidentd                Enable oidentd support (bip overwrites ~/.oidentd.conf with this on!)],
-enable_oidentd=yes
-AC_DEFINE([HAVE_OIDENTD], [], [Enable oidentd.conf management support]),
-[enable_oidentd=no]
+	enable_oidentd=yes
+	AC_DEFINE([HAVE_OIDENTD], [], [Enable oidentd.conf management support]),
+	[enable_oidentd=no]
 	)
 
 AM_CONDITIONAL(OIDENTD, test x$enable_identd = xyes)
@@ -39,16 +48,15 @@ AC_ARG_ENABLE(openssl,
 	      [ enable_openssl=yes ])
 
 if test "x$enable_openssl" = "xyes" ; then
-    AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [],
-		 [AC_MSG_ERROR([library 'crypto' is required for OpenSSL support])]) 
-
-    AC_CHECK_LIB(ssl, SSL_read, [], 
-		 [AC_MSG_ERROR(
-		  [library 'ssl' is required for OpenSSL support])],
-		  -lcrypto) 
+	AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [
+		AC_MSG_ERROR([library 'crypto' is required for OpenSSL support])
+	], -lcrypto) 
+    	AC_CHECK_LIB(ssl, SSL_read, [], [
+		AC_MSG_ERROR([library 'ssl' is required for OpenSSL support])
+	]) 
 fi
 AC_OUTPUT(Makefile src/Makefile samples/Makefile)
 
 echo OPENSSL: $enable_openssl
-echo DEBUG: $enable_debug
+echo DEBUG: $enable_debug $backtrace
 echo OIDENTD: $enable_oidentd
