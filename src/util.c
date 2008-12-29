@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -41,7 +42,11 @@ void memory_fatal(void)
 
 void *bip_malloc(size_t size)
 {
-	void *r = malloc(size);
+	void *r;
+
+	assert(size < INT_MAX / 4);
+
+	r = malloc(size);
 	if (!r)
 		memory_fatal();
 	return r;
@@ -57,7 +62,11 @@ void *bip_calloc(size_t nmemb, size_t size)
 
 void *bip_realloc(void *ptr, size_t size)
 {
-	void *r = realloc(ptr, size);
+	void *r;
+
+	assert(size < INT_MAX / 4);
+
+	r = realloc(ptr, size);
 	if (size > 0 && r == NULL)
 		memory_fatal();
 	return r;

@@ -88,8 +88,7 @@ char *nick_from_ircmask(const char *mask)
 	char *ret;
 	size_t len;
 
-	if (!mask)
-		fatal("nick_from_ircmask");
+	assert(mask);
 
 	while (*nick && *nick != '!')
 		nick++;

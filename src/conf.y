@@ -36,9 +36,7 @@ list_t *root_list;
 struct tuple *tuple_i_new(int type, int i)
 {
 	struct tuple *t;
-	t = malloc(sizeof(struct tuple));
-	if (!t)
-		fatal("malloc");
+	t = bip_malloc(sizeof(struct tuple));
 	t->type = type;
 	t->ndata = i;
 	t->tuple_type = TUPLE_INT;
@@ -48,9 +46,7 @@ struct tuple *tuple_i_new(int type, int i)
 struct tuple *tuple_p_new(int type, void *p)
 {
 	struct tuple *t;
-	t = malloc(sizeof(struct tuple));
-	if (!t)
-		fatal("malloc");
+	t = bip_malloc(sizeof(struct tuple));
 	t->type = type;
 	t->pdata = p;
 	return t;
