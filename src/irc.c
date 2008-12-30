@@ -2127,6 +2127,7 @@ connection_t *irc_server_connect(struct link *link)
 	if (conn->handle == -1) {
 		mylog(LOG_INFO, "Cannot connect.");
 		connection_free(conn);
+		server_next(link);
 		return NULL;
 	}
 
