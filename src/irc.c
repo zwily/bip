@@ -88,8 +88,7 @@ char *nick_from_ircmask(const char *mask)
 	char *ret;
 	size_t len;
 
-	if (!mask)
-		fatal("nick_from_ircmask");
+	assert(mask);
 
 	while (*nick && *nick != '!')
 		nick++;
@@ -1273,9 +1272,10 @@ static int irc_join(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 	if (!line->origin)
 		return ERR_PROTOCOL;
-	s_nick = nick_from_ircmask(line->origin);
 
+	s_nick = nick_from_ircmask(line->origin);
 	hash_insert(&channel->ovmasks, s_nick, 0);
+	free(s_nick);
 	return OK_COPY;
 }
 
@@ -1490,9 +1490,12 @@ static int irc_part(struct link_server *server, struct line *line)
 	if (!line->origin)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
-	if (!hash_includes(&channel->ovmasks, s_nick))
+	if (!hash_includes(&channel->ovmasks, s_nick)) {
+		free(s_nick);
 		return ERR_PROTOCOL;
+	}
 	hash_remove(&channel->ovmasks, s_nick);
+	free(s_nick);
 
 	log_part(LINK(server)->log, line->origin, s_chan,
 			irc_line_count(line) == 3 ?
@@ -2128,6 +2131,7 @@ connection_t *irc_server_connect(struct link *link)
 	if (conn->handle == -1) {
 		mylog(LOG_INFO, "Cannot connect.");
 		connection_free(conn);
+		server_next(link);
 		return NULL;
 	}
 

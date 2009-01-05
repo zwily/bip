@@ -897,8 +897,6 @@ static void create_socket(char *dsthostname, char *dstport, char *srchostname,
 	cn->connected = CONN_ERROR;
 	cdata = (struct connecting_data *)
 		bip_malloc(sizeof(struct connecting_data));
-	if (!cdata)
-		fatal("Out of memory.");
 	cdata->dst = cdata->src = cdata->cur = NULL;
 
 	err = getaddrinfo(dsthostname, dstport, &hint, &cdata->dst);
