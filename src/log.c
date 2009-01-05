@@ -1069,6 +1069,7 @@ next_file:
 	if (!logdata->lastfile_seeked) {
 		if (fseek(lf->file, lf->backlog_offset, SEEK_SET)) {
 			log_reinit(store);
+			free(buf);
 			return _log_wrap(destination,
 					"Error reading in logfile");
 		}
