@@ -1489,9 +1489,12 @@ static int irc_part(struct link_server *server, struct line *line)
 	if (!line->origin)
 		return ERR_PROTOCOL;
 	s_nick = nick_from_ircmask(line->origin);
-	if (!hash_includes(&channel->ovmasks, s_nick))
+	if (!hash_includes(&channel->ovmasks, s_nick)) {
+		free(s_nick);
 		return ERR_PROTOCOL;
+	}
 	hash_remove(&channel->ovmasks, s_nick);
+	free(s_nick);
 
 	log_part(LINK(server)->log, line->origin, s_chan,
 			irc_line_count(line) == 3 ?
