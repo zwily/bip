@@ -1272,9 +1272,10 @@ static int irc_join(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 	if (!line->origin)
 		return ERR_PROTOCOL;
-	s_nick = nick_from_ircmask(line->origin);
 
+	s_nick = nick_from_ircmask(line->origin);
 	hash_insert(&channel->ovmasks, s_nick, 0);
+	free(s_nick);
 	return OK_COPY;
 }
 
