@@ -1280,6 +1280,8 @@ list_t *backlog_lines_from_last_mark(log_t *log, const char *bl)
 		while ((line = log_backread(log, bl, &skip))) {
 			if (!skip)
 				list_add_last(ret, line);
+			else
+				free(line);
 		}
 
 		if (ischannel(*bl)) {
