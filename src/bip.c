@@ -228,6 +228,7 @@ pid_is_there:
 			if (c != 1 || p == 0) {
 				mylog(LOG_INFO, "pid file found but invalid "
 						"data inside. Continuing...\n");
+				fclose(f);
 				if (unlink(conf_pid_file)) {
 					fatal("Cannot delete pid file '%s', "
 							"check permissions.\n",
