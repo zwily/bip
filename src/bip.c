@@ -1522,7 +1522,6 @@ void adm_info_user(struct link_client *ic, const char *name)
 noroom:
 	buf[RET_STR_LEN] = 0;
 	bip_notify(ic, "%s", buf);
-	t_written = 0;
 
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",

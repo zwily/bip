@@ -130,13 +130,11 @@ void replace_var(char *str, char *var, char *value, unsigned int max)
 char *log_build_filename(log_t *logdata, const char *destination)
 {
 	char *logfile, year[5], day[3], month[3], *tmp, *logdir;
-	int log_format_len;
 	struct tm *now;
 	time_t s;
 	char *dest = bip_strdup(destination);
 	strtolower(dest);
 
-	log_format_len = strlen(conf_log_format);
 	logfile = (char *)bip_malloc(MAX_PATH_LEN + 1);
 
 	time(&s);
