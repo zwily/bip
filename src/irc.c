@@ -2469,7 +2469,7 @@ void irc_main(bip_t *bip)
 		char *l;
 
 		while ((l = list_remove_first(&bip->errors)))
-			bip_notify(bip->reloading_client, l);
+			bip_notify(bip->reloading_client, "%s", l);
 		bip->reloading_client = NULL;
 	}
 
