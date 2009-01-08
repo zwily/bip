@@ -28,6 +28,7 @@ static int _log_write(log_t *logdata, logstore_t *lf, const char *d,
 		const char *str);
 void logfile_free(logfile_t *lf);
 static char *_log_wrap(const char *dest, const char *line);
+static void log_drop(log_t *log, const char *storename);
 
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
@@ -457,8 +458,11 @@ void log_nick(log_t *logdata, const char *ircmask, const char *channel,
 {
 	char *oldnick = nick_from_ircmask(ircmask);
 
-	if (hash_includes(&logdata->logfgs, oldnick))
+	if (hash_includes(&logdata->logfgs, oldnick)) {
+		if (hash_includes(&logdata->logfgs, newnick))
+			log_drop(logdata, newnick);
 		hash_rename_key(&logdata->logfgs, oldnick, newnick);
+	}
 	free(oldnick);
 
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
@@ -675,6 +679,27 @@ void log_client_disconnected(log_t *logdata)
 {
 	(void)logdata;
 	mylog(LOG_DEBUG, "A client disconnected");
+}
+
+void log_store_free(logstore_t *store)
+{
+	logfile_t *lf;
+
+	log_reset(store);
+	if ((lf = list_remove_first(&store->file_group)))
+		logfile_free(lf);
+	free(store->name);
+	if (store->memlog)
+		list_free(store->memlog);
+	free(store);
+}
+
+static void log_drop(log_t *log, const char *storename)
+{
+	logstore_t *store;
+
+	store = hash_remove(&log->logfgs, storename);
+	log_store_free(store);
 }
 
 void log_reinit_all(log_t *logdata)
@@ -1243,7 +1268,6 @@ void log_free(log_t *log)
 {
 	hash_iterator_t it;
 	logstore_t *store;
-	logfile_t *lf;
 
 	list_remove(log_all_logs, log);
 
@@ -1253,8 +1277,7 @@ void log_free(log_t *log)
 	for (hash_it_init(&log->logfgs, &it); (store = hash_it_item(&it));
 			hash_it_next(&it)) {
 		log_reset(store);
-		if ((lf = list_remove_first(&store->file_group)))
-			logfile_free(lf);
+		log_store_free(store);
 	}
 	hash_clean(&log->logfgs);
 	free(log);
