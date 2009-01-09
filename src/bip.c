@@ -228,6 +228,7 @@ pid_is_there:
 			if (c != 1 || p == 0) {
 				mylog(LOG_INFO, "pid file found but invalid "
 						"data inside. Continuing...\n");
+				fclose(f);
 				if (unlink(conf_pid_file)) {
 					fatal("Cannot delete pid file '%s', "
 							"check permissions.\n",
@@ -1379,7 +1380,7 @@ void adm_print_connection(struct link_client *ic, struct link *lnk,
 noroom: /* that means the line is larger that RET_STR_LEN. We're not likely to
 	   even read such a long line */
 	buf[RET_STR_LEN] = 0;
-	bip_notify(ic, buf);
+	bip_notify(ic, "%s", buf);
 
 	// TODO: on_connect_send
 
@@ -1396,13 +1397,13 @@ noroom: /* that means the line is larger that RET_STR_LEN. We're not likely to
 			(ch->backlog ? "" : "`"));
 		if (t_written > LINE_SIZE_LIM) {
 			buf[RET_STR_LEN] = 0;
-			bip_notify(ic, buf);
+			bip_notify(ic, "%s", buf);
 			t_written = 0;
 		}
 	}
 noroomchan:
 	buf[RET_STR_LEN] = 0;
-	bip_notify(ic, buf);
+	bip_notify(ic, "%s", buf);
 
 	t_written = snprintf(buf, RET_STR_LEN, "  Status: ");
 	if (t_written >= RET_STR_LEN)
@@ -1462,7 +1463,7 @@ noroomchan:
 	}
 noroomstatus:
 	buf[RET_STR_LEN] = 0;
-	bip_notify(ic, buf);
+	bip_notify(ic, "%s", buf);
 }
 
 void adm_list_all_links(struct link_client *ic)
@@ -1521,8 +1522,7 @@ void adm_info_user(struct link_client *ic, const char *name)
 
 noroom:
 	buf[RET_STR_LEN] = 0;
-	bip_notify(ic, buf);
-	t_written = 0;
+	bip_notify(ic, "%s", buf);
 
 #ifdef HAVE_LIBSSL
 	bip_notify(ic, "SSL check mode '%s', stored into '%s'",
@@ -1590,13 +1590,13 @@ void adm_list_users(struct link_client *ic)
 				goto noroom;
 			if (t_written > LINE_SIZE_LIM) {
 				buf[RET_STR_LEN] = 0;
-				bip_notify(ic, buf);
+				bip_notify(ic, "%s", buf);
 				t_written = 0;
 			}
 		}
 noroom:
 		buf[RET_STR_LEN] = 0;
-		bip_notify(ic, buf);
+		bip_notify(ic, "%s", buf);
 	}
 	bip_notify(ic, "-- End of User list");
 }
@@ -1640,13 +1640,13 @@ void adm_list_networks(struct link_client *ic)
 				goto noroom;
 			if (t_written > LINE_SIZE_LIM) {
 				buf[RET_STR_LEN] = 0;
-				bip_notify(ic, buf);
+				bip_notify(ic, "%s", buf);
 				t_written = 0;
 			}
 		}
 noroom:
 		buf[RET_STR_LEN] = 0;
-		bip_notify(ic, buf);
+		bip_notify(ic, "%s", buf);
 	}
 	bip_notify(ic, "-- End of Network list");
 }
