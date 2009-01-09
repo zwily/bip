@@ -965,18 +965,29 @@ int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
 			return 0;
 		}
 
-		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
-			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
-			list_add_last(res, _log_wrap(store->name,
-					"Error seeking in logfile"));
-			return 0;
-		}
-
 		close = 1;
 	}
 
-	buf = bip_malloc(LOGLINE_MAXLEN + 1);
+	if (list_get_first(&store->file_group) == lf) {
+		mylog(LOG_DEBUG, "Seeking %s to %d", lf->filename,
+				store->file_offset);
+		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
+			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
+			list_add_last(res, _log_wrap(store->name,
+						"Error seeking in logfile"));
+			return 0;
+		}
+	} else {
+		mylog(LOG_DEBUG, "Seeking %s to %d", lf->filename, 0);
+		if (fseek(lf->file, 0, SEEK_SET)) {
+			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
+			list_add_last(res, _log_wrap(store->name,
+						"Error seeking in logfile"));
+			return 0;
+		}
+	}
 
+	buf = bip_malloc(LOGLINE_MAXLEN + 1);
 	for(;;) {
 		if (!fgets(buf, LOGLINE_MAXLEN, lf->file)) {
 			if (ferror(lf->file)) {
@@ -986,6 +997,11 @@ int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
 			/* error or oef */
 			break;
 		}
+		int slen = strlen(buf);
+		if (buf[slen - 1] == '\n')
+			buf[slen - 1] = 0;
+		if (slen >= 2 && buf[slen] == '\r')
+			buf[slen - 2] = 0;
 		if (buf[0] == 0 || buf[0] == '\n')
 			continue;
 		logbr = log_beautify(log, buf, store->name);
