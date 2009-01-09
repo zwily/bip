@@ -689,6 +689,14 @@ void log_reinit_all(log_t *logdata)
 	}
 }
 
+void log_reset_store(log_t *log, const char *storename)
+{
+	logstore_t *store;
+	store = hash_get(&log->logfgs, storename);
+	if (store)
+		log_reset(store);
+}
+
 void log_client_none_connected(log_t *logdata)
 {
 	logdata->connected = 0;

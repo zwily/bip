@@ -1847,6 +1847,12 @@ void adm_blreset(struct link_client *ic)
 	bip_notify(ic, "backlog resetted for this network.");
 }
 
+void adm_blreset_store(struct link_client *ic, const char *store)
+{
+	log_reset_store(LINK(ic)->log, store);
+	bip_notify(ic, "backlog resetted for %s.", store);
+}
+
 void adm_follow_nick(struct link_client *ic, const char *val)
 {
 	struct link *link = LINK(ic);
@@ -2163,9 +2169,19 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 		}
 		bip_notify(ic, "-- Jumping to next server");
 	} else if (irc_line_elem_case_equals(line, privmsg + 1, "BLRESET")) {
-		if (irc_line_count(line) == privmsg + 3 &&
-				irc_line_elem_equals(line, privmsg + 2, "-q")) {
-			log_reinit_all(LINK(ic)->log);
+		if (irc_line_includes(line, privmsg + 2)) {
+			if (irc_line_elem_equals(line, privmsg + 2, "-q")) {
+				if (irc_line_includes(line, privmsg + 3)) {
+					log_reset_store(LINK(ic)->log,
+						irc_line_elem(line,
+							privmsg + 3));
+				} else {
+					log_reinit_all(LINK(ic)->log);
+				}
+			} else {
+				adm_blreset_store(ic, irc_line_elem(line,
+							privmsg + 3));
+			}
 		} else {
 			adm_blreset(ic);
 		}

@@ -100,6 +100,7 @@ void log_reset(logstore_t *);
 void log_reinit_all(log_t *logdata);
 void log_free(log_t *log);
 int check_dir(char *filename, int is_fatal);
+void log_reset_store(log_t *log, const char *storename);
 
 list_t *log_backlogs(log_t *log);
 list_t *backlog_lines_from_last_mark(log_t *log, const char *bl);
