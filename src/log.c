@@ -854,37 +854,6 @@ char *log_beautify(log_t *logdata, const char *buf, const char *storename,
 		return _log_wrap(dest, buf);
 	p++;
 
-#if 0
-	done = ((p[-1] == ':') || (action && (p[1] != '(')));
-	p++;
-
-	/*
-	 * TODO add a : before the action text in the log files
-	 * otherwise "/me (bla) blabla" on a chan is logged exactly as
-	 * "/me blabla" in a query with bla.
-	 */
-	if (!done) {
-		p++;
-		if (!p[0] || !p[1] || p[0] == ')')
-			return _log_wrap(dest, buf);
-		sod = p;
-		while (*p && *p != ')' && *p != ' ' && *p != '!')
-			p++;
-		lod = p - sod;
-
-		if (*p == '!')
-			while (*p && *p != ')' && *p != ' ')
-				p++;
-
-		if (!p[0] || p[0] != ')' || !p[1] || p[1] != ':' ||
-				!p[2] || p[2] != ' ' || !p[3])
-			return _log_wrap(dest, buf);
-		p += 3;
-	} else {
-		sod = dest;
-		lod = strlen(dest);
-	}
-#endif
 	if (out && !ischannel(*dest)) {
 		son = storename;
 		lon = strlen(storename);
