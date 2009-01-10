@@ -1965,9 +1965,10 @@ void adm_bip_help(struct link_client *ic, int admin, const char *subhelp)
 		}
 		bip_notify(ic, "/BIP JUMP # jump to next server (in same "
 				"network)");
-		bip_notify(ic, "/BIP BLRESET # reset backlog (this "
-				"connection only). Add -q flag and the "
-				"operation is quiet.");
+		bip_notify(ic, "/BIP BLRESET [channel|query]# reset backlog "
+				"(this connection only). Add -q flag and the "
+				"operation is quiet. You can specify a channel "
+				"or a nick to reset only this channel/query.");
 #ifdef HAVE_LIBSSL
 		bip_notify(ic, "/BIP TRUST # trust this server certificate");
 #endif
