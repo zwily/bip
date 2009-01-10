@@ -789,7 +789,8 @@ chan:
 09-01-2009 14:15:57 > bip4ever: chantest
 09-01-2009 14:16:21 < nohar!~nohar@haruka.t1r.net: chantestrepl
 */
-char *log_beautify(log_t *logdata, const char *buf, const char *dest)
+char *log_beautify(log_t *logdata, const char *buf, const char *storename,
+		const char *dest)
 {
 	int action = 0;
 	char *p;
@@ -797,8 +798,8 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	 * so = startov, lo = lengthov
 	 * ts = timestamp, n = sender nick, m = message or action
 	 */
-	const char *sots, *son, *som, *sod = NULL;
-	size_t lots, lon, lom, lod;
+	const char *sots, *son, *som;
+	size_t lots, lon, lom;
 	char *ret;
 	int out;
 	int done;
@@ -849,9 +850,11 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	lon = p - son;
 
 	p = strchr(p, ' ');
-	if (!p || !p[0])
+	if (!p || !p[0] || !p[1])
 		return _log_wrap(dest, buf);
+	p++;
 
+#if 0
 	done = ((p[-1] == ':') || (action && (p[1] != '(')));
 	p++;
 
@@ -881,21 +884,11 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		sod = dest;
 		lod = strlen(dest);
 	}
-#if 0
-	if (out && !ischannel(*dest)) {
-		const char *stmp;
-		size_t ltmp;
-
-		stmp = sod;
-		ltmp = lod;
-
-		sod = son;
-		lod = lon;
-
-		son = stmp;
-		lon = ltmp;
-	}
 #endif
+	if (out && !ischannel(*dest)) {
+		son = storename;
+		lon = strlen(storename);
+	}
 
 	som = p;
 	lom = strlen(p);
@@ -903,8 +896,9 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		return _log_wrap(dest, buf);
 
 	p = ret = (char *)bip_malloc(
-		1 + lon + strlen(LAMESTRING) + lod + 2 + lots +	2 + lom + 3
-		+ action * (2 + strlen("ACTION ")) + out * strlen(PMSG_ARROW));
+		1 + lon + strlen(LAMESTRING) + strlen(dest) + 2 + lots + 2 +
+		lom + 3 + action * (2 + strlen("ACTION ")) +
+		out * strlen(PMSG_ARROW));
 
 	*p++ = ':';
 
@@ -914,8 +908,10 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	strcpy(p, LAMESTRING);
 	p += strlen(LAMESTRING);
 
-	memcpy(p, sod, lod);
-	p += lod;
+	memcpy(p, dest, strlen(dest));
+	p += strlen(dest);
+	//memcpy(p, sod, lod);
+	//p += lod;
 
 	*p++ = ' ';
 	*p++ = ':';
@@ -925,7 +921,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		strcpy(p, "ACTION ");
 		p += strlen("ACTION ");
 	}
-	if (out) {
+	if (out && !ischannel(*dest)) {
 		strcpy(p, PMSG_ARROW);
 		p += strlen(PMSG_ARROW);
 	}
@@ -1004,7 +1000,7 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 		if (buf[0] == 0 || buf[0] == '\n')
 			continue;
 
-		logbr = log_beautify(log, buf, dest);
+		logbr = log_beautify(log, buf, store->name, dest);
 		if (logbr)
 			list_add_last(res, logbr);
 
@@ -1089,7 +1085,8 @@ static int _log_write(log_t *logdata, logstore_t *store,
 	tmpstr[LOGLINE_MAXLEN] = 0;
 
 	if (store->memlog) {
-		char *r = log_beautify(logdata, tmpstr, destination);
+		char *r = log_beautify(logdata, tmpstr, store->name,
+				destination);
 		if (r != NULL) {
 			list_add_last(store->memlog, r);
 			if (store->memc == logdata->user->backlog_lines)
