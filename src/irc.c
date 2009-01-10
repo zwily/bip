@@ -868,7 +868,6 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 	if (irc_line_elem_equals(line, 1, "-bip"))
 		return adm_bip(bip, ic, line, 1);
 
-	printf("%d<-\n", LINK(ic)->user->blreset_on_talk);
 	if (LINK(ic)->user->blreset_on_talk)
 		log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
 	return OK_COPY_CLI;

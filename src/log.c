@@ -1308,14 +1308,24 @@ list_t *backlog_lines_from_last_mark(log_t *log, const char *bl,
 
 	if (log_has_backlog(log, bl)) {
 		ret = log_backread(log, bl, dest);
-		/* clean this up */
-		irc_line_init(&l);
-		l.origin = P_IRCMASK;
-		_irc_line_append(&l, "PRIVMSG");
-		_irc_line_append(&l, dest);
-		_irc_line_append(&l, "End of backlog");
-		list_add_last(ret, irc_line_to_string(&l));
-		_irc_line_deinit(&l);
+		/*
+		 * This exception is cosmetic, but you want it.
+		 * Most of the time, you get backlog from your own nick for
+		 * your mode changes only.
+		 * Hence opening a query just to say "end of backlog"...
+		 */
+		if (strcmp(bl, cli_nick) != 0) {
+			/* clean this up */
+			irc_line_init(&l);
+			l.origin = P_IRCMASK;
+			if (dest == cli_nick)
+				l.origin = bl;
+			_irc_line_append(&l, "PRIVMSG");
+			_irc_line_append(&l, dest);
+			_irc_line_append(&l, "End of backlog");
+			list_add_last(ret, irc_line_to_string(&l));
+			_irc_line_deinit(&l);
+		}
 	}
 	return ret;
 }
