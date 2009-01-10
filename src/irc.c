@@ -1012,9 +1012,10 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 				kp[klen] = 0;
 				if (*ke == 0)
 					ks = NULL;
-			} else
+			} else {
 				kp = NULL;
 				ks = NULL;
+			}
 		}
 
 		irc_add_channel_info(LINK(irc)->l_server, p, kp);
