@@ -2180,7 +2180,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 				}
 			} else {
 				adm_blreset_store(ic, irc_line_elem(line,
-							privmsg + 3));
+							privmsg + 2));
 			}
 		} else {
 			adm_blreset(ic);

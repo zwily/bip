@@ -25,9 +25,9 @@
 #define OK_COPY_CLI (4)
 #define OK_COPY_WHO (5)
 
-#define P_SERV "bip.bip.bip"
+#define P_SERV "b.i.p"
 #define S_PING "BIPPING"
-#define P_IRCMASK "-bip!bip@bip.bip.bip"
+#define P_IRCMASK "-bip!bip@" P_SERV
 
 struct server {
 	char *host;

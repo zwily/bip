@@ -175,9 +175,7 @@ void irc_start_lagtest(struct link_server *l)
  */
 void irc_compute_lag(struct link_server *is)
 {
-	if (is->laginit_ts == -1)
-		fatal("irc_compute_lag");
-
+	assert(is->laginit_ts != -1);
 	is->lag = time(NULL) - is->laginit_ts;
 }
 
@@ -504,8 +502,7 @@ static void irc_send_join(struct link_client *ic, struct channel *chan)
 	char *ircmask;
 
 	user = LINK(ic)->user;
-	if (!user)
-		fatal("irc_send_join: No user associated");
+	assert(user);
 
 	/* user ircmask here for rbot */
 	ircmask = bip_malloc(strlen(LINK(ic)->l_server->nick) +
@@ -566,8 +563,8 @@ void unbind_from_link(struct link_client *ic)
 	for (i = 0; i < l->l_clientc; i++)
 		if (l->l_clientv[i] == ic)
 			break;
-	if (i == l->l_clientc)
-		fatal("unbind_from_link");
+
+	assert(i != l->l_clientc);
 
 	if (l->who_client == ic) {
 		mylog(LOG_DEBUG, "unbind_from_link:  %p: %d", l->who_client,
@@ -658,8 +655,9 @@ static void irc_cli_backlog(struct link_client *ic)
 	struct user *user;
 
 	user = LINK(ic)->user;
-	if (!user)
-		fatal("irc_cli_backlog: No user associated");
+	assert(user);
+	assert(LINK(ic)->l_server);
+
 	if (!user->backlog) {
 		mylog(LOG_DEBUG, "Backlog disabled for %s, not backlogging",
 				user->name);
@@ -672,7 +670,8 @@ static void irc_cli_backlog(struct link_client *ic)
 	backlogl = log_backlogs(LINK(ic)->log);
 	while ((bl = list_remove_first(backlogl))) {
 		list_t *bllines;
-		bllines = backlog_lines_from_last_mark(LINK(ic)->log, bl);
+		bllines = backlog_lines_from_last_mark(LINK(ic)->log, bl,
+				LINK(ic)->l_server->nick);
 		mylog(LOG_INFO, "backlogging: %s", bl);
 		write_lines(CONN(ic), bllines);
 		list_free(bllines);
@@ -688,8 +687,7 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 	char *user, *pass, *connname;
 	(void)line;
 
-	if (!ic->init_pass)
-		fatal("internal irc_cli_startup");
+	assert(ic->init_pass);
 
 	user = get_str_elem(ic->init_pass, 0);
 	if (!user)
@@ -870,6 +868,7 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 	if (irc_line_elem_equals(line, 1, "-bip"))
 		return adm_bip(bip, ic, line, 1);
 
+	printf("%d<-\n", LINK(ic)->user->blreset_on_talk);
 	if (LINK(ic)->user->blreset_on_talk)
 		log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
 	return OK_COPY_CLI;
@@ -1143,8 +1142,7 @@ static void irc_copy_cli(struct link_client *src, struct link_client *dest,
 	}
 
 	if (ischannel(*irc_line_elem(line, 1)) || LINK(src) != LINK(dest)) {
-		if (line->origin)
-			fatal("internal error: line->origin should be null");
+		assert(!line->origin);
 		line->origin = LINK(src)->l_server->nick;
 		str = irc_line_to_string(line);
 		line->origin = NULL;
@@ -2126,8 +2124,7 @@ connection_t *irc_server_connect(struct link *link)
 				0, 0, NULL, NULL,
 #endif
 				CONNECT_TIMEOUT);
-	if (!conn)
-		fatal("connection_new");
+	assert(conn);
 	if (conn->handle == -1) {
 		mylog(LOG_INFO, "Cannot connect.");
 		connection_free(conn);
@@ -2386,8 +2383,7 @@ void bip_on_event(bip_t *bip, connection_t *conn)
 
 	if (conn == bip->listener) {
 		struct link_client *n = irc_accept_new(conn);
-		if (!n)
-			fatal("Problem while binding local socket");
+		assert(n);
 		list_add_last(&bip->conn_list, CONN(n));
 		list_add_last(&bip->connecting_client_list, n);
 		return;

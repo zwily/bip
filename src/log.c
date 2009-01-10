@@ -32,8 +32,8 @@ void logfile_free(logfile_t *lf);
 static void log_drop(log_t *log, const char *storename);
 
 #define BOLD_CHAR 0x02
-#define LAMESTRING "!bip@bip.bip.bip PRIVMSG "
-#define PMSG_ARROW " \002->\002 "
+#define LAMESTRING "!bip@" P_SERV " PRIVMSG "
+#define PMSG_ARROW "\002->\002"
 
 int check_dir(char *filename, int is_fatal)
 {
@@ -270,14 +270,17 @@ static int log_add_file(log_t *logdata, const char *destination,
 			return 0;
 		}
 
+		if (fseek(f, 0, SEEK_END) == -1) {
+			mylog(LOG_ERROR, "fseek(%s) %s", uniq_fname,
+					strerror(errno));
+			free(uniq_fname);
+			return 0;
+		}
+
 		lf = bip_malloc(sizeof(logfile_t));
 		lf->file = f;
-		lf->filename = uniq_fname;
-
-		fseek(lf->file, 0, SEEK_END);
-		if (ftell(f) < 0)
-			fatal("ftell");
 		lf->len = ftell(f);
+		lf->filename = uniq_fname;
 		log_updatelast(lf);
 	}
 
@@ -394,12 +397,10 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 
 		if (!logdata->user->backlog) {
 			/* remove oldlf from file_group */
-			if (list_remove_first(&store->file_group) != oldlf)
-				fatal("internal log_find_file 2");
+			assert(list_remove_first(&store->file_group) == oldlf);
 			logfile_free(oldlf);
-			if (list_get_first(&store->file_group)
-					!= list_get_last(&store->file_group))
-				fatal("internal log_find_file 3");
+			assert(list_get_first(&store->file_group) ==
+					list_get_last(&store->file_group));
 		} else {
 			fclose(oldlf->file);
 			oldlf->file = NULL;
@@ -692,6 +693,7 @@ void log_reinit_all(log_t *logdata)
 void log_reset_store(log_t *log, const char *storename)
 {
 	logstore_t *store;
+
 	store = hash_get(&log->logfgs, storename);
 	if (store)
 		log_reset(store);
@@ -779,18 +781,14 @@ int log_has_backlog(log_t *logdata, const char *destination)
 	return store->file_offset != lf->len;
 }
 
-
 /*
- * chan:
- * 13-05-2005 12:14:29 > nohar: coucou
- * 13-05-2005 12:14:30 < nohar!~nohar@je.suis.t1r.net: coucou
- *
- * private:
- * 13-05-2005 12:14:53 > nohar (jj): 1 luv PHP
- * 13-05-2005 12:14:55 < jj!john@thebox.ofjj.net (nohar): t00 s3xy
- * 01-08-2005 10:46:11 < * jj!john@thebox.ofjj.net
- */
-
+query:
+09-01-2009 14:16:10 < nohar!~nohar@haruka.t1r.net: repl querytest
+09-01-2009 14:16:37 > bip4ever: je dis yo la quand meem
+chan:
+09-01-2009 14:15:57 > bip4ever: chantest
+09-01-2009 14:16:21 < nohar!~nohar@haruka.t1r.net: chantestrepl
+*/
 char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 {
 	int action = 0;
@@ -805,8 +803,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	int out;
 	int done;
 
-	if (!buf)
-		fatal("BUG log_beautify not called correctly!");
+	assert(buf);
 
 	p = strchr(buf, ' ');
 	if (!p || !p[0] || !p[1])
@@ -884,7 +881,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		sod = dest;
 		lod = strlen(dest);
 	}
-
+#if 0
 	if (out && !ischannel(*dest)) {
 		const char *stmp;
 		size_t ltmp;
@@ -898,6 +895,7 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 		son = stmp;
 		lon = ltmp;
 	}
+#endif
 
 	som = p;
 	lom = strlen(p);
@@ -950,7 +948,8 @@ char *log_beautify(log_t *logdata, const char *buf, const char *dest)
 	return ret;
 }
 
-int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
+static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
+		list_t *res, const char *dest)
 {
 	char *buf, *logbr;
 	int close = 0;
@@ -1004,7 +1003,8 @@ int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
 			buf[slen - 2] = 0;
 		if (buf[0] == 0 || buf[0] == '\n')
 			continue;
-		logbr = log_beautify(log, buf, store->name);
+
+		logbr = log_beautify(log, buf, dest);
 		if (logbr)
 			list_add_last(res, logbr);
 
@@ -1017,7 +1017,7 @@ int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf, list_t *res)
 	return 1;
 }
 
-list_t *log_backread(log_t *log, const char *storename)
+static list_t *log_backread(log_t *log, const char *storename, const char *dest)
 {
 	list_t *ret;
 
@@ -1053,7 +1053,7 @@ list_t *log_backread(log_t *log, const char *storename)
 	for (list_it_init(&store->file_group, &file_it);
 			(logf = list_it_item(&file_it));
 			list_it_next(&file_it)) {
-		if (!log_backread_file(log, store, logf, ret)) {
+		if (!log_backread_file(log, store, logf, ret, dest)) {
 			log_reinit(store);
 			return ret;
 		}
@@ -1293,26 +1293,29 @@ list_t *backlog_hours(log_t *log, const char *storename, int hours)
 }
 #endif
 
-list_t *backlog_lines_from_last_mark(log_t *log, const char *bl)
+list_t *backlog_lines_from_last_mark(log_t *log, const char *bl,
+		const char *cli_nick)
 {
 	list_t *ret;
 	struct line l;
+	const char *dest;
 
 	ret = list_new(NULL);
+	if (ischannel(*bl))
+		dest = bl;
+	else
+		dest = cli_nick;
 
 	if (log_has_backlog(log, bl)) {
-		ret = log_backread(log, bl);
-
-		if (ischannel(*bl)) {
-			/* clean this up */
-			irc_line_init(&l);
-			l.origin = P_IRCMASK;
-			_irc_line_append(&l, "PRIVMSG");
-			_irc_line_append(&l, bl);
-			_irc_line_append(&l, "End of backlog");
-			list_add_last(ret, irc_line_to_string(&l));
-			_irc_line_deinit(&l);
-		}
+		ret = log_backread(log, bl, dest);
+		/* clean this up */
+		irc_line_init(&l);
+		l.origin = P_IRCMASK;
+		_irc_line_append(&l, "PRIVMSG");
+		_irc_line_append(&l, dest);
+		_irc_line_append(&l, "End of backlog");
+		list_add_last(ret, irc_line_to_string(&l));
+		_irc_line_deinit(&l);
 	}
 	return ret;
 }
