@@ -802,7 +802,6 @@ char *log_beautify(log_t *logdata, const char *buf, const char *storename,
 	size_t lots, lon, lom;
 	char *ret;
 	int out;
-	int done;
 
 	assert(buf);
 
@@ -1285,7 +1284,7 @@ list_t *backlog_lines_from_last_mark(log_t *log, const char *bl,
 			irc_line_init(&l);
 			l.origin = P_IRCMASK;
 			if (dest == cli_nick)
-				l.origin = bl;
+				l.origin = (char *)bl;
 			_irc_line_append(&l, "PRIVMSG");
 			_irc_line_append(&l, dest);
 			_irc_line_append(&l, "End of backlog");

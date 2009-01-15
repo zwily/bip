@@ -214,7 +214,6 @@ void print_trace(void)
 {
 	void *array[32];
 	size_t size;
-	size_t i;
 
 	size = backtrace(array, 32);
 	fflush(conf_global_log_file);
