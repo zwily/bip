@@ -234,6 +234,7 @@ pid_is_there:
 							"check permissions.\n",
 							conf_pid_file);
 				}
+				close(fd);
 				goto try_again;
 			}
 		} else
