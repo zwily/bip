@@ -196,6 +196,7 @@ int do_pid_stuff(void)
 	char longpath[1024];
 	FILE *f;
 	int fd;
+
 try_again:
 	fd = -1;
 	f = fopen(conf_pid_file, "r");
@@ -223,8 +224,11 @@ pid_is_there:
 	{
 		pid_t pid;
 		long unsigned int p;
+		if (fd != -1)
+			close(fd);
 		if (f) {
 			int c = fscanf(f, "%ld", &p);
+			fclose(f);
 			pid = p;
 			if (c != 1 || p == 0) {
 				mylog(LOG_INFO, "pid file found but invalid "
@@ -234,9 +238,6 @@ pid_is_there:
 							"check permissions.\n",
 							conf_pid_file);
 				}
-				fclose(f);
-				if (fd != -1)
-					close(fd);
 				goto try_again;
 			}
 		} else
@@ -244,7 +245,6 @@ pid_is_there:
 		int kr = kill(pid, 0);
 		if (kr == -1 && (errno == ESRCH || errno == EPERM)) {
 			/* that's not bip! */
-			fclose(f);
 			if (unlink(conf_pid_file)) {
 				fatal("Cannot delete pid file '%s', check "
 						"permissions.\n",
@@ -254,7 +254,8 @@ pid_is_there:
 		}
 		if (pid)
 			mylog(LOG_INFO, "pid file found (pid %ld).", pid);
-		mylog(LOG_FATAL, "Another instance of bip is certainly runing.");
+		mylog(LOG_FATAL,
+				"Another instance of bip is certainly runing.");
 		mylog(LOG_FATAL, "If you are sure this is not the case remove"
 					" %s.", conf_pid_file);
 		exit(2);
