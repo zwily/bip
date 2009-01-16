@@ -195,7 +195,9 @@ int do_pid_stuff(void)
 	char hname[1024];
 	char longpath[1024];
 	FILE *f;
+	int fd;
 try_again:
+	fd = -1;
 	f = fopen(conf_pid_file, "r");
 	if (f)
 		goto pid_is_there;
@@ -203,7 +205,6 @@ try_again:
 		fatal("%s %s", "gethostname", strerror(errno));
 	snprintf(longpath, 1023, "%s.%s.%ld", conf_pid_file, hname,
 			(long unsigned int)getpid());
-	int fd;
 	if ((fd = open(longpath, O_CREAT|O_WRONLY, S_IWUSR|S_IRUSR)) == -1)
 		fatal("Cannot write to PID file (%s) %s", longpath,
 				strerror(errno));
@@ -228,13 +229,14 @@ pid_is_there:
 			if (c != 1 || p == 0) {
 				mylog(LOG_INFO, "pid file found but invalid "
 						"data inside. Continuing...\n");
-				fclose(f);
 				if (unlink(conf_pid_file)) {
 					fatal("Cannot delete pid file '%s', "
 							"check permissions.\n",
 							conf_pid_file);
 				}
-				close(fd);
+				fclose(f);
+				if (fd != -1)
+					close(fd);
 				goto try_again;
 			}
 		} else
