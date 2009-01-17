@@ -1001,7 +1001,7 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 	if (irc_line_count(line) != 2 && irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
 
-	const char *s, *e, *ks, *ke = 0;
+	const char *s, *e, *ks, *ke = NULL;
 	s = irc_line_elem(line, 1);
 	if (irc_line_count(line) == 3)
 		ks = irc_line_elem(line, 2);

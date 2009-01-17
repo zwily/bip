@@ -191,16 +191,16 @@ void log_reset(logstore_t *store)
 		return;
 	}
 
-	while ((olf = list_get_first(&store->file_group)) !=
-			list_get_last(&store->file_group)) {
+	while ((olf = list_get_first(&store->file_group)) &&
+			olf != list_get_last(&store->file_group)) {
 		logfile_free(olf);
 		list_remove_first(&store->file_group);
 	}
 
-	if (olf)
-		list_it_init_last(&store->file_group, &store->file_it);
-
+	assert(olf);
 	assert(olf->file);
+
+	list_it_init_last(&store->file_group, &store->file_it);
 
 	fseek(olf->file, 0, SEEK_END);
 	olf->len = ftell(olf->file);
@@ -275,6 +275,7 @@ static int log_add_file(log_t *logdata, const char *destination,
 			mylog(LOG_ERROR, "fseek(%s) %s", uniq_fname,
 					strerror(errno));
 			free(uniq_fname);
+			fclose(f);
 			return 0;
 		}
 

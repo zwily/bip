@@ -830,6 +830,7 @@ static int validate_config(bip_t *bip)
 						user->name, link->name);
 					link_kill(bip, link);
 					r = 0;
+					continue;
 				}
 			}
 
@@ -842,7 +843,8 @@ static int validate_config(bip_t *bip)
 						"%s: channel must have"
 						"a name.", user->name,
 						link->name);
-					return 0;
+					r = 0;
+					continue;
 				}
 			}
 		}
@@ -853,7 +855,8 @@ static int validate_config(bip_t *bip)
 				"lines to a non-nul value for each user with"
 				"backlog = true. Faulty user is %s",
 				user->name);
-			return 0;
+			r = 0;
+			continue;
 		}
 	}
 
@@ -907,8 +910,8 @@ void sweep(bip_t *bip)
 		if (!l->in_use) {
 			mylog(LOG_INFO, "Administratively killing %s/%s",
 					l->user->name, l->name);
-			link_kill(bip, l);
 			list_remove_if_exists(&bip->conn_list, l);
+			link_kill(bip, l);
 			list_it_remove(&lit);
 		}
 	}

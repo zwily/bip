@@ -822,8 +822,11 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 
 	/* if no connection is active, return the list... empty... */
 	if (maxfd == -1) {
-		usleep(*msec * 1000);
-		*msec = 0;
+		struct timespec req, rem;
+		req.tv_sec = *msec * 1000;
+		req.tv_nsec = 0;
+		nanosleep(&req, &rem);
+		*msec = rem.tv_sec;
 		return cn_newdata;
 	}
 
