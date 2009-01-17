@@ -263,6 +263,7 @@ struct link *irc_link_new();
 void link_kill(bip_t *bip, struct link *);
 void unbind_from_link(struct link_client *ic);
 char *nick_from_ircmask(const char *mask);
+void irc_cli_backlog(struct link_client *ic, int hours);
 #define BIP_FAKEMASK "!bip@bip.bip.bip"
 
 #endif

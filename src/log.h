@@ -103,5 +103,6 @@ int check_dir(char *filename, int is_fatal);
 void log_reset_store(log_t *log, const char *storename);
 
 list_t *log_backlogs(log_t *log);
-list_t *backlog_lines_from_last_mark(log_t *log, const char *bl, const char *);
+list_t *backlog_lines(log_t *log, const char *bl, const char *cli_nick,
+		int hours);
 #endif

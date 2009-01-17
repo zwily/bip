@@ -1988,6 +1988,8 @@ void adm_bip_help(struct link_client *ic, int admin, const char *subhelp)
 		bip_notify(ic, "/BIP ON_CONNECT_SEND # Clears on_connect_send");
 		bip_notify(ic, "/BIP AWAY_NICK <nick> # Set away nick");
 		bip_notify(ic, "/BIP AWAY_NICK # clear away nick");
+		bip_notify(ic, "/BIP BACKLOG [n] # backlog text of the n last "
+				"hours");
 	} else if (admin && strcasecmp(subhelp, "RELOAD") == 0) {
 		bip_notify(ic, "/BIP RELOAD (admin only) :");
 		bip_notify(ic, "  Reloads bip configuration file and apply "
@@ -2236,6 +2238,15 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 		} else {
 			bip_notify(ic, "-- AWAY_NICK command needs zero or one"
 				" argument");
+		}
+	} else if (irc_line_elem_case_equals(line, privmsg + 1, "BACKLOG")) {
+		if (irc_line_count(line) == privmsg + 2) {
+			irc_cli_backlog(ic, 0);
+		} else if (irc_line_count(line) == privmsg + 3) {
+			int hours = atoi(irc_line_elem(line, privmsg + 2));
+			irc_cli_backlog(ic, hours);
+		} else {
+			bip_notify(ic, "-- BACKLOG takes 0 or one argument");
 		}
 	} else if (admin && irc_line_elem_case_equals(line, privmsg + 1,
 				"ADD_CONN")) {

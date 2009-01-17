@@ -16,6 +16,7 @@
 #include "irc.h"
 #include "util.h"
 #include <sys/time.h>
+#include <stdio.h>
 
 extern int errno;
 extern int log_level;
@@ -292,7 +293,6 @@ static int log_add_file(log_t *logdata, const char *destination,
 		store->name = bip_strdup(destination);
 		store->skip_advance = 0;
 		hash_insert(&logdata->logfgs, destination, store);
-		list_it_init(&store->file_group, &store->file_it);
 	}
 
 	if (!conf_log && logdata->user->backlog) {
@@ -302,6 +302,8 @@ static int log_add_file(log_t *logdata, const char *destination,
 
 	if (lf) {
 		list_add_last(&store->file_group, lf);
+		if (list_it_item(&store->file_it) == NULL)
+			list_it_init_last(&store->file_group, &store->file_it);
 		store->file_offset = lf->len;
 	}
 	return 1;
@@ -912,8 +914,20 @@ char *log_beautify(log_t *logdata, const char *buf, const char *storename,
 	return ret;
 }
 
+static time_t compute_time(const char *buf)
+{
+	struct tm tm;
+	int err;
+	err = sscanf(buf, "%2d-%2d-%4d %2d:%2d:%2d", &tm.tm_mday, &tm.tm_mon,
+			&tm.tm_year, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
+	if (err != 6)
+		return (time_t)-1;
+	tm.tm_year -= 1900;
+	return mktime(&tm);
+}
+
 static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
-		list_t *res, const char *dest)
+		list_t *res, const char *dest, time_t start)
 {
 	char *buf, *logbr;
 	int close = 0;
@@ -931,7 +945,7 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 		close = 1;
 	}
 
-	if (list_get_first(&store->file_group) == lf) {
+	if (!start && list_it_item(&store->file_it) == lf) {
 		mylog(LOG_DEBUG, "Seeking %s to %d", lf->filename,
 				store->file_offset);
 		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
@@ -968,6 +982,15 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 		if (buf[0] == 0 || buf[0] == '\n')
 			continue;
 
+		if (start != 0) {
+			time_t linetime = compute_time(buf);
+			/* parse error, don't backlog */
+			if (linetime == (time_t)-1)
+				continue;
+			/* too old line, don't backlog */
+			if (linetime < start)
+				continue;
+		}
 		logbr = log_beautify(log, buf, store->name, dest);
 		if (logbr)
 			list_add_last(res, logbr);
@@ -1010,14 +1033,15 @@ static list_t *log_backread(log_t *log, const char *storename, const char *dest)
 		return NULL;
 	}
 
-	list_iterator_t file_it;
+	list_iterator_t file_it = store->file_it;
 	logfile_t *logf;
 
 	ret = list_new(NULL);
-	for (list_it_init(&store->file_group, &file_it);
+	for (file_it = store->file_it;
 			(logf = list_it_item(&file_it));
 			list_it_next(&file_it)) {
-		if (!log_backread_file(log, store, logf, ret, dest)) {
+		if (!log_backread_file(log, store, logf, ret, dest,
+					(time_t)0)) {
 			log_reinit(store);
 			return ret;
 		}
@@ -1213,29 +1237,26 @@ int log_parse_date(char *strdate, int *year, int *month, int *mday, int *hour,
 	return ret;
 }
 
-logfile_t *logstore_get_file_at(logstore_t *store, time_t at)
+void logstore_get_file_at(logstore_t *store, time_t at, list_iterator_t *li)
 {
-	list_iterator_t li;
-
-	for (list_it_init(&store->file_group, &li); list_it_item(&li);
-			list_it_next(&li)) {
-		logfile_t *lf = list_it_item(&li);
+	for (list_it_init(&store->file_group, li); list_it_item(li);
+			list_it_next(li)) {
+		logfile_t *lf = list_it_item(li);
 
 		if (mktime(&lf->last_log) > at)
-			return lf;
+			return;
 	}
-	return NULL;
 }
 
-#if 0
-list_t *backlog_hours(log_t *log, const char *storename, int hours)
+static list_t *log_backread_hours(log_t *log, const char *storename,
+		const char *dest, int hours)
 {
-	time_t blstarttime, linetime;
+	time_t blstarttime;
 	struct timeval tv;
-	struct tm tm;
 	logstore_t *store;
-	logfile_t *lf;
-	const char *line;
+	logfile_t *logf;
+	list_t *ret;
+	list_iterator_t file_it;
 
 	gettimeofday(&tv, NULL);
 	if (tv.tv_sec <= 3600 * 24 * hours)
@@ -1243,36 +1264,38 @@ list_t *backlog_hours(log_t *log, const char *storename, int hours)
 	blstarttime = tv.tv_sec - 3600 * 24 * hours;
 
 	store = hash_get(&log->logfgs, storename);
-	lf = logstore_get_file_at(store, blstarttime);
 
-	foreach_logline(lf, line) {
-		log_parse_date(line, &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
-				&tm.tm_hour, &tm.tm_min, &tm.tm_sec);
-		tm.tm_year -= 1900;
-		tm.tm_isdst = -1;
-
-		linetime = mktime(&tm);
-		if (linetime > blstarttime) {
+	ret = list_new(NULL);
+	for (logstore_get_file_at(store, blstarttime, &file_it);
+			(logf = list_it_item(&file_it));
+			list_it_next(&file_it)) {
+		if (!log_backread_file(log, store, logf, ret, dest,
+					blstarttime)) {
+			log_reinit(store);
+			return ret;
 		}
 	}
+	return ret;
 }
-#endif
 
-list_t *backlog_lines_from_last_mark(log_t *log, const char *bl,
-		const char *cli_nick)
+list_t *backlog_lines(log_t *log, const char *bl, const char *cli_nick,
+		int hours)
 {
 	list_t *ret;
 	struct line l;
 	const char *dest;
 
-	ret = list_new(NULL);
+	ret = NULL;
 	if (ischannel(*bl))
 		dest = bl;
 	else
 		dest = cli_nick;
 
 	if (log_has_backlog(log, bl)) {
-		ret = log_backread(log, bl, dest);
+		if (hours == 0)
+			ret = log_backread(log, bl, dest);
+		else
+			ret = log_backread_hours(log, bl, dest, hours);
 		/*
 		 * This exception is cosmetic, but you want it.
 		 * Most of the time, you get backlog from your own nick for

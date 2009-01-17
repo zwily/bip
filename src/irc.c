@@ -650,7 +650,7 @@ static void irc_cli_make_join(struct link_client *ic)
 	}
 }
 
-static void irc_cli_backlog(struct link_client *ic)
+void irc_cli_backlog(struct link_client *ic, int hours)
 {
 	struct user *user;
 
@@ -664,17 +664,25 @@ static void irc_cli_backlog(struct link_client *ic)
 		return;
 	}
 
+	if (hours != 0) {
+		/* have some limit */
+		if (hours > 24 * 366)
+			hours = 24 * 366;
+	}
+
 	list_t *backlogl;
 	char *bl;
+	list_t *bllines;
 
 	backlogl = log_backlogs(LINK(ic)->log);
 	while ((bl = list_remove_first(backlogl))) {
-		list_t *bllines;
-		bllines = backlog_lines_from_last_mark(LINK(ic)->log, bl,
-				LINK(ic)->l_server->nick);
-		mylog(LOG_INFO, "backlogging: %s", bl);
-		write_lines(CONN(ic), bllines);
-		list_free(bllines);
+		bllines = backlog_lines(LINK(ic)->log, bl,
+				LINK(ic)->l_server->nick, hours);
+		if (bllines) {
+			mylog(LOG_INFO, "backlogging: %s", bl);
+			write_lines(CONN(ic), bllines);
+			list_free(bllines);
+		}
 		free(bl);
 	}
 	list_free(backlogl);
@@ -787,7 +795,7 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 	}
 
 	irc_cli_make_join(ic);
-	irc_cli_backlog(ic);
+	irc_cli_backlog(ic, 0);
 
 	log_client_connected(LINK(ic)->log);
 	free(init_nick);
