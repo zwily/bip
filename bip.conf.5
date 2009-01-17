@@ -194,7 +194,13 @@ If true, backlogged line won't include the timestamp.
 \fBbacklog_reset_on_talk\fP (default: \fBfalse\fP)
 When true, backlog will be reset upon client talk (channel/private message or
 action). It means that next time you log to your bip session, the backlogging
-will start at the time right after your last words on that specific network.
+will start at the time right after your last words on that specific channel or
+query.
+
+.TP
+\fBbacklog_reset_connection\fP (default: \fBfalse\fP)
+When true, backlog_reset_on_talk option above is changed in that the whole
+network backlog is resetted when you talk in the network.
 
 .TP
 \fBbacklog_msg_only\fP (default: \fBfalse\fP)

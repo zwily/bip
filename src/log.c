@@ -678,7 +678,7 @@ static void log_drop(log_t *log, const char *storename)
 	log_store_free(store);
 }
 
-void log_reinit_all(log_t *logdata)
+void log_reset_all(log_t *logdata)
 {
 	logstore_t *store;
 	hash_iterator_t hi;
@@ -706,7 +706,7 @@ void log_client_none_connected(log_t *logdata)
 	if (logdata->user->always_backlog)
 		return;
 
-	log_reinit_all(logdata);
+	log_reset_all(logdata);
 }
 
 void log_client_connected(log_t *logdata)

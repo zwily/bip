@@ -97,7 +97,7 @@ int log_has_backlog(log_t *logdata, const char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);
 void log_reset(logstore_t *);
-void log_reinit_all(log_t *logdata);
+void log_reset_all(log_t *logdata);
 void log_free(log_t *log);
 int check_dir(char *filename, int is_fatal);
 void log_reset_store(log_t *log, const char *storename);

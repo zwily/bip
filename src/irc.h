@@ -74,12 +74,13 @@ struct user {
 	char *default_realname;
 
 	/* backlog options */
-	int backlog;
+	int backlog:1;
 	int backlog_lines;
-	int always_backlog;
-	int bl_msg_only;
-	int backlog_no_timestamp;
-	int blreset_on_talk;
+	int always_backlog:1;
+	int bl_msg_only:1;
+	int backlog_no_timestamp:1;
+	int blreset_on_talk:1;
+	int blreset_connection:1;
 
 #ifdef HAVE_LIBSSL
 	int ssl_check_mode;
@@ -88,7 +89,7 @@ struct user {
 #endif
 
 	hash_t connections;
-	int in_use; /* for mark and sweep on reload */
+	int in_use:1; /* for mark and sweep on reload */
 };
 
 struct network

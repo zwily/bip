@@ -91,6 +91,7 @@ list_t *parse_conf(FILE *file, int *err)
 "backlog_always"	{ return LEX_ALWAYS_BACKLOG; }
 "backlog_msg_only"	{ return LEX_BL_MSG_ONLY; }
 "backlog_reset_on_talk"	{ return LEX_BLRESET_ON_TALK; }
+"backlog_reset_connection"	{ return LEX_BLRESET_CONNECTION; }
 "blreset_on_talk"	{ return LEX_BLRESET_ON_TALK; }
 "bl_msg_only"		{ return LEX_BL_MSG_ONLY; }
 "always_backlog"	{ return LEX_ALWAYS_BACKLOG; }

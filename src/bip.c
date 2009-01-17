@@ -479,7 +479,7 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 #endif
 	} else {
 		l->network = NULL;
-		log_reinit_all(l->log);
+		log_reset_all(l->log);
 	}
 
 	while ((t = list_remove_first(data))) {
@@ -682,6 +682,7 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 		u->backlog_lines = DEFAULT_BACKLOG_LINES;
 		u->backlog_no_timestamp = DEFAULT_BACKLOG_NO_TIMESTAMP;
 		u->blreset_on_talk = DEFAULT_BLRESET_ON_TALK;
+		u->blreset_connection = DEFAULT_BLRESET_CONNECTION;
 		u->bip_use_notice = DEFAULT_BIP_USE_NOTICE;
 	} else {
 		FREE(u->name);
@@ -741,6 +742,9 @@ static int add_user(bip_t *bip, list_t *data, struct historical_directives *hds)
 			break;
 		case LEX_BLRESET_ON_TALK:
 			u->blreset_on_talk = t->ndata;
+			break;
+		case LEX_BLRESET_CONNECTION:
+			u->blreset_connection = t->ndata;
 			break;
 		case LEX_BIP_USE_NOTICE:
 			u->bip_use_notice = t->ndata;
@@ -1847,7 +1851,7 @@ void bip_notify(struct link_client *ic, char *fmt, ...)
 
 void adm_blreset(struct link_client *ic)
 {
-	log_reinit_all(LINK(ic)->log);
+	log_reset_all(LINK(ic)->log);
 	bip_notify(ic, "backlog resetted for this network.");
 }
 
@@ -2181,7 +2185,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 						irc_line_elem(line,
 							privmsg + 3));
 				} else {
-					log_reinit_all(LINK(ic)->log);
+					log_reset_all(LINK(ic)->log);
 				}
 			} else {
 				adm_blreset_store(ic, irc_line_elem(line,

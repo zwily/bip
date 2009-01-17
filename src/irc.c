@@ -869,8 +869,12 @@ static int irc_cli_privmsg(bip_t *bip, struct link_client *ic,
 		log_cli_privmsg(LINK(ic)->log, LINK(ic)->l_server->nick,
 			irc_line_elem(line, 1), irc_line_elem(line, 2));
 
-	if (LINK(ic)->user->blreset_on_talk)
-		log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
+	if (LINK(ic)->user->blreset_on_talk) {
+		if (LINK(ic)->user->blreset_connection)
+			log_reset_all(LINK(ic)->log);
+		else
+			log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
+	}
 	return OK_COPY_CLI;
 }
 
@@ -880,8 +884,12 @@ static int irc_cli_notice(struct link_client *ic, struct line *line)
 		return OK_FORGET;
 	log_cli_notice(LINK(ic)->log, LINK(ic)->l_server->nick,
 				irc_line_elem(line, 1), irc_line_elem(line, 2));
-	if (LINK(ic)->user->blreset_on_talk)
-		log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
+	if (LINK(ic)->user->blreset_on_talk) {
+		if (LINK(ic)->user->blreset_connection)
+			log_reset_all(LINK(ic)->log);
+		else
+			log_reset_store(LINK(ic)->log, irc_line_elem(line, 1));
+	}
 	return OK_COPY_CLI;
 }
 
