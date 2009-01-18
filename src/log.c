@@ -777,7 +777,7 @@ int log_has_backlog(log_t *logdata, const char *destination)
 		return 0;
 
 	logfile_t *lf;
-	lf = list_get_first(&store->file_group);
+	lf = list_it_item(&store->file_it);
 	if (lf != list_get_last(&store->file_group))
 		return 1;
 
