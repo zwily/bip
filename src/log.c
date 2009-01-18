@@ -412,11 +412,6 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 	return store;
 }
 
-/*
- * Da log routines
- * There are a lot of snprintf's here without enforcing the last \0 in the
- * buffer, but _log_write takes care of this for us.
- */
 void log_join(log_t *logdata, const char *ircmask, const char *channel)
 {
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
@@ -623,7 +618,7 @@ void log_disconnected(log_t *logdata)
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		store = hash_it_item(&hi);
-		_log_write(logdata, store, hash_it_key(&hi), logdata->buffer);
+		log_write(logdata, hash_it_key(&hi), logdata->buffer);
 	}
 }
 
@@ -650,7 +645,7 @@ void log_connected(log_t *logdata)
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		store = hash_it_item(&hi);
-		_log_write(logdata, store, hash_it_key(&hi), logdata->buffer);
+		log_write(logdata, hash_it_key(&hi), logdata->buffer);
 	}
 }
 
