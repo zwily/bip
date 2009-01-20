@@ -914,6 +914,13 @@ static time_t compute_time(const char *buf)
 {
 	struct tm tm;
 	int err;
+	time_t tv;
+
+	/* this is to fill tm_isdst to current tm, expect brokennes when dst
+	 * changes */
+	time(&tv);
+	tm = *localtime(&tv);
+
 	err = sscanf(buf, "%2d-%2d-%4d %2d:%2d:%2d", &tm.tm_mday, &tm.tm_mon,
 			&tm.tm_year, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
 	if (err != 6)
@@ -981,8 +988,12 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 		if (start != 0) {
 			time_t linetime = compute_time(buf);
 			/* parse error, don't backlog */
-			if (linetime == (time_t)-1)
+			if (linetime == (time_t)-1) {
+				list_add_last(res, _log_wrap("Error in "
+							"timestamp in %s",
+							store->name));
 				continue;
+			}
 			/* too old line, don't backlog */
 			if (linetime < start)
 				continue;
