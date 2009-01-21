@@ -548,6 +548,9 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 			}
 			list_free(t->pdata);
 			break;
+		case LEX_AUTOJOIN_ON_KICK:
+			l->autojoin_on_kick = t->ndata;
+			break;
 		case LEX_FOLLOW_NICK:
 			l->follow_nick = t->ndata;
 			break;

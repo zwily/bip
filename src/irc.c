@@ -1767,10 +1767,20 @@ static int irc_kick(struct link_server *server, struct line *line)
 		return ERR_PROTOCOL;
 
 	if (strcasecmp(irc_line_elem(line, 2), server->nick) == 0) {
+		/* we get kicked !! */
 		log_kick(LINK(server)->log, line->origin, channel->name,
 				irc_line_elem(line, 2),
 				irc_line_count(line) == 4 ?
 					irc_line_elem(line, 3) : NULL);
+
+		if (LINK(server)->autojoin_on_kick) {
+			if (!channel->key)
+				WRITE_LINE1(CONN(server), NULL, "JOIN",
+						channel->name);
+			else
+				WRITE_LINE2(CONN(server), NULL, "JOIN",
+						channel->name, channel->key);
+		}
 
 		hash_remove(&server->channels, channel->name);
 		channel_free(channel);
@@ -1781,6 +1791,8 @@ static int irc_kick(struct link_server *server, struct line *line)
 	log_kick(LINK(server)->log, line->origin, irc_line_elem(line, 1),
 		irc_line_elem(line, 2),
 		irc_line_count(line) == 4 ? irc_line_elem(line, 3) : NULL);
+
+
 	return OK_COPY;
 }
 
@@ -2541,6 +2553,7 @@ struct link *irc_link_new()
 	hash_init(&link->chan_infos, HASH_NOCASE);
 	list_init(&link->chan_infos_order, list_ptr_cmp);
 	list_init(&link->on_connect_send, list_ptr_cmp);
+	link->autojoin_on_kick = 1;
 	return link;
 }
 

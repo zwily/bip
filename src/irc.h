@@ -131,6 +131,7 @@ struct link {
 
 	int follow_nick;
 	int ignore_first_nick;
+	int autojoin_on_kick;
 	list_t on_connect_send;
 	char *no_client_away_msg;
 	char *away_nick;
