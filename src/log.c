@@ -1318,7 +1318,7 @@ list_t *backlog_lines(log_t *log, const char *bl, const char *cli_nick,
 			_irc_line_append(&l, "PRIVMSG");
 			_irc_line_append(&l, dest);
 			_irc_line_append(&l, "End of backlog");
-			list_add_last(ret, irc_line_to_string(&l));
+			if (ret) list_add_last(ret, irc_line_to_string(&l));
 			_irc_line_deinit(&l);
 		}
 	}
