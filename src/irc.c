@@ -679,8 +679,10 @@ void irc_cli_backlog(struct link_client *ic, int hours)
 		bllines = backlog_lines(LINK(ic)->log, bl,
 				LINK(ic)->l_server->nick, hours);
 		if (bllines) {
-			mylog(LOG_INFO, "backlogging: %s", bl);
-			write_lines(CONN(ic), bllines);
+			if (!list_is_empty(bllines)) {
+				mylog(LOG_INFO, "backlogging: %s", bl);
+				write_lines(CONN(ic), bllines);
+			}
 			list_free(bllines);
 		}
 		free(bl);
