@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
