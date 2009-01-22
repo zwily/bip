@@ -278,6 +278,7 @@ void list_add_first(list_t *list, void *ptr)
 {
 	struct list_item *li;
 
+	assert(list);
 	if (!ptr)
 		fatal("Cannot add NULL ptr to list.");
 	li = list_item(ptr);
@@ -292,8 +293,8 @@ void list_add_first(list_t *list, void *ptr)
 
 void list_add_first_uniq(list_t *list, void *ptr)
 {
-	if (!ptr)
-		fatal("Cannot add NULL ptr to list.");
+	assert(list);
+	assert_msg(ptr, "Cannot add NULL ptr to list.");
 	if (list_get(list, ptr))
 		return;
 	list_add_first(list, ptr);
@@ -303,8 +304,8 @@ void list_add_last(list_t *list, void *ptr)
 {
 	struct list_item *li;
 
-	if (!ptr)
-		fatal("Cannot add NULL ptr to list.");
+	assert(list);
+	assert_msg(ptr, "Cannot add NULL ptr to list.");
 	li = list_item(ptr);
 	if (!list->first) {
 		list->first = list->last = li;
@@ -317,6 +318,7 @@ void list_add_last(list_t *list, void *ptr)
 
 void *list_get_first(list_t *list)
 {
+	assert(list);
 	if (!list->first)
 		return NULL;
 	return list->first->ptr;
@@ -324,6 +326,7 @@ void *list_get_first(list_t *list)
 
 void *list_get_last(list_t *list)
 {
+	assert(list);
 	if (!list->last)
 		return NULL;
 	return list->last->ptr;
@@ -332,8 +335,10 @@ void *list_get_last(list_t *list)
 void *list_remove_first(list_t *list)
 {
 	struct list_item *l;
-	void *ptr = list_get_first(list);
+	void *ptr;
 
+	assert(list);
+	ptr = list_get_first(list);
 	if (!ptr)
 		return NULL;
 	l = list->first;
@@ -347,7 +352,10 @@ void *list_remove_first(list_t *list)
 void *list_remove_last(list_t *list)
 {
 	struct list_item *l;
-	void *ptr = list_get_last(list);
+	void *ptr;
+
+	assert(list);
+	ptr = list_get_last(list);
 
 	if (!ptr)
 		return NULL;
@@ -365,8 +373,8 @@ void *list_remove_if_exists(list_t *list, const void *ptr)
 	int debug = 0;
 	void *ret = 0;
 
-	if (!list->cmp)
-		fatal("list_remove: list does not have a cmp function\n");
+	assert(list);
+	assert_msg(list->cmp, "list does not have a cmp function");
 
 	for (list_it_init(list, &li); list_it_item(&li); list_it_next(&li)) {
 		if (list->cmp(list_it_item(&li), ptr) == 0) {
@@ -393,8 +401,7 @@ void *list_get(list_t *list, const void *ptr)
 {
 	struct list_item *it;
 
-	if (!list->cmp)
-		fatal("list_get: list does not have a cmp function\n");
+	assert_msg(list->cmp, "list_get: list does not have a cmp function");
 
 	for (it = list->first; it; it = it->next) {
 		if (list->cmp(it->ptr, ptr) == 0)
@@ -405,11 +412,13 @@ void *list_get(list_t *list, const void *ptr)
 
 int list_is_empty(list_t *l)
 {
+	assert(l);
 	return (l->first ? 0 : 1);
 }
 
 void list_it_init(list_t *list, list_iterator_t *ti)
 {
+	assert(list && ti);
 	ti->list = list;
 	ti->cur = list->first;
 	ti->next = NULL;
@@ -417,6 +426,7 @@ void list_it_init(list_t *list, list_iterator_t *ti)
 
 void list_it_init_last(list_t *list, list_iterator_t *ti)
 {
+	assert(list && ti);
 	ti->list = list;
 	ti->cur = list->last;
 	ti->next = NULL;
@@ -424,6 +434,7 @@ void list_it_init_last(list_t *list, list_iterator_t *ti)
 
 void *list_it_remove(list_iterator_t *li)
 {
+	assert(li);
 	if (!li->cur)
 		return NULL;
 
@@ -447,13 +458,14 @@ void *list_it_remove(list_iterator_t *li)
 
 void list_free(list_t *t)
 {
-	if (t->first != NULL)
-		fprintf(stderr, "Warning, freeing non empty list\n");
+	assert(t);
+	assert(list_is_empty(t));
 	free(t);
 }
 
 void list_append(list_t *dest, list_t *src)
 {
+	assert(dest && src);
 	if (src->last == NULL)
 		return;
 	if (dest->first == NULL) {
@@ -491,6 +503,7 @@ void hash_init(hash_t *h, int options)
 {
 	int i;
 
+	assert(h);
 	memset(h, 0, sizeof(hash_t));
 	for (i = 0; i < 256; i++) {
 		switch (options) {
@@ -515,6 +528,7 @@ void hash_clean(hash_t *h)
 	int i;
 	struct hash_item *hi;
 
+	assert(h);
 	for (i = 0; i < 256; i++) {
 		while ((hi = list_remove_first(&h->lists[i]))) {
 			free(hi->key);
@@ -525,6 +539,7 @@ void hash_clean(hash_t *h)
 
 void hash_free(hash_t *h)
 {
+	assert(h);
 	hash_clean(h);
 	free(h);
 }
@@ -552,6 +567,7 @@ void hash_insert(hash_t *hash, const char *key, void *ptr)
 {
 	struct hash_item *it;
 
+	assert(hash && key);
 	if (hash_get(hash, key))
 		fatal("Element with key %s already in hash %x\n", key, hash);
 
@@ -564,7 +580,10 @@ void hash_insert(hash_t *hash, const char *key, void *ptr)
 int hash_includes(hash_t *hash, const char *key)
 {
 	struct hash_item *hi;
-	list_t *list = &hash->lists[hash_func(key)];
+	list_t *list;
+
+	assert(hash && key);
+	list = &hash->lists[hash_func(key)];
 	hi = list_get(list, key);
 	return hi != NULL;
 }
@@ -572,7 +591,10 @@ int hash_includes(hash_t *hash, const char *key)
 void *hash_get(hash_t *hash, const char *key)
 {
 	struct hash_item *hi;
-	list_t *list = &hash->lists[hash_func(key)];
+	list_t *list;
+
+	assert(hash && key);
+	list = &hash->lists[hash_func(key)];
 	hi = list_get(list, key);
 	if (!hi)
 		return NULL;
@@ -581,6 +603,7 @@ void *hash_get(hash_t *hash, const char *key)
 
 void *hash_remove_if_exists(hash_t *hash, const char *key)
 {
+	assert(hash && key);
 	if (hash_get(hash, key) == NULL)
 		return NULL;
 	return hash_remove(hash, key);
@@ -590,6 +613,8 @@ void *hash_remove(hash_t *hash, const char *key)
 {
 	struct hash_item *it;
 	void *ptr;
+
+	assert(hash && key);
 	it = (struct hash_item *)list_remove(&hash->lists[hash_func(key)], key);
 	if (!it)
 		return NULL;
@@ -603,6 +628,7 @@ int hash_is_empty(hash_t *h)
 {
 	int i;
 
+	assert(h);
 	for (i = 0; i < 256; i++) {
 		if (!list_is_empty(&h->lists[i]))
 			return 0;
@@ -612,6 +638,7 @@ int hash_is_empty(hash_t *h)
 
 void hash_it_init(hash_t *h, hash_iterator_t *hi)
 {
+	assert(h);
 	memset(hi, 0, sizeof(hash_iterator_t));
 	hi->hash = h;
 
@@ -623,6 +650,7 @@ void hash_it_init(hash_t *h, hash_iterator_t *hi)
 
 void hash_it_next(hash_iterator_t *hi)
 {
+	assert(hi);
 	list_it_next(&hi->lit);
 	if (!list_it_item(&hi->lit)) {
 		do {
@@ -638,6 +666,7 @@ void *hash_it_item(hash_iterator_t *h)
 {
 	struct hash_item *hi;
 
+	assert(h);
 	hi = list_it_item(&h->lit);
 	if (!hi)
 		return NULL;
@@ -647,6 +676,8 @@ void *hash_it_item(hash_iterator_t *h)
 const char *hash_it_key(hash_iterator_t *h)
 {
 	struct hash_item *hi;
+
+	assert(h);
 	hi = list_it_item(&h->lit);
 	if (!hi)
 		return NULL;
@@ -658,6 +689,7 @@ void *hash_it_remove(hash_iterator_t *hi)
 	struct hash_item *hitem;
 	void *ptr;
 
+	assert(hi);
 	hitem = list_it_remove(&hi->lit);
 
 	ptr = hitem->item;
@@ -669,6 +701,7 @@ void *hash_it_remove(hash_iterator_t *hi)
 void hash_dump(hash_t *h)
 {
 	hash_iterator_t it;
+	assert(h);
 	for (hash_it_init(h, &it); hash_it_key(&it) ;hash_it_next(&it))
 		printf("%s => %p\n", hash_it_key(&it), hash_it_item(&it));
 }
@@ -678,6 +711,7 @@ list_t *hash_keys(hash_t *hash)
 	hash_iterator_t hi;
 	list_t *ret;
 
+	assert(hash);
 	ret = list_new(NULL);
 
 	for (hash_it_init(hash, &hi); hash_it_item(&hi); hash_it_next(&hi))
@@ -688,6 +722,7 @@ list_t *hash_keys(hash_t *hash)
 
 void hash_rename_key(hash_t *h, const char *oldk, const char *newk)
 {
+	assert(h && oldk && newk);
 	hash_insert(h, newk, hash_remove(h, oldk));
 }
 
@@ -727,7 +762,7 @@ array_t *array_new(void)
 
 void array_ensure(array_t *a, int index)
 {
-	assert(index >= 0);
+	assert(a && index >= 0);
 
 	if (array_includes(a, index))
 		return;
@@ -741,7 +776,7 @@ array_t *array_extract(array_t *a, int index, int upto)
 	array_t *ret;
 	int i;
 
-	assert(array_includes(a, index));
+	assert(a && array_includes(a, index));
 	if (upto == -1)
 		upto = a->elemc;
 	assert((index == 0 && upto == 0) || array_includes(a, upto - 1));
@@ -760,6 +795,7 @@ array_t *array_extract(array_t *a, int index, int upto)
 
 void array_deinit(array_t *a)
 {
+	assert(a);
 	if (a->elemv)
 		free(a->elemv);
 	array_init(a);
@@ -767,6 +803,7 @@ void array_deinit(array_t *a)
 
 void array_free(array_t *a)
 {
+	assert(a);
 	if (a->elemv)
 		free(a->elemv);
 	free(a);

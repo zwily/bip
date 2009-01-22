@@ -96,7 +96,8 @@ typedef struct array {
 #define assert_msg(condition, msg) \
 	do { \
 		if (!(condition)) \
-			fatal(msg); \
+			fatal("%s in " __FILE__ "(%d): " \
+				#condition, (msg), __LINE__); \
 	} while(0)
 
 void list_init(list_t *list, int (*cmp)(const void*, const void*));
@@ -121,6 +122,7 @@ int list_is_empty(list_t *l);
 
 static inline void list_it_next(list_iterator_t *ti)
 {
+	assert(ti);
 	if (ti->cur) {
 		if (ti->next)
 			fatal("list_it_next: inconsistent interator state");
@@ -133,6 +135,7 @@ static inline void list_it_next(list_iterator_t *ti)
 
 static inline void *list_it_item(list_iterator_t *ti)
 {
+	assert(ti);
 	if (!ti->cur)
 		return NULL;
 	return ti->cur->ptr;
@@ -184,37 +187,42 @@ void array_deinit(array_t *a);
 void array_free(array_t *a);
 static inline int array_count(array_t *a)
 {
+	assert(a);
 	return a->elemc;
 }
 
 static inline int array_includes(array_t *a, int index)
 {
-	assert(index >= 0);
+	assert(a && index >= 0);
 	return a->elemc > index;
 }
 
 static inline void array_set(array_t *a, int index, void *ptr)
 {
+	assert(a);
 	array_ensure(a, index);
 	a->elemv[index] = ptr;
 }
 
 static inline void *array_get(array_t *a, int index)
 {
-	assert(array_includes(a, index));
+	assert(a && array_includes(a, index));
 	return a->elemv[index];
 }
 
 static inline void array_push(array_t *a, void *ptr)
 {
-	int idx = a->elemc;
+	int idx;
 
+	assert(a);
+	idx = a->elemc;
 	array_ensure(a, idx);
 	a->elemv[idx] = ptr;
 }
 
 static inline void *array_pop(array_t *a)
 {
+	assert(a);
 	if (a->elemc == 0)
 		return NULL;
 	if (a->elemc == 1) {
