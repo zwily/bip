@@ -1,3 +1,18 @@
+2009-01-24 (0.8.x)
+Visible changes:
+- One logfile per nick for queries, instead of the messy privates.x.log
+  Slight log format change (now the format of the log of queries is very
+  similar to the on used for channels)
+- "Window"-local blreset and blreset on talk. By default the blreset_on_talk
+  now only clears the backlog of the query you talked to or the channel you
+  talked to.  The /quote bip blreset command now can take a query name or a
+  channel name as an argument. "/quote bip blreset" still resets the backlog of
+  the whole network.
+- /quote bip backlog x command where x is the number of hours will backlog x
+  hours.
+- autorejoin on kick by default. Can be disabled with the option
+  autojoin_on_kick = false in a connection block.
+
 2008-02-07  Arnaud Cornet <nohar@t1r.net>
 What's to expect in bip now:
 - Support kill -HUP and /bip reload cleanly.
