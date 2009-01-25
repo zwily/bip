@@ -12,6 +12,8 @@ Visible changes:
   hours.
 - autorejoin on kick by default. Can be disabled with the option
   autojoin_on_kick = false in a connection block.
+- bip SSL on the client<->bip part now support Ephemeral Diffie Hellman key
+  exchange.
 
 2008-02-07  Arnaud Cornet <nohar@t1r.net>
 What's to expect in bip now:

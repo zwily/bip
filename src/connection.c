@@ -1033,6 +1033,71 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	return conn;
 }
 
+#ifdef HAVE_LIBSSL
+
+#include "moduli.h"
+
+/* from postfix tls impl */
+static DH *dh_512(void)
+{
+	DH *dh;
+	static DH *dh_512;
+
+	if (dh_512 == NULL) {
+		if ((dh = DH_new()) == NULL) {
+			mylog(LOG_WARN, "SSL: cannot create DH parameter set");
+			return (0);
+		}
+		dh->p = BN_bin2bn(dh512_p, sizeof(dh512_p), (BIGNUM *) 0);
+		dh->g = BN_bin2bn(dh512_g, sizeof(dh512_g), (BIGNUM *) 0);
+		if ((dh->p == NULL) || (dh->g == NULL)) {
+			mylog(LOG_WARN, "SSL: cannot load compiled-in DH "
+					"parameters");
+			DH_free(dh);
+			return (0);
+		} else
+			dh_512 = dh;
+	}
+	return dh_512;
+}
+
+/* tls_get_dh_1024 - get 1024-bit DH parameters, compiled-in or from file */
+static DH *dh_1024(void)
+{
+	DH *dh;
+	static DH *dh_1024;
+
+	if (dh_1024 == NULL) {
+		if ((dh = DH_new()) == NULL) {
+			mylog(LOG_WARN, "SSL: cannot create DH parameter set");
+			return (0);
+		}
+		dh->p = BN_bin2bn(dh1024_p, sizeof(dh1024_p), (BIGNUM *) 0);
+		dh->g = BN_bin2bn(dh1024_g, sizeof(dh1024_g), (BIGNUM *) 0);
+		if ((dh->p == NULL) || (dh->g == NULL)) {
+			mylog(LOG_WARN, "SSL: cannot load compiled-in DH "
+					"parameters");
+			DH_free(dh);
+			return (0);
+		} else
+			dh_1024 = dh;
+	}
+	return (dh_1024);
+}
+
+/* ripped from postfix's tls_dh.c */
+static DH *tmp_dh_cb(SSL *ssl_unused, int export, int keylength)
+{
+	DH *ret;
+
+	if (export && keylength == 512)
+		ret = dh_512();
+	else
+		ret = dh_1024();
+	return ret;
+}
+#endif
+
 connection_t *accept_new(connection_t *cn)
 {
 	connection_t *conn;
@@ -1073,6 +1138,10 @@ connection_t *accept_new(connection_t *cn)
 						conf_ssl_certfile,
 						SSL_FILETYPE_PEM))
 				mylog(LOG_WARN, "SSL: Unable to load key file");
+
+			/* diffie hellman key generation need us to feed some
+			   data that can be static ... */
+			SSL_CTX_set_tmp_dh_callback(sslctx, tmp_dh_cb);
 		}
 
 		conn->ssl_h = SSL_new(sslctx);
