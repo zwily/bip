@@ -1,3 +1,521 @@
+commit 5628da3ee07b7891c159469b0e8ac4080e91c8b5
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 25 14:41:19 2009 +0100
+
+    Add warning when using 512 bits long moduli for diffie hellman
+
+commit b62c3e4697124e1331362f973296003fffc4b26f
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 25 14:24:22 2009 +0100
+
+    [SSL] Support ephemeral diffie hellman kex
+    
+    Pushing some non private data into openssl enables to use edh that
+    provides perfect forward secrecy.
+
+commit 7e539298fdd5860e947debfa41c456efda0ba4aa
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 24 21:48:12 2009 +0100
+
+    Update NEWS file.
+
+commit 03210a796e45ec50709cca4528b98406e68f3fbe
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jan 22 12:06:26 2009 +0100
+
+    [CLEANUP] Add lots of asserts in utils
+    
+    list hash and array types are now even stricter on their usage.
+
+commit dae6cad3f7b0b6959ee8df2c9831c2c78e70162e
+Author: Ben Byer <bbyer@mm.st>
+Date:   Thu Jan 22 11:26:03 2009 +0100
+
+    Add limit.h for INT_MAX
+
+commit 23b6ec4492dca350435069c170bffac8beb2ac65
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jan 22 11:24:44 2009 +0100
+
+    Better check for backread returning NULL
+
+commit 43fe81e114e9fab747fc15a2e5683dc3d1d9f94b
+Author: Ben Byer <bbyer@mm.st>
+Date:   Thu Jan 22 10:14:33 2009 +0100
+
+    add null pointer check to backlog_lines
+    
+    In some configuration backlog_lines can return NULL
+
+commit 170d4d1e00ebc16f898c093fbf094667058d7cd9
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Jan 21 17:24:54 2009 +0100
+
+    [FEATURE] autojoin_on_kick in connection blocks
+    
+    true by default
+
+commit afefc9a3d4590f488e3ffba3c9d016c0c335ef13
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 20 19:30:20 2009 +0100
+
+    [FIX] Try to guess current daylight saving time
+    
+    When backloging we have no clue of a log lines dst, we try to guess it
+    with current dst, which makes no sense, but at least it provides decent
+    result when not near dst change.
+
+commit 500d5467069657c8258696d82cbc8a384ae0ddd8
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 18 12:26:41 2009 +0100
+
+    [FIX] improper log rotation
+    
+    disconnection/reconnection log message bypassed the log rotation checks
+    So if the message after a new day is a disconnected message, logs files
+    did not rotate.
+
+commit 7a7c2432cf3fcffc8c78585d95c7c3a2d08e565d
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 18 11:26:08 2009 +0100
+
+    [FIX] make log_has_backlog actually work
+    
+    log_has_backlog used to check for the presnece of tracked logfiles to
+    determine the presence of logs. This does not work anymore. This patch
+    uses the last file tracker to determine that.
+
+commit 9882a0cbdc7c3235a9df211b04dc47e8d1bbb846
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 17 15:03:06 2009 +0100
+
+    [CLEANUP] various cleanups
+
+commit fe251f72b5267f0223a0fe76910ffd215c34c40e
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 17 14:16:31 2009 +0100
+
+    [FEATURE] /quote bip backlog [n]
+    
+    /quote bip backlog triggers a log replay.
+    With the optional argument n in hours, you can request a backlog of a
+    few hours.
+
+commit 26eb9c28d7f81cbf6402117a9910ce430a2f29dc
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 17 12:50:39 2009 +0100
+
+    [OPTION] implement backlog_reset_connection
+    
+    backlog_reset_on_talk no works per query/channel.
+    Setting backlog_reset_connection to true falls back to the former kind
+    of backlog reset.
+
+commit 0e2f305d4edcee4c00b5c638681473ecd95062b2
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 16 15:17:34 2009 +0100
+
+    [cleanup] Try to cleanup this pid mess
+    
+    close files, but no too soon...
+
+commit 2d9d388fba14659e5052a8658a1f36a257a84ad0
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 16 15:09:53 2009 +0100
+
+    Close some fds, original path from Trou.
+
+commit 7565b9cb8ef708cb21bb4ce40f2378c750055853
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 16 15:09:22 2009 +0100
+
+    typos
+
+commit 111f1382d1b1e160a1edf6a52c4b4d9f6415b529
+Author: Trou <devel@syscall.eu>
+Date:   Fri Jan 16 14:45:31 2009 +0100
+
+    Fix fd leak
+
+commit b912282410dd701abf353e7d197ef49b31bd55cf
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 16 12:30:24 2009 +0100
+
+    optionnal -> optional
+
+commit 3b704f53c4cbc849d0a83cf171393930280a9d76
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jan 15 22:56:42 2009 +0100
+
+    drop unused variables
+
+commit be0d83d681b5ebce5b6d9fe53121e04ef6792227
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 14:16:36 2009 +0100
+
+    Remove code inside #if 0... it's what svcs are for
+
+commit 8ed0565266040c53043e8a875d86d61bd6c09096
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 14:08:41 2009 +0100
+
+    [LOG] Fixup log_beautify to work beautifully :)
+
+commit a5814b17a03902648acf66a958c6434dc792a104
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 13:34:40 2009 +0100
+
+    Don't log queries with -bip, fix blreset help
+
+commit b3d7dbfb02f18f8858f0ce335191826013ce10a9
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 13:26:59 2009 +0100
+
+    [COSMETIC] Avoid opening a query with your own nic
+    
+    This exception is cosmetic, but you want it.  Most of the time, you get
+    backlog from your own nick for your mode changes only.  Hence opening a
+    query just to say "end of backlog"...
+
+commit 744ea7d03b5adb4ea36f547d326cbd3262ed2ddf
+Merge: f536a05... 67ddf15...
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 12:55:13 2009 +0100
+
+    Merge branch 'master' into bip08
+
+commit 67ddf152647e178d97359907782375d30586ca5f
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 12:53:25 2009 +0100
+
+    [BUG] channel with key handling
+    
+    A bug existed when a client issued join commands with multiple keys:
+    JOIN #a,#b keya,keyb
+    which this patch fixes
+
+commit f536a0546d113436bcc690708049ecb1a4aefeaf
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jan 10 12:35:59 2009 +0100
+
+    Cleanup and fixes of the backlog code
+
+commit 32cf2d462f54f06b59a1a5d635e01b5da0f4492a
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 9 13:24:11 2009 +0100
+
+    Backlogging code cleanup: fixes
+    
+    This makes the new backlogging code, actually backlog something.
+
+commit f1221703b06da28696b5f0e607f1f99abcf1c351
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 9 11:26:12 2009 +0100
+
+    [FEATURE] reset backlog on talk now "window" local
+    
+    The reset_backlog_on_talk now resets current query or channel.
+    The /bip blreset command not takes an optional argument taking query
+    name or channel name.
+
+commit a6bb697f5da9016c65bf8dd39767d12a4422b6c3
+Merge: 0600196... d2f7840...
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jan 9 09:57:17 2009 +0100
+
+    Merge branch 'master' into bip08
+    
+    Conflicts:
+    
+    	src/log.c
+
+commit d2f7840ced065d644ba626413f5e53900efb39ef
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jan 8 11:01:47 2009 +0100
+
+    [BUG] Fix fatal on some nick change
+    
+    When a nick changes to one for which we already have a logstore
+    allocated. We try to overwrite a hash entry that is already existing
+    leading to a fatal.
+    
+    This pach cleans things up before rename the logstore.
+
+commit a57e76f883c8d7f138fb61eb2c8edc66413c7012
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 6 16:34:17 2009 +0100
+
+    add fclose on pid file
+
+commit eb57d9683d95ea49868f984ad2c2cd93e85fc351
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 6 16:28:06 2009 +0100
+
+    Drop some unused variable.
+
+commit 41c0a5a9c6d5d403445ad9bac18823bae9c49b10
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 6 15:58:18 2009 +0100
+
+    Fix bip_notify usage
+    
+    These may lead to crash if you call in your conf networks or other names
+    with %s or other fancy format strings.
+
+commit 06001961021beff6aca472b7456078651bad8f2e
+Merge: 3f895fa... 217816c...
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 5 23:24:49 2009 +0100
+
+    merge master
+
+commit 217816c220905365b323acee8c81a67917e26d08
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 5 22:57:27 2009 +0100
+
+    And anothear nick_from_ircmask leak.
+
+commit 00a10a9f610cda3d186ac464ba6b485b52db94b2
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 5 22:56:01 2009 +0100
+
+    Fix another leak.
+
+commit 96a91cd92e6aab1c04587e5c3a77bfefcb89adff
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 5 22:54:10 2009 +0100
+
+    Fix leak during backlog.
+
+commit aab5e61c050d28ae049d46d2a50781c4a2b6fd94
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 5 22:52:25 2009 +0100
+
+    Fix leak.
+
+commit 2ef3506a22deb016055d66d2c036976028d948a1
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Dec 30 11:12:52 2008 +0100
+
+    Remove useless null check. Cycle server on early connection problem.
+
+commit 0ecb77617cedbf0b82c9f1ed78af61d47a6c3a32
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 15:31:32 2008 +0100
+
+    Sanitize bip_(m|re)alloc size.
+
+commit b9f86d544d6422f61870f1326cf1197a959530fb
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 14:07:09 2008 +0100
+
+    Add autoheader in boostrap script.
+
+commit a4b101cea82654ab3eb028b794b8776238ddd82c
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 14:04:51 2008 +0100
+
+    ensure null terminated str
+
+commit 3f895fa6ea4632f4fb6e28d539410ad4b1123c46
+Merge: c0db3c4... 5a5f1b8...
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 09:15:44 2008 +0100
+
+    Merge branch 'master' into bip08
+
+commit 5a5f1b8bfbbdca16b141b776593721b4c2fdcf00
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 09:15:27 2008 +0100
+
+    Some autoconf magic fix
+
+commit 8d7eecf78bb45b4205abd14923a3b3a3ce59b0e9
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 29 09:14:24 2008 +0100
+
+    Fix fatal Element with key %s already in hash
+    
+    on client disconnect.
+    bad hash usage
+
+commit b222196b18b6854963c625f874457aa520b3955b
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Dec 28 15:47:43 2008 +0100
+
+    Use backtrace when --enable-debug=yes and avail.
+    
+    I KNOW AUTOCONF.
+
+commit c0db3c408dfb6ebbd01d481bf00e33eb0c26706e
+Merge: 3c810ee... 24110a5...
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Dec 28 14:47:44 2008 +0100
+
+    Merge fixups
+
+commit 24110a58dc0e5c38751ffdfd698360f45b5e65d2
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Dec 28 14:45:44 2008 +0100
+
+    Fix leak + cleanup list_append.
+    
+    Thanks to TheMIROn for spotting the leak.
+
+commit 3c810eef53be514d76109a94b7e35579585408e3
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Dec 26 18:43:35 2008 +0100
+
+    Refactor log system. prepare for /backlog 1 hour
+
+commit 8693044511a2129a3b24c9fd7c20f38972c971f3
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Dec 26 08:56:03 2008 +0100
+
+    fix notice logging file storage
+
+commit 20ce456e385cf843aca99e58c0f92af595151420
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Dec 25 18:34:36 2008 +0100
+
+    Work out autoconf magic
+    
+    Now --disable-ssl works as expected.
+    The bug is there since bip uses autoconf. CHAMPAGNE.
+
+commit b102aed08a511e283aab1850fd955163d3758208
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Dec 25 17:49:48 2008 +0100
+
+    array_extract: fix braindeadness.
+
+commit 7c6cc20e90dc073763cab3550b6f921c98bcfb02
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Dec 20 21:15:04 2008 +0100
+
+    Use hash_it_key cause now hash items can be null.
+
+commit fa78df648265955586e3013940f41218a02a2434
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Dec 20 20:26:38 2008 +0100
+
+    Fixup file name allocation
+
+commit e8bb841e5f04c6dd4982919d3a515bbbe8f136a0
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Dec 20 17:59:16 2008 +0100
+
+    refactor nick management code
+    
+    - drop struct nick.
+    - follow nick changes in a basic way.
+      right now it does not work if one changes nick and somebody else takes
+      the old unused nick.
+
+commit 4d231e8ddce7881321a77e4bd20d43cd278590df
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Dec 20 14:28:18 2008 +0100
+
+    Inline most array methods
+
+commit d3ef106c4f717ab696a32c44c668368f3c18608d
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Dec 20 14:20:50 2008 +0100
+
+    New array type, cleanupts and rename logfilegroup log_store
+
+commit 4b723ca4798a2a60e84bbd2d92f68d1cfa2c8a66
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Dec 18 14:27:16 2008 +0100
+
+    more cleanups, start of a log refactoring
+    
+    That changes log format and might breack everything.
+
+commit fd644b312bb0b2d1b9689ce9de88fe81dcc4f33c
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 15 20:02:56 2008 +0100
+
+    bip_strdup fatals on out of memory
+
+commit c1501510662acec2ddc5f316546cef4f6e0d043f
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Dec 15 19:19:27 2008 +0100
+
+    BIG cleanup. check for memory allocation failure, add extra checks all arround.
+
+commit e18d335578b63f888c9d9fec178c39f8f40c8b2f
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Dec 11 11:00:05 2008 +0100
+
+    calloc/realloc checks.
+
+commit 2b96805ecb40862ff2c6927a72da20327f008ab2
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Dec 10 23:27:53 2008 +0100
+
+    Revert "drop fork priviledges when running."
+    
+    This reverts commit 1cbb1b9b7aa228704db91b942b6105e848a4eed0.
+    It juste does not work, since this limit is uid-wide (thanks julien`)
+
+commit 3ab27557679d766571ba5cacb9012dca60b60fcc
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Wed Dec 10 23:26:37 2008 +0100
+
+    Catch malloc returning NULL.
+
+commit c3bb6639b68529ba34a8e6def5dbcb086b41e682
+Author: Vladislav Grishenko <themiron@mail.ru>
+Date:   Sun Nov 23 15:12:32 2008 +0100
+
+    Send after join /names before backlog
+    
+    there're some irc client which create windows, session etc only on 366
+    packet received (End of /NAMES list) like Miranda IM, QIP
+    that's why backlog sent from bip after 332/333 packets and just before
+    353/336 goes to nowhere
+    i'v took a look at other irc bouncers, all of them send backlog right
+    after 353 /336 packets
+    so, all what we need is just chamge the order in
+    static void irc_send_join(struct link_client *ic, struct channel *chan)
+
+commit 0f0d0427b8303414a7058cfe8f867837118c17f0
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Nov 23 15:09:24 2008 +0100
+
+    Enlarge connection buffer size and logline_maxlen.
+
+commit c21db5a556df2e1b647a32b811fe1db73cbc4982
+Author: theMIROn <themiron@mail.ru>
+Date:   Tue Nov 11 16:07:42 2008 +0100
+
+    Fix for empty topic creator and timestamp on RusNet IRC Servers
+
+commit 383a3a4477387392d50e245b049cf0c5e0490505
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Sun Nov 9 19:05:49 2008 +0100
+
+    Fix help message: bip reload is quite stable for some time now.
+
+commit 1cbb1b9b7aa228704db91b942b6105e848a4eed0
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Oct 31 19:38:12 2008 +0100
+
+    drop fork priviledges when running.
+
+commit e8c6adedc9d782ef35968cc7b68c21c5fbb3f7c6
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Oct 24 10:24:52 2008 +0200
+
+    Add -git to version string.
+
+commit fcfea9921a55455bba7ad5f0e616170e228b885a
+Author: Arnaud Cornet <arnaud.cornet@gmail.com>
+Date:   Fri Oct 24 10:24:49 2008 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit cd82512f7a5f2d708c87e486cbf48ed2d933287b
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Fri Oct 24 09:11:23 2008 +0200
