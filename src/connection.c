@@ -1090,10 +1090,12 @@ static DH *tmp_dh_cb(SSL *ssl_unused, int export, int keylength)
 {
 	DH *ret;
 
-	if (export && keylength == 512)
+	if (export && keylength == 512) {
+		mylog(LOG_WARN, "SSL: using 512 bits diffie hellman moduli");
 		ret = dh_512();
-	else
+	} else {
 		ret = dh_1024();
+	}
 	return ret;
 }
 #endif
