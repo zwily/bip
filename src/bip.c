@@ -1233,8 +1233,7 @@ int main(int argc, char **argv)
 	if (!confpath) {
 		confpath = bip_malloc(strlen(conf_biphome) + 1 +
 				strlen(S_CONF) + 1);
-		*confpath = 0;
-		strcat(confpath, conf_biphome);
+		strcpy(confpath, conf_biphome);
 		strcat(confpath, "/");
 		strcat(confpath, S_CONF);
 	}
