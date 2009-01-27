@@ -528,12 +528,12 @@ void log_cli_privmsg(log_t *logdata, const char *ircmask,
 void log_notice(log_t *logdata, const char *ircmask, const char *destination,
 		const char *message)
 {
+	if (!ircmask)
+		ircmask = P_IRCMASK;
 	if (!ischannel(*destination)) {
-		if (ircmask) {
-			char *nick = nick_from_ircmask(ircmask);
-			do_log_privmsg(logdata, nick, 0, ircmask, message);
-			free(nick);
-		}
+		char *nick = nick_from_ircmask(ircmask);
+		do_log_privmsg(logdata, nick, 0, ircmask, message);
+		free(nick);
 	} else {
 		do_log_privmsg(logdata, destination, 0, ircmask, message);
 	}
