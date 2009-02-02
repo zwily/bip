@@ -185,6 +185,7 @@ void array_ensure(array_t *a, int index);
 array_t *array_extract(array_t *a, int index, int upto);
 void array_deinit(array_t *a);
 void array_free(array_t *a);
+void *array_drop(array_t *a, int index);
 static inline int array_count(array_t *a)
 {
 	assert(a);

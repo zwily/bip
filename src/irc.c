@@ -412,6 +412,12 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 
 	} else if (LINK(server)->s_state == IRCS_CONNECTING) {
 		ret = OK_FORGET;
+		if (irc_line_elem_equals(line, 0, "005")) {
+			int i;
+			for (i = 0; i < irc_line_count(line); i++)
+				if (irc_line_elem_equals(line, i, "CAPAB"))
+					irc_line_drop(line, i);
+		}
 		if (irc_line_elem_equals(line, 0, "NOTICE")) {
 		} else if (irc_line_elem_equals(line, 0, "376")) {
 							/* end of motd */

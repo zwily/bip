@@ -100,5 +100,6 @@ char *irc_line_pop(struct line *l);
 int irc_line_elem_equals(struct line *line, int elem, const char *cmp);
 int irc_line_elem_case_equals(struct line *line, int elem, const char *cmp);
 void irc_line_free_args(char **elemv, int elemc);
+void irc_line_drop(struct line *line, int elem);
 
 #endif

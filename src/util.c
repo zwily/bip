@@ -771,6 +771,20 @@ void array_ensure(array_t *a, int index)
 	a->elemc = index + 1;
 }
 
+void *array_drop(array_t *a, int index)
+{
+	int i;
+	void *ret;
+
+	assert(a && array_includes(a, index));
+
+	ret = a->elemv[index];
+	for (i = index; i < array_count(a) - 1; i++)
+		a->elemv[i] = a->elemv[i + 1];
+	a->elemc--;
+	return ret;
+}
+
 array_t *array_extract(array_t *a, int index, int upto)
 {
 	array_t *ret;

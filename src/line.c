@@ -130,6 +130,11 @@ const char *irc_line_elem(struct line *line, int elem)
 	return array_get(&line->words, elem);
 }
 
+void irc_line_drop(struct line *line, int elem)
+{
+	free(array_drop(&line->words, elem));
+}
+
 int irc_line_elem_equals(struct line *line, int elem, const char *cmp)
 {
 	return !strcmp(irc_line_elem(line, elem), cmp);
