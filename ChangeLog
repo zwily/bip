@@ -1,3 +1,60 @@
+commit eef2fd180d77aab96337a5a0ecd240cc2dea0328
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Feb 2 19:47:53 2009 +0100
+
+    [CLIENTHACK] Remove xchat's + and - on each msg
+    
+    This patch drops CAPAB setting in 005 message from server to client.
+    Doing this xchat does not start the mode that prepends a + or a - at the
+    beginning of PRIVMSGS.
+
+commit c4fb1b140add5050c8f4c1a77856272aac40cc01
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Jan 28 19:21:30 2009 +0100
+
+    Another man typo found by Renzokuken.
+
+commit b5d777dfee75cad37fe488634b68d2fd71689189
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Jan 28 15:13:44 2009 +0100
+
+    man typo found by Renzokuken.
+
+commit 69640eaf8c49339d71523d01fcb21494db546172
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 27 11:24:50 2009 +0100
+
+    [FIX] Complete previous commit
+    
+    Previous commit was incomplete and did not log some weird messages. They
+    still might be legit, so we come with them
+
+commit 5416fc19b203e94bb31cd35ef2ceeafb2ddbbd5f
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Tue Jan 27 08:25:44 2009 +0100
+
+    [FIX] check for weird shape notice messages
+    
+    Prevents a fatal on some rare conditions
+
+commit c2b3090e471b6f169b9359e5c8d89c6b5920e0d1
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Jan 26 16:57:52 2009 +0100
+
+    Cosmetic (special kasdedi a trou)
+
+commit bfc86202a1cfc3c0c7ed7252106f5ed4e1e265b7
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 25 14:44:26 2009 +0100
+
+    Add -git to version string.
+
+commit 488a17dab5f29a19071edc798863a11507a1c893
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jan 25 14:44:22 2009 +0100
+
+    Update src/version.h and Changelog for release.
+
 commit 5628da3ee07b7891c159469b0e8ac4080e91c8b5
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sun Jan 25 14:41:19 2009 +0100
