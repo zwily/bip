@@ -129,9 +129,10 @@ struct link {
 
 	/** link options */
 
-	int follow_nick;
-	int ignore_first_nick;
-	int autojoin_on_kick;
+	int follow_nick:1;
+	int ignore_first_nick:1;
+	int autojoin_on_kick:1;
+	int ignore_server_capab:1;
 	list_t on_connect_send;
 	char *no_client_away_msg;
 	char *away_nick;

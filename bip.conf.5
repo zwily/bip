@@ -291,6 +291,18 @@ If set to true, BIP will ignore the nickname sent by the client upon connect.
 Further nickname changes will be processed as usual.
 
 .TP
+\fBignore_server_capab\fP (default: \fBtrue\fP)
+By default bip ignores when a server advertises the CAPAB feature. Servers that
+support this can prefix each line with a "+" or a "-" depending if a user is
+registered or not. xchat checks if a server has the CAPAB feature and enables
+it.
+If you have two clients connected to a bip connection, one that supports this
+mode and one that does not, you see the plus and the minuses on each line in
+the client that does not support CAPAB. To avoid that, when a server advertises
+CAPAB bip simply removes it. You can set this option to false to keep using
+CAPAB (if you only use clients that support it for instance).
+
+.TP
 \fBnetwork\fP
 The network name. See the \fBNETWORK SECTION\fP.
 

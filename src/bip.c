@@ -557,6 +557,9 @@ static int add_connection(bip_t *bip, struct user *user, list_t *data)
 		case LEX_IGN_FIRST_NICK:
 			l->ignore_first_nick = t->ndata;
 			break;
+		case LEX_IGNORE_CAPAB:
+			l->ignore_server_capab = t->ndata;
+			break;
 		case LEX_AWAY_NICK:
 			MOVE_STRING(l->away_nick, t->pdata);
 			break;

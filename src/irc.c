@@ -412,7 +412,8 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 
 	} else if (LINK(server)->s_state == IRCS_CONNECTING) {
 		ret = OK_FORGET;
-		if (irc_line_elem_equals(line, 0, "005")) {
+		if (LINK(server)->ignore_server_capab &&
+				irc_line_elem_equals(line, 0, "005")) {
 			int i;
 			for (i = 0; i < irc_line_count(line); i++)
 				if (irc_line_elem_equals(line, i, "CAPAB"))
@@ -2562,6 +2563,7 @@ struct link *irc_link_new()
 	list_init(&link->chan_infos_order, list_ptr_cmp);
 	list_init(&link->on_connect_send, list_ptr_cmp);
 	link->autojoin_on_kick = 1;
+	link->ignore_server_capab = 1;
 	return link;
 }
 

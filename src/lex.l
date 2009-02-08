@@ -107,6 +107,7 @@ list_t *parse_conf(FILE *file, int *err)
 "pid_file"		{ return LEX_PID_FILE; }
 "bip_use_notice"	{ return LEX_BIP_USE_NOTICE; }
 "client_side_ssl_pem"	{ return LEX_CSS_PEM; }
+"ignore_server_capab"	{ return LEX_IGNORE_CAPAB; }
 \"[^"]*\" 		{
 				size_t len = strlen(yytext) - 2;
 				yylval.string = bip_malloc(len + 1);
