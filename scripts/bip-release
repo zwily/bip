@@ -22,7 +22,7 @@ fi
 
 olddir=$(pwd)
 tmpdir=$(mktemp -d /var/tmp/bip-XXXXX)
-git-archive --format=tar --prefix=$prefix/ HEAD > $tmpdir/$prefix.tar
+git archive --format=tar --prefix=$prefix/ HEAD > $tmpdir/$prefix.tar
 cd $tmpdir
 tar xf $prefix.tar
 cd $prefix

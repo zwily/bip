@@ -631,8 +631,10 @@ void log_ping_timeout(log_t *logdata)
 
 	snprintf(logdata->buffer, LOGLINE_MAXLEN,
 			"%s -!- Ping timeout with server...", timestamp());
-	while ((s = list_remove_first(l)))
+	while ((s = list_remove_first(l))) {
 		log_write(logdata, s, logdata->buffer);
+		free(s);
+	}
 	list_free(l);
 	log_disconnected(logdata);
 }
