@@ -1,3 +1,27 @@
+commit b6f30f6a032421911035f77a59d29549e4ab7828
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Feb 28 11:19:57 2009 +0100
+
+    Fix one leak. Fix git-release script for new git.
+
+commit 29ff342d93ba4f5c253702468c3c951a9e61eb91
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Feb 8 12:36:49 2009 +0100
+
+    Add option ignore_server_capab
+
+commit b8c740357d9aeaa0d74b53bacdd55156752d3c64
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Feb 2 19:51:10 2009 +0100
+
+    Add -git to version string.
+
+commit 1f462ef03585d3cf439e36a591dc3c4630d2d2a1
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Feb 2 19:51:05 2009 +0100
+
+    Update src/version.h and Changelog for release.
+
 commit eef2fd180d77aab96337a5a0ecd240cc2dea0328
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Mon Feb 2 19:47:53 2009 +0100
