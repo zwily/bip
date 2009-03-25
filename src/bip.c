@@ -2165,7 +2165,7 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 			return OK_FORGET;
 		}
 
-		if (admin && irc_line_elem_case_equals(line, privmsg + 3,
+		if (admin && irc_line_elem_case_equals(line, privmsg + 2,
 					"user") == 0) {
 			if (irc_line_count(line) == privmsg + 4) {
 				adm_info_user(ic,
