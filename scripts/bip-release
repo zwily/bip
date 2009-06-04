@@ -21,7 +21,7 @@ else
 fi
 
 olddir=$(pwd)
-tmpdir=$(mktemp -d /var/tmp/bip-XXXXX)
+tmpdir=$(mktemp -d /var/tmp/bip-XXXXXX)
 git archive --format=tar --prefix=$prefix/ HEAD > $tmpdir/$prefix.tar
 cd $tmpdir
 tar xf $prefix.tar
