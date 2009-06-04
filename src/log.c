@@ -613,15 +613,12 @@ void log_mode(log_t *logdata, const char *ircmask, const char *channel,
 
 void log_disconnected(log_t *logdata)
 {
-	logstore_t *store;
 	hash_iterator_t hi;
 	snprintf(logdata->buffer, LOGLINE_MAXLEN, "%s -!- Disconnected"
 			" from server...", timestamp());
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
-			hash_it_next(&hi)) {
-		store = hash_it_item(&hi);
+			hash_it_next(&hi))
 		log_write(logdata, hash_it_key(&hi), logdata->buffer);
-	}
 }
 
 void log_ping_timeout(log_t *logdata)
@@ -684,11 +681,23 @@ void log_reset_all(log_t *logdata)
 {
 	logstore_t *store;
 	hash_iterator_t hi;
+	list_t drop;
+
+	list_init(&drop, NULL);
 
 	for (hash_it_init(&logdata->logfgs, &hi); hash_it_item(&hi);
 			hash_it_next(&hi)) {
 		store = hash_it_item(&hi);
-		log_reset(store);
+		if (ischannel(*hash_it_key(&hi)))
+			log_reset(store);
+		else
+			list_add_last(&drop, strdup(hash_it_key(&hi)));
+	}
+
+	char *name;
+	while ((name = list_remove_first(&drop))) {
+		log_drop(logdata, name);
+		free(name);
 	}
 }
 
@@ -699,6 +708,8 @@ void log_reset_store(log_t *log, const char *storename)
 	store = hash_get(&log->logfgs, storename);
 	if (store)
 		log_reset(store);
+	if (!ischannel(*storename))
+		log_drop(log, storename);
 }
 
 void log_client_none_connected(log_t *logdata)
