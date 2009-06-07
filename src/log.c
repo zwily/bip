@@ -706,10 +706,11 @@ void log_reset_store(log_t *log, const char *storename)
 	logstore_t *store;
 
 	store = hash_get(&log->logfgs, storename);
-	if (store)
+	if (store) {
 		log_reset(store);
-	if (!ischannel(*storename))
-		log_drop(log, storename);
+		if (!ischannel(*storename))
+			log_drop(log, storename);
+	}
 }
 
 void log_client_none_connected(log_t *logdata)
