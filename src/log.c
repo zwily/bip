@@ -1314,7 +1314,7 @@ list_t *backlog_lines(log_t *log, const char *bl, const char *cli_nick,
 	else
 		dest = cli_nick;
 
-	if (log_has_backlog(log, bl)) {
+	if (log_has_backlog(log, bl) || hours) {
 		if (hours == 0)
 			ret = log_backread(log, bl, dest);
 		else
