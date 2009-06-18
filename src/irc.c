@@ -126,18 +126,18 @@ list_t *channel_name_list(struct channel *c)
 			len = 0;
 		}
 		if (len != 0) {
-			strncat(str, " ", NAMESIZE);
+			strcat(str, " ");
 			len++;
 		}
 		if (ovmask & NICKOP)
-			strncat(str, "@", NAMESIZE);
+			strcat(str, "@");
 		else if (ovmask & NICKHALFOP)
-			strncat(str, "%", NAMESIZE);
+			strncat(str, "%");
 		else if (ovmask & NICKVOICED)
-			strncat(str, "+", NAMESIZE);
+			strcat(str, "+");
 		len++;
 
-		strncat(str, nick, NAMESIZE);
+		strncat(str, nick);
 		len += strlen(nick);
 		assert(len < NAMESIZE);
 	}
