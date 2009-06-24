@@ -481,9 +481,12 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 	if (ret == OK_COPY) {
 		int i;
 		for (i = 0; i < LINK(server)->l_clientc; i++) {
-			char *s = irc_line_to_string(line);
-			write_line(CONN(LINK(server)->l_clientv[i]), s);
-			free(s);
+			if (TYPE(LINK(server)->l_clientv[i]) ==
+					IRC_TYPE_CLIENT) {
+				char *s = irc_line_to_string(line);
+				write_line(CONN(LINK(server)->l_clientv[i]), s);
+				free(s);
+			}
 		}
 	}
 	if (ret == OK_COPY_WHO && LINK(server)->who_client) {

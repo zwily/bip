@@ -54,9 +54,6 @@ int conf_log_sync_interval = DEFAULT_LOG_SYNC_INTERVAL;
 
 list_t *parse_conf(FILE *file, int *err);
 void conf_die(bip_t *bip, char *fmt, ...);
-#ifdef HAVE_LIBSSL
-int adm_trust(struct link_client *ic, struct line *line);
-#endif
 static char *get_tuple_pvalue(list_t *tuple_l, int lex);
 void bip_notify(struct link_client *ic, char *fmt, ...);
 void adm_list_connections(struct link_client *ic, struct user *bu);
@@ -1985,9 +1982,6 @@ void adm_bip_help(struct link_client *ic, int admin, const char *subhelp)
 				"(this connection only). Add -q flag and the "
 				"operation is quiet. You can specify a channel "
 				"or a nick to reset only this channel/query.");
-#ifdef HAVE_LIBSSL
-		bip_notify(ic, "/BIP TRUST # trust this server certificate");
-#endif
 		bip_notify(ic, "/BIP HELP [subhelp] # show this help...");
 		bip_notify(ic, "## Temporary changes for this connection:");
 		bip_notify(ic, "/BIP FOLLOW_NICK|IGNORE_FIRST_NICK TRUE|FALSE");
@@ -2029,9 +2023,6 @@ void adm_bip_help(struct link_client *ic, int admin, const char *subhelp)
 	} else if (strcasecmp(subhelp, "BLRESET") == 0) {
 		bip_notify(ic, "/BIP BLRESET :");
 		bip_notify(ic, "  Reset backlog on this network.");
-	} else if (strcasecmp(subhelp, "TRUST") == 0) {
-		bip_notify(ic, "/BIP TRUST");
-		bip_notify(ic, "  Trust current server's certificate.");
 	} else if (strcasecmp(subhelp, "FOLLOW_NICK") == 0) {
 		bip_notify(ic, "/BIP FOLLOW_NICK TRUE|FALSE :");
 		bip_notify(ic, "  Change the value of the follow_nick option "
@@ -2274,10 +2265,6 @@ int adm_bip(bip_t *bip, struct link_client *ic, struct line *line, int privmsg)
 			adm_bip_delconn(bip, ic,
 					irc_line_elem(line, privmsg + 2));
 		}
-#ifdef HAVE_LIBSSL
-	} else if (irc_line_elem_case_equals(line, privmsg + 1, "TRUST")) {
-		return adm_trust(ic, line);
-#endif
 	} else {
 		bip_notify(ic, "Unknown command.");
 	}
