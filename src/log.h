@@ -96,11 +96,11 @@ void log_client_connected(log_t *logdata);
 int log_has_backlog(log_t *logdata, const char *destination);
 void log_flush_all(void);
 void log_client_none_connected(log_t *logdata);
-void log_reset(logstore_t *);
 void log_reset_all(log_t *logdata);
 void log_free(log_t *log);
 int check_dir(char *filename, int is_fatal);
 void log_reset_store(log_t *log, const char *storename);
+void log_drop(log_t *log, const char *storename);
 
 list_t *log_backlogs(log_t *log);
 list_t *backlog_lines(log_t *log, const char *bl, const char *cli_nick,

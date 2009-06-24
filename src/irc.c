@@ -132,12 +132,12 @@ list_t *channel_name_list(struct channel *c)
 		if (ovmask & NICKOP)
 			strcat(str, "@");
 		else if (ovmask & NICKHALFOP)
-			strncat(str, "%");
+			strcat(str, "%");
 		else if (ovmask & NICKVOICED)
 			strcat(str, "+");
 		len++;
 
-		strncat(str, nick);
+		strcat(str, nick);
 		len += strlen(nick);
 		assert(len < NAMESIZE);
 	}
@@ -1058,12 +1058,19 @@ static int irc_cli_join(struct link_client *irc, struct line *line)
 
 static int irc_cli_part(struct link_client *irc, struct line *line)
 {
+	struct chan_info *ci;
+	char *cname;
+
 	if (irc_line_count(line) != 2 && irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
 
-	struct chan_info *ci;
+	cname = irc_line_elem(line, 1);
+
+	log_reset_store(LINK(irc)->log, cname);
+	log_drop(LINK(irc)->log, cname);
+
 	if ((ci = hash_remove_if_exists(&LINK(irc)->chan_infos,
-					irc_line_elem(line, 1))) != NULL) {
+					cname)) != NULL) {
 		list_remove(&LINK(irc)->chan_infos_order, ci);
 		free(ci->name);
 		if (ci->key)

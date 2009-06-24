@@ -30,7 +30,8 @@ static int _log_write(log_t *logdata, logstore_t *lf, const char *d,
 		const char *str);
 static char *_log_wrap(const char *dest, const char *line);
 void logfile_free(logfile_t *lf);
-static void log_drop(log_t *log, const char *storename);
+void log_drop(log_t *log, const char *storename);
+static void log_reset(logstore_t *store);
 
 #define BOLD_CHAR 0x02
 #define LAMESTRING "!bip@" P_SERV " PRIVMSG "
@@ -179,7 +180,7 @@ void log_updatelast(logfile_t *lf)
 	localtime_r(&t, &lf->last_log);
 }
 
-void log_reset(logstore_t *store)
+static void log_reset(logstore_t *store)
 {
 	logfile_t *olf;
 
@@ -669,7 +670,7 @@ void log_store_free(logstore_t *store)
 	free(store);
 }
 
-static void log_drop(log_t *log, const char *storename)
+void log_drop(log_t *log, const char *storename)
 {
 	logstore_t *store;
 
