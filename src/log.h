@@ -31,6 +31,7 @@ typedef struct logfile
 {
 	FILE *file;
 	char *filename;
+	char *canonical_filename;
 	struct tm last_log;
 	size_t len;
 } logfile_t;

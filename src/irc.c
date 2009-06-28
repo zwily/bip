@@ -1067,10 +1067,7 @@ static int irc_cli_part(struct link_client *irc, struct line *line)
 	if (irc_line_count(line) != 2 && irc_line_count(line) != 3)
 		return ERR_PROTOCOL;
 
-	cname = irc_line_elem(line, 1);
-
-	log_reset_store(LINK(irc)->log, cname);
-	log_drop(LINK(irc)->log, cname);
+	cname = (char *)irc_line_elem(line, 1);
 
 	if ((ci = hash_remove_if_exists(&LINK(irc)->chan_infos,
 					cname)) != NULL) {
@@ -1515,6 +1512,8 @@ static int irc_part(struct link_server *server, struct line *line)
 		log_part(LINK(server)->log, line->origin, s_chan,
 			irc_line_count(line) == 3 ? irc_line_elem(line, 2) :
 				NULL);
+		log_reset_store(LINK(server)->log, s_chan);
+		log_drop(LINK(server)->log, s_chan);
 
 		hash_remove(&server->channels, s_chan);
 		channel_free(channel);
@@ -1791,6 +1790,8 @@ static int irc_kick(struct link_server *server, struct line *line)
 				irc_line_elem(line, 2),
 				irc_line_count(line) == 4 ?
 					irc_line_elem(line, 3) : NULL);
+		log_reset_store(LINK(server)->log, channel->name);
+		log_drop(LINK(server)->log, channel->name);
 
 		if (LINK(server)->autojoin_on_kick) {
 			if (!channel->key)

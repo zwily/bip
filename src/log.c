@@ -137,8 +137,8 @@ char *log_build_filename(log_t *logdata, const char *destination)
 	struct tm *now;
 	time_t s;
 	char *dest = bip_strdup(destination);
-	strtolower(dest);
 
+	strtolower(dest);
 	logfile = (char *)bip_malloc(MAX_PATH_LEN + 1);
 
 	time(&s);
@@ -257,18 +257,23 @@ static int log_add_file(log_t *logdata, const char *destination,
 	FILE *f;
 	logstore_t *store;
 	char *uniq_fname;
+	char *canonical_fname = NULL;
 	logfile_t *lf = NULL;
 
 	if (conf_log) {
-		if (log_has_file(logdata, filename))
+		if (log_has_file(logdata, filename)) {
+			canonical_fname = bip_strdup(filename);
 			uniq_fname = filename_uniq(filename);
-		else
+		} else {
+			canonical_fname = bip_strdup(filename);
 			uniq_fname = bip_strdup(filename);
+		}
 		f = fopen(uniq_fname, "a+");
 		if (!f) {
 			mylog(LOG_ERROR, "fopen(%s) %s", uniq_fname,
 					strerror(errno));
 			free(uniq_fname);
+			free(canonical_fname);
 			return 0;
 		}
 
@@ -276,6 +281,7 @@ static int log_add_file(log_t *logdata, const char *destination,
 			mylog(LOG_ERROR, "fseek(%s) %s", uniq_fname,
 					strerror(errno));
 			free(uniq_fname);
+			free(canonical_fname);
 			fclose(f);
 			return 0;
 		}
@@ -284,11 +290,11 @@ static int log_add_file(log_t *logdata, const char *destination,
 		lf->file = f;
 		lf->len = ftell(f);
 		lf->filename = uniq_fname;
+		lf->canonical_filename = canonical_fname;
 		log_updatelast(lf);
 	}
 
 	store = hash_get(&logdata->logfgs, destination);
-
 	if (!store) {
 		store = bip_calloc(sizeof(logstore_t), 1);
 		list_init(&store->file_group, NULL);
@@ -322,6 +328,8 @@ void logfile_free(logfile_t *lf)
 		fclose(lf->file);
 	if (lf->filename)
 		free(lf->filename);
+	if (lf->canonical_filename)
+		free(lf->canonical_filename);
 	free(lf);
 }
 
@@ -330,8 +338,6 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 	logfile_t *lf;
 	logstore_t *store;
 	char *filename = NULL;
-	time_t t;
-	struct tm *ltime;
 	struct link *l;
 
 	store = hash_get(&logdata->logfgs, destination);
@@ -373,10 +379,14 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 	}
 
 	/* This is reached if store already exists */
+	lf = list_get_last(&store->file_group);
+
+	time_t t;
+	struct tm *ltime;
+
 	time(&t);
 	ltime = localtime(&t);
-	lf = list_get_last(&store->file_group);
-	if (ltime->tm_mday != lf->last_log.tm_mday) {
+	if (ltime->tm_hour != lf->last_log.tm_hour) {
 		logfile_t *oldlf;
 
 		/* day changed, we might want to rotate logfile */
@@ -384,14 +394,16 @@ logstore_t *log_find_file(log_t *logdata, const char *destination)
 		if (!filename)
 			return NULL;
 
-		if (strcmp(lf->filename, filename) == 0) {
+		if (strcmp(lf->canonical_filename, filename) == 0) {
 			/* finally we don't */
 			free(filename);
 			return store;
 		}
 
-		/* we do want do rotate logfiles */
-		mylog(LOG_DEBUG, "Rotating logfile for %s from", destination);
+		/* we do want to rotate logfiles */
+		mylog(LOG_DEBUG, "Rotating logfile for %s %s %s", destination,
+				lf->filename, filename);
+
 		oldlf = list_get_last(&store->file_group);
 		if (!log_add_file(logdata, destination, filename)) {
 			free(filename);
@@ -662,7 +674,7 @@ void log_store_free(logstore_t *store)
 	logfile_t *lf;
 
 	log_reset(store);
-	if ((lf = list_remove_first(&store->file_group)))
+	while ((lf = list_remove_first(&store->file_group)))
 		logfile_free(lf);
 	free(store->name);
 	if (store->memlog)
