@@ -1278,12 +1278,13 @@ static int bip_ssl_verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
 	/* in basic mode (mode 1), accept a leaf certificate if we can find it
 	 * in the store */
-	if (c->ssl_check_mode == SSL_CHECK_BASIC && depth == 0 && result == 0 &&
+	if (c->ssl_check_mode == SSL_CHECK_BASIC && result == 0 &&
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
 			 err == X509_V_ERR_CERT_UNTRUSTED ||
 			 err == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
 			 err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
-			 err == X509_V_ERR_CERT_HAS_EXPIRED)) {
+			 err == X509_V_ERR_CERT_HAS_EXPIRED ||
+			 err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)) {
 
 		if (X509_STORE_get_by_subject(ctx, X509_LU_X509,
 				X509_get_subject_name(err_cert), &xobj) > 0 &&
@@ -1440,7 +1441,7 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 	case SSL_CHECK_BASIC:
 		SSL_CTX_set_verify(conn->ssl_ctx_h, SSL_VERIFY_PEER,
 				bip_ssl_verify_callback);
-		SSL_CTX_set_verify_depth(conn->ssl_ctx_h, 0);
+		/* SSL_CTX_set_verify_depth(conn->ssl_ctx_h, 0); */
 		break;
 	case SSL_CHECK_CA:
 		SSL_CTX_set_verify(conn->ssl_ctx_h, SSL_VERIFY_PEER,
