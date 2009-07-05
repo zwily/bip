@@ -133,7 +133,7 @@ void replace_var(char *str, char *var, char *value, unsigned int max)
 
 char *log_build_filename(log_t *logdata, const char *destination)
 {
-	char *logfile, year[5], day[3], month[3], hour[2], *tmp, *logdir;
+	char *logfile, year[5], day[3], month[3], hour[3], *tmp, *logdir;
 	struct tm *now;
 	time_t s;
 	char *dest = bip_strdup(destination);
