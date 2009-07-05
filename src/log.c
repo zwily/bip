@@ -133,7 +133,7 @@ void replace_var(char *str, char *var, char *value, unsigned int max)
 
 char *log_build_filename(log_t *logdata, const char *destination)
 {
-	char *logfile, year[5], day[3], month[3], *tmp, *logdir;
+	char *logfile, year[5], day[3], month[3], hour[2], *tmp, *logdir;
 	struct tm *now;
 	time_t s;
 	char *dest = bip_strdup(destination);
@@ -146,6 +146,7 @@ char *log_build_filename(log_t *logdata, const char *destination)
 	snprintf(year, 5, "%04d", now->tm_year + 1900);
 	snprintf(day, 3, "%02d", now->tm_mday);
 	snprintf(month, 3, "%02d", now->tm_mon + 1);
+	snprintf(hour, 3, "%02d", now->tm_hour);
 	snprintf(logfile, MAX_PATH_LEN, "%s/%s", conf_log_root,
 			conf_log_format);
 	replace_var(logfile, "%u", logdata->user->name, MAX_PATH_LEN);
@@ -154,6 +155,7 @@ char *log_build_filename(log_t *logdata, const char *destination)
 	replace_var(logfile, "%Y", year, MAX_PATH_LEN);
 	replace_var(logfile, "%d", day, MAX_PATH_LEN);
 	replace_var(logfile, "%m", month, MAX_PATH_LEN);
+	replace_var(logfile, "%h", hour, MAX_PATH_LEN);
 
 	logdir = bip_strdup(logfile);
 
