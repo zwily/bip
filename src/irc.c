@@ -182,10 +182,10 @@ void irc_compute_lag(struct link_server *is)
 int irc_lags_out(struct link_server *is)
 {
 	if (is->lag > LAGOUT_TIME) {
-		mylog(LOG_ERROR, "%s Lags out! closing", LINK(is)->name);
+		mylog(LOG_ERROR, "[%s] Lags out! closing", LINK(is)->name);
 		return 1;
 	} else {
-		mylog(LOG_DEBUG, "%s lag : %d\n", LINK(is)->name, is->lag);
+		mylog(LOG_DEBUG, "[%s] lag : %d\n", LINK(is)->name, is->lag);
 		return 0;
 	}
 }
@@ -216,7 +216,7 @@ static void irc_server_connected(struct link_server *server)
         LINK(server)->s_state = IRCS_CONNECTED;
         LINK(server)->s_conn_attempt = 0;
 
-	mylog(LOG_INFO, "Connected to server %s for user %s",
+	mylog(LOG_INFO, "[%s] Connected for user %s",
 			LINK(server)->name, LINK(server)->user->name);
 
         irc_server_join(server);
@@ -690,7 +690,8 @@ void irc_cli_backlog(struct link_client *ic, int hours)
 				LINK(ic)->l_server->nick, hours);
 		if (bllines) {
 			if (!list_is_empty(bllines)) {
-				mylog(LOG_INFO, "backlogging: %s", bl);
+				mylog(LOG_INFO, "[%s] backlogging: %s",
+						LINK(ic)->name, bl);
 				write_lines(CONN(ic), bllines);
 			}
 			list_free(bllines);
@@ -739,8 +740,8 @@ static int irc_cli_startup(bip_t *bip, struct link_client *ic,
 	}
 
 	if (!LINK(ic))
-		mylog(LOG_ERROR, "Invalid credentials (user:%s connection:%s)",
-				user, connname);
+		mylog(LOG_ERROR, "[%s] Invalid credentials (user: %s)",
+				 connname, user);
 	free(user);
 	free(connname);
 	free(pass);
@@ -2073,7 +2074,7 @@ static void server_setup_reconnect_timer(struct link *link)
 		if (timer > RECONN_TIMER_MAX)
 			timer = RECONN_TIMER_MAX;
 	}
-	mylog(LOG_ERROR, "%s dead, reconnecting in %d seconds", link->name,
+	mylog(LOG_ERROR, "[%s] reconnecting in %d seconds", link->name,
 			timer);
 	link->recon_timer = timer;
 }
@@ -2158,8 +2159,8 @@ connection_t *irc_server_connect(struct link *link)
 
 	link->s_conn_attempt++;
 
-	mylog(LOG_INFO, "Connecting user '%s' to network '%s' using server "
-		"%s:%d", link->user->name, link->name,
+	mylog(LOG_INFO, "[%s] Connecting user '%s' using server "
+		"%s:%d", link->name, link->user->name,
 		link->network->serverv[link->cur_server].host,
 		link->network->serverv[link->cur_server].port);
 	conn = connection_new(link->network->serverv[link->cur_server].host,
@@ -2175,7 +2176,7 @@ connection_t *irc_server_connect(struct link *link)
 				CONNECT_TIMEOUT);
 	assert(conn);
 	if (conn->handle == -1) {
-		mylog(LOG_INFO, "Cannot connect.");
+		mylog(LOG_INFO, "[%s] Cannot connect.", link->name);
 		connection_free(conn);
 		server_next(link);
 		return NULL;
@@ -2443,11 +2444,11 @@ void bip_on_event(bip_t *bip, connection_t *conn)
 	list_t *linel = read_lines(conn, &err);
 	if (err) {
 		if (TYPE(lc) == IRC_TYPE_SERVER) {
-			mylog(LOG_ERROR, "read_lines error, closing %s ...",
+			mylog(LOG_ERROR, "[%s] read_lines error, closing...",
 					LINK(lc)->name);
 			irc_server_shutdown(LINK(lc)->l_server);
 		} else {
-			mylog(LOG_ERROR, "read_lines error, closing...");
+			mylog(LOG_ERROR, "client read_lines error, closing...");
 		}
 		goto prot_err;
 	}
@@ -2465,7 +2466,8 @@ void bip_on_event(bip_t *bip, connection_t *conn)
 
 		line = irc_line_new_from_string(line_s);
 		if (!line) {
-			mylog(LOG_ERROR, "Error in protocol, closing...");
+			mylog(LOG_ERROR, "[%s] Error in protocol, closing...",
+					LINK(lc)->name);
 			free(line_s);
 			goto prot_err_lines;
 		}
@@ -2474,8 +2476,8 @@ void bip_on_event(bip_t *bip, connection_t *conn)
 		irc_line_free(line);
 		free(line_s);
 		if (r == ERR_PROTOCOL) {
-			mylog(LOG_ERROR, "Error in protocol, "
-					"closing...");
+			mylog(LOG_ERROR, "[%s] Error in protocol, closing...",
+					LINK(lc)->name);
 			goto prot_err_lines;
 		}
 		if (r == ERR_AUTH)

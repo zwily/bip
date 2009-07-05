@@ -976,7 +976,7 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 	char *buf, *logbr;
 	int close = 0;
 
-	mylog(LOG_ERROR, "log_backread_file store:", store->name);
+	//mylog(LOG_ERROR, "log_backread_file store:", store->name);
 
 	if (!lf->file) {
 		lf->file = fopen(lf->filename, "r");
@@ -992,8 +992,10 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 	}
 
 	if (!start && list_it_item(&store->file_it) == lf) {
+		/*
 		mylog(LOG_ERROR, "bread Seeking %s to %d", lf->filename,
 				store->file_offset);
+		*/
 		if (fseek(lf->file, store->file_offset, SEEK_SET)) {
 			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
 			list_add_last(res, _log_wrap(store->name,
@@ -1001,7 +1003,7 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 			return 0;
 		}
 	} else {
-		mylog(LOG_ERROR, "bread Seeking %s to %d", lf->filename, 0);
+		//mylog(LOG_ERROR, "bread Seeking %s to %d", lf->filename, 0);
 		if (fseek(lf->file, 0, SEEK_SET)) {
 			mylog(LOG_ERROR, "Can't seek in %s", lf->filename);
 			list_add_last(res, _log_wrap(store->name,
@@ -1051,7 +1053,7 @@ static int log_backread_file(log_t *log, logstore_t *store, logfile_t *lf,
 		lf->file = NULL;
 	}
 	free(buf);
-	mylog(LOG_ERROR, "end of log_backread_file store: %s", store->name);
+	//mylog(LOG_ERROR, "end of log_backread_file store: %s", store->name);
 	return 1;
 }
 
