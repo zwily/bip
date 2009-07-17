@@ -1,3 +1,107 @@
+commit 213643d5bf74d1d71b8faec71505a4c1ec448452
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jul 5 19:35:00 2009 +0200
+
+    size hour array correctly
+
+commit 1a2b1dd165282d24cc5c2a2e5f1bc4e793e41be5
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jul 5 19:04:51 2009 +0200
+
+    Cleanup log outputs
+
+commit 36989553659370a8ed76d80932be485410095bbf
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jul 5 18:08:35 2009 +0200
+
+    Don't reset store->file_offset when adding a new file
+    
+    This just makes no sense
+
+commit a8fb0c40d3a0f26617bbbc5eea2381284d346f6b
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jul 5 14:00:06 2009 +0200
+
+    Support hour in log format. Mostly for debugging
+
+commit 32e08c94aaa192edafbe910901be79554a50e6ff
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jul 2 18:05:51 2009 +0200
+
+    SSL basic mode, support X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN
+
+commit 405f8b4afc33bac9fa8d7afffd526e9a02c81f0d
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jun 28 16:33:29 2009 +0200
+
+    [log] Use canonical name to detect need for log rotation
+    
+    Also reset store on part from server to close more file descriptor.
+
+commit 453223442660150c33c3f55b661d7ba93fab3802
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jun 25 01:24:38 2009 +0200
+
+    [ssl:basic] Restore trust command behavior that was broken (repported by psychon)
+
+commit 5ae1c1dec53b22e4af4ca283d3d140862bec6ec7
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jun 25 00:43:44 2009 +0200
+
+    [log] close logs files more intensively.
+
+commit 7af35a3018e3aff62411ad770d9fc14e344b526a
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Thu Jun 18 13:50:43 2009 +0200
+
+    Bad and useless strncat use (reported by psychon, thanks to him)
+
+commit 015969e86be1f15925856c0673b1dd3261b3b2fc
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sat Jun 13 17:29:44 2009 +0200
+
+    [log] Fix to /bip backlog x
+    
+    This is fix for:
+    When using /bip backlog X windows with no tracked backlog (ie after a
+    blreset) do not show backlog
+
+commit 8cea2bdb710f40d7ed22acc14af5ead9179912aa
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jun 7 13:22:20 2009 +0200
+
+    Don't fail if ressetting non existing store.
+
+commit 94b5ac4797a10188f95cc7e8774cb2dfd6db6302
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jun 5 00:44:28 2009 +0200
+
+    [release script] Fix mktemp usage
+
+commit 499a7d75b59e7bfdf3bfc9201015f7bc94e3135e
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jun 5 00:43:05 2009 +0200
+
+    backlog tweak
+
+commit 9187d556b54d04927b11c97aed18909059be6c43
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Mar 25 11:40:19 2009 +0100
+
+    Fix info user parsing.
+
+commit 3166a570223020f8b3c7bee8649f244e40d6978d
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Mar 2 12:54:27 2009 +0100
+
+    Add -git to version string.
+
+commit 104d251a0bfe29e9a8a2edf67373b6cf2db11ddf
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Mar 2 12:54:25 2009 +0100
+
+    Update src/version.h and Changelog for release.
+
 commit b6f30f6a032421911035f77a59d29549e4ab7828
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sat Feb 28 11:19:57 2009 +0100
@@ -259,7 +363,7 @@ Date:   Sat Jan 10 13:26:59 2009 +0100
     query just to say "end of backlog"...
 
 commit 744ea7d03b5adb4ea36f547d326cbd3262ed2ddf
-Merge: f536a05... 67ddf15...
+Merge: f536a05 67ddf15
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sat Jan 10 12:55:13 2009 +0100
 
@@ -300,7 +404,7 @@ Date:   Fri Jan 9 11:26:12 2009 +0100
     name or channel name.
 
 commit a6bb697f5da9016c65bf8dd39767d12a4422b6c3
-Merge: 0600196... d2f7840...
+Merge: 0600196 d2f7840
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Fri Jan 9 09:57:17 2009 +0100
 
@@ -344,7 +448,7 @@ Date:   Tue Jan 6 15:58:18 2009 +0100
     with %s or other fancy format strings.
 
 commit 06001961021beff6aca472b7456078651bad8f2e
-Merge: 3f895fa... 217816c...
+Merge: 3f895fa 217816c
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Mon Jan 5 23:24:49 2009 +0100
 
@@ -399,7 +503,7 @@ Date:   Mon Dec 29 14:04:51 2008 +0100
     ensure null terminated str
 
 commit 3f895fa6ea4632f4fb6e28d539410ad4b1123c46
-Merge: c0db3c4... 5a5f1b8...
+Merge: c0db3c4 5a5f1b8
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Mon Dec 29 09:15:44 2008 +0100
 
@@ -429,7 +533,7 @@ Date:   Sun Dec 28 15:47:43 2008 +0100
     I KNOW AUTOCONF.
 
 commit c0db3c408dfb6ebbd01d481bf00e33eb0c26706e
-Merge: 3c810ee... 24110a5...
+Merge: 3c810ee 24110a5
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sun Dec 28 14:47:44 2008 +0100
 
@@ -754,7 +858,7 @@ Date:   Wed Apr 2 23:41:27 2008 +0200
     Most of this is Yoann Guillot's work.
 
 commit e383c2b6f6c69bf71010621b5e9f2be875b92971
-Merge: d7430d4... 6cee8c7...
+Merge: d7430d4 6cee8c7
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Sat Feb 16 13:50:40 2008 +0100
 
@@ -862,7 +966,7 @@ Date:   Thu Jan 10 11:33:00 2008 +0100
     - add a "session limit exceeded" / oidentd section
 
 commit 06cfc9160bff7e246564817df0f0dc1061a280b6
-Merge: 671a455... 78cb1c4...
+Merge: 671a455 78cb1c4
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Thu Jan 10 11:11:49 2008 +0100
 
@@ -954,7 +1058,7 @@ Date:   Tue Jan 8 00:09:16 2008 +0100
     - fix checking of PEM file
 
 commit c10061172c34bb6c6b8b4e5febbe39a14595b342
-Merge: 4d97f4e... d007a14...
+Merge: 4d97f4e d007a14
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Mon Jan 7 23:46:31 2008 +0100
 
@@ -999,7 +1103,7 @@ Date:   Mon Jan 7 22:31:28 2008 +0100
     Cosmetic fix for man page.
 
 commit ca785fd28020d640a03a8f8f2f13191dea05c2e6
-Merge: 87ef072... 36d31e3...
+Merge: 87ef072 36d31e3
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Mon Jan 7 22:21:55 2008 +0100
 
@@ -1012,7 +1116,7 @@ Date:   Mon Jan 7 20:42:40 2008 +0100
     rename client_side_ssl_key to client_side_ssl_pem
 
 commit d02957f8bb3bca87747880b659bd098c5f604491
-Merge: d3a4ee6... 2cd37c0...
+Merge: d3a4ee6 2cd37c0
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Mon Jan 7 20:39:13 2008 +0100
 
@@ -1031,7 +1135,7 @@ Date:   Mon Jan 7 19:48:04 2008 +0100
     forgot the manpage..
 
 commit 87ef072bb9a56311296f3afe0ad3702a88d5a030
-Merge: 8eda1ac... e7e49fd...
+Merge: 8eda1ac e7e49fd
 Author: Arnaud Cornet <arnaud.cornet@gmail.com>
 Date:   Mon Jan 7 19:36:38 2008 +0100
 
@@ -1044,7 +1148,7 @@ Date:   Mon Jan 7 15:54:51 2008 +0100
     bipgenconfig client_side_ssl_key option
 
 commit 2034713356184d6921bdf33e50cac796f5ffe2c3
-Merge: e7e49fd... 8eda1ac...
+Merge: e7e49fd 8eda1ac
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Mon Jan 7 15:50:25 2008 +0100
 
@@ -1076,7 +1180,7 @@ Date:   Mon Jan 7 14:00:25 2008 +0100
     fix misleading fatal() message (pidfile error)
 
 commit 56b73ad73af0b24ff6980c35166d44d77dbd6b12
-Merge: ac407d9... 20129da...
+Merge: ac407d9 20129da
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Mon Jan 7 13:47:12 2008 +0100
 
@@ -1159,7 +1263,7 @@ Date:   Sat Dec 29 01:35:11 2007 +0100
     Add subcategory in help commands.
 
 commit ac407d9a3deae111dd00cacd298e70d1b8780b33
-Merge: 130d649... e0170c8...
+Merge: 130d649 e0170c8
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Sun Dec 23 21:17:57 2007 +0100
 
@@ -1291,7 +1395,7 @@ Date:   Sun Nov 25 16:34:52 2007 +0100
     bip_use_notice option
 
 commit b68b0dc71d802805b0c2ef7d0da729f574089d2a
-Merge: a65ffa6... c064fe6...
+Merge: a65ffa6 c064fe6
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Sun Nov 25 16:12:36 2007 +0100
 
@@ -1308,7 +1412,7 @@ Date:   Sun Nov 25 16:07:53 2007 +0100
     notify when addconn command is successful.
 
 commit a65ffa67fa72a842a49a412f9c0bf598aa6367a2
-Merge: 38148bb... a169ceb...
+Merge: 38148bb a169ceb
 Author: Loïc Gomez <opensource@kyoshiro.org>
 Date:   Sun Nov 25 16:06:45 2007 +0100
 
