@@ -235,46 +235,42 @@ static int _write_socket(connection_t *cn, char *message)
 	ssize_t count;
 
 	size = strlen(message);
+	if (size == 0)
+		return WRITE_OK;
+	/* loop if we wrote some data but not everything, or if error is
+	 * EINTR */
 	do {
 		count = write(cn->handle, ((const char *)message) + tcount,
 					size - tcount);
 		if (count > 0) {
 			tcount += count;
 			if (tcount == size)
-				break;
+				return WRITE_OK;
 		}
-	} while (count < 0 && errno == EINTR);
+	} while (count > 0 || (count < 0 && errno == EINTR));
 
-#if 0
-	if (count <= 0 && tcount > 0)
-		fatal("shit happens errno:%d count:%d tcount:%d (%s)\n", errno,
-				count, tcount, message);
-#endif
-	if (tcount < size) {
-		/*
-		 * if no fatal error, return WRITE_KEEP, which makes caller
-		 * keep line in its FIFO
-		 *
-		 * Shitty: we might have written a partial line, so we hack the
-		 * line...
-		 * callers of _write_socket muse provide a writable memspace
-		 */
-		if (count < 0 && (errno == EAGAIN || errno == EINPROGRESS)) {
-			memmove(message, message + tcount, size - tcount + 1);
-			return WRITE_KEEP;
-		}
+	/* If we reach this point, we have a partial write */
+	assert(count != 0);
 
-		if (cn_is_connected(cn)) {
-			mylog(LOG_DEBUGVERB, "write(fd %d) : %s", cn->handle,
-					strerror(errno));
-			connection_close(cn);
-			cn->connected = CONN_ERROR;
-		}
-		mylog(LOG_DEBUGVERB, "write : %s", strerror(errno));
-		return WRITE_ERROR;
+	/* if no fatal error, return WRITE_KEEP, which makes caller keep line
+	 * in its FIFO
+	 *
+	 * Shitty: we might have written a partial line, so we hack the line...
+	 * Callers of _write_socket muse provide a writable message
+	 */
+	if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS) {
+		memmove(message, message + tcount, size - tcount + 1);
+		return WRITE_KEEP;
 	}
-	mylog(LOG_DEBUGVERB, "%d/%d bytes sent !", tcount, size);
-	return WRITE_OK;
+	/* other errors, EPIPE or worse, close the connection, repport error */
+	if (cn_is_connected(cn)) {
+		if (errno != EPIPE)
+			mylog(LOG_INFO, "Broken socket: %s.", strerror(errno));
+		connection_close(cn);
+		cn->connected = CONN_ERROR;
+	}
+	mylog(LOG_DEBUGVERB, "write: %d, %s", cn->handle, strerror(errno));
+	return WRITE_ERROR;
 }
 
 static int write_socket(connection_t *cn, char *line)
@@ -343,12 +339,9 @@ void write_line_fast(connection_t *cn, char *line)
 		r = write_socket(cn, nline);
 		switch (r) {
 		case WRITE_KEEP:
-			list_add_first(cn->outgoing, nline);
+			cn->partial = nline;
 			break;
 		case WRITE_ERROR:
-			cn->connected = CONN_ERROR;
-			free(nline);
-			break;
 		case WRITE_OK:
 			free(nline);
 			break;
@@ -362,11 +355,13 @@ void write_line_fast(connection_t *cn, char *line)
 void write_lines(connection_t *cn, list_t *lines)
 {
 	list_append(cn->outgoing, lines);
+	real_write_all(cn);
 }
 
 void write_line(connection_t *cn, char *line)
 {
 	list_add_last(cn->outgoing, bip_strdup(line));
+	real_write_all(cn);
 }
 
 list_t *read_lines(connection_t *cn, int *error)
