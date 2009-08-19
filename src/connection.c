@@ -232,46 +232,42 @@ static int _write_socket(connection_t *cn, char *message)
 {
 	size_t size;
 	size_t tcount = 0;
-	size_t p_tcount = 0;
 	ssize_t count;
 
 	size = strlen(message);
 	do {
-		while ((count = write(cn->handle,
-					((const char *)message) + tcount,
-					size - tcount)) > 0) {
+		count = write(cn->handle, ((const char *)message) + tcount,
+					size - tcount);
+		if (count > 0) {
 			tcount += count;
 			if (tcount == size)
 				break;
-			if (tcount - p_tcount == 0) {
-				/* no write at all, we give up */
-				cn->connected = CONN_ERROR;
-				return WRITE_ERROR;
-			}
-			p_tcount = tcount;
 		}
-	} while (count < 0 &&
-		(errno == EAGAIN || errno == EINTR || errno == EINPROGRESS));
+	} while (count < 0 && errno == EINTR);
 
 #if 0
 	if (count <= 0 && tcount > 0)
 		fatal("shit happens errno:%d count:%d tcount:%d (%s)\n", errno,
 				count, tcount, message);
 #endif
-	if (count <= 0) {
+	if (tcount < size) {
 		/*
 		 * if no fatal error, return WRITE_KEEP, which makes caller
 		 * keep line in its FIFO
 		 *
-		 * Cannot do: we might have written a partial line
-		 * 
-		if (errno == EAGAIN || errno == EINTR || errno == EINPROGRESS)
-			return WRITE_KEEP;
+		 * Shitty: we might have written a partial line, so we hack the
+		 * line...
+		 * callers of _write_socket muse provide a writable memspace
 		 */
+		if (count < 0 && (errno == EAGAIN || errno == EINPROGRESS)) {
+			memmove(message, message + tcount, size - tcount + 1);
+			return WRITE_KEEP;
+		}
 
 		if (cn_is_connected(cn)) {
 			mylog(LOG_DEBUGVERB, "write(fd %d) : %s", cn->handle,
 					strerror(errno));
+			connection_close(cn);
 			cn->connected = CONN_ERROR;
 		}
 		mylog(LOG_DEBUGVERB, "write : %s", strerror(errno));
@@ -301,7 +297,14 @@ static int real_write_all(connection_t *cn)
 	if (cn == NULL)
 		fatal("real_write_all: wrong arguments");
 
-	while ((line = list_remove_first(cn->outgoing))) {
+	if (cn->partial) {
+		line = cn->partial;
+		cn->partial = NULL;
+	} else {
+		line = list_remove_first(cn->outgoing);
+	}
+
+	do {
 		ret = write_socket(cn, line);
 
 		switch (ret) {
@@ -311,7 +314,8 @@ static int real_write_all(connection_t *cn)
 			return 1;
 		case WRITE_KEEP:
 			/* interrupted or not ready */
-			list_add_first(cn->outgoing, line);
+			assert(cn->partial == NULL);
+			cn->partial = line;
 			return 0;
 		case WRITE_OK:
 			free(line);
@@ -324,26 +328,34 @@ static int real_write_all(connection_t *cn)
 		if (cn->anti_flood)
 			/* one line at a time */
 			break;
-	}
+	} while ((line = list_remove_first(cn->outgoing)));
 	return 0;
 }
 
 void write_line_fast(connection_t *cn, char *line)
 {
 	int r;
-	r = write_socket(cn, line);
-	switch (r) {
-	case WRITE_KEEP:
-		list_add_first(cn->outgoing, bip_strdup(line));
-		break;
-	case WRITE_ERROR:
-		cn->connected = CONN_ERROR;
-		break;
-	case WRITE_OK:
-		break;
-	default:
-		fatal("internal error 7");
-		break;
+	char *nline = bip_strdup(line);
+
+	if (cn->partial) {
+		list_add_first(cn->outgoing, nline);
+	} else {
+		r = write_socket(cn, nline);
+		switch (r) {
+		case WRITE_KEEP:
+			list_add_first(cn->outgoing, nline);
+			break;
+		case WRITE_ERROR:
+			cn->connected = CONN_ERROR;
+			free(nline);
+			break;
+		case WRITE_OK:
+			free(nline);
+			break;
+		default:
+			fatal("internal error 7");
+			break;
+		}
 	}
 }
 

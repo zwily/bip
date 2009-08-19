@@ -76,6 +76,7 @@ typedef struct connection {
 	char *incoming;
 	unsigned incoming_end;
 	list_t *outgoing;
+	char *partial;
 	list_t *incoming_lines;
 	void *user_data;
 	list_t *ip_list;
