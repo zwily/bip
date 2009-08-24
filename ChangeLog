@@ -1,3 +1,37 @@
+commit 70fbf99c7f6422a033220211307f6085a453edc3
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Aug 19 22:02:56 2009 +0200
+
+    Refactor _write_socket
+    
+    Call real_write_all in write_lines and write_line.
+    This should fix debian bug #542291.
+    BIG thanks to Zygo Blaxell.
+
+commit 7546daa27691fb981230c0119cd0e25a461ca770
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Wed Aug 19 02:09:16 2009 +0200
+
+    [BUG] Handle badly lagging client conns decently.
+
+commit fa0c70539b5e2a86d08b635ff87979758d57da09
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Jul 26 11:38:20 2009 +0200
+
+    Allow parallel build (thks Whoopie and psychon).
+
+commit 442e4973cd6f67ef069b0d674d527033b68a57c2
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jul 17 11:43:34 2009 +0200
+
+    Add -git to version string.
+
+commit a7c38c17c07d80fb740cd47098f75c93d76f7c1c
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Fri Jul 17 11:43:29 2009 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit 213643d5bf74d1d71b8faec71505a4c1ec448452
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sun Jul 5 19:35:00 2009 +0200

@@ -79,7 +79,6 @@ typedef struct connection {
 	char *partial;
 	list_t *incoming_lines;
 	void *user_data;
-	list_t *ip_list;
 	struct connecting_data *connecting_data;
 #ifdef HAVE_LIBSSL
 	SSL_CTX *ssl_ctx_h;

@@ -75,8 +75,6 @@ void connection_free(connection_t *cn)
 		list_free(cn->incoming_lines);
 	if (cn->incoming)
 		free(cn->incoming);
-	if (cn->ip_list)
-		list_free(cn->ip_list);
 	if (cn->connecting_data)
 		connecting_data_free(cn->connecting_data);
 	/* conn->user_data */
@@ -1028,7 +1026,6 @@ static connection_t *connection_init(int anti_flood, int ssl, int timeout,
 	conn->listening = listen;
 	conn->handle = -1;
 	conn->client = 0;
-	conn->ip_list = NULL;
 	conn->connecting_data = NULL;
 #ifdef HAVE_LIBSSL
 	conn->ssl_ctx_h = NULL;
