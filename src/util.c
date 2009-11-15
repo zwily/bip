@@ -723,6 +723,8 @@ list_t *hash_keys(hash_t *hash)
 void hash_rename_key(hash_t *h, const char *oldk, const char *newk)
 {
 	assert(h && oldk && newk);
+	if (strcmp(oldk, newk) == 0)
+		return;
 	hash_insert(h, newk, hash_remove(h, oldk));
 }
 
