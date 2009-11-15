@@ -1,3 +1,21 @@
+commit a932cc53a91df6651e673b20d4de14a6bff02114
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Nov 15 20:40:17 2009 +0000
+
+    [BUILD] Attempt to fix autostuff
+
+commit 944f18962a1a4e937db9d689a80c0b3958ec6301
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Nov 15 20:21:27 2009 +0000
+
+    Add -git to version string.
+
+commit 06a67e08af30d9b10d0707096d47ceb59b27fc39
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Nov 15 20:21:24 2009 +0000
+
+    Update src/version.h and Changelog for release.
+
 commit 03ee43ca89edaf4dfa79412dc91aa89694634445
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Sun Nov 15 20:14:28 2009 +0000
