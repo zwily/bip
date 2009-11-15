@@ -1,3 +1,30 @@
+commit 03ee43ca89edaf4dfa79412dc91aa89694634445
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Sun Nov 15 20:14:28 2009 +0000
+
+    [BUG] fatal() on nick change on gamesurge network
+    
+    Some time gamesurge sends a "foo NICK :foo" which we didn't handle
+    correctly.
+
+commit 31ae5ac0bf2651778979fb974bba4e0fb6b4f0b8
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Aug 24 21:26:46 2009 +0200
+
+    [autostuff] Rewrite. Use non recursive make. Drop src/config.h.in that must be populated by autoheader
+
+commit 889f3cc1b7b4ed62f1d34c5afee6835ec30b72a6
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Aug 24 19:05:48 2009 +0200
+
+    Add -git to version string.
+
+commit c496bd702791b451d2bc248679405eaa0c9d9d41
+Author: Arnaud Cornet <nohar@t1r.net>
+Date:   Mon Aug 24 19:05:45 2009 +0200
+
+    Update src/version.h and Changelog for release.
+
 commit 70fbf99c7f6422a033220211307f6085a453edc3
 Author: Arnaud Cornet <nohar@t1r.net>
 Date:   Wed Aug 19 22:02:56 2009 +0200

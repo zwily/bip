@@ -60,9 +60,9 @@ AS_IF([test "x$enable_debug" = "xyes"], [
 ])
 AM_CONDITIONAL(OIDENTD, test x$enable_identd = xyes)
 AS_IF([test "x$with_openssl" != "xno"], [
-	AC_CHECK_LIB(ssl, SSL_read, [], [
+	AC_CHECK_LIB(ssl, SSL_read, [with_openssl=yes], [
 		AC_MSG_ERROR([library 'ssl' is required for OpenSSL support])
-	], -lssl) 
+	], -lssl)
 	AC_CHECK_LIB(crypto, CRYPTO_new_ex_data, [], [
 		AC_MSG_ERROR([library 'crypto' is required for OpenSSL support])
 	], -lcrypto) 
