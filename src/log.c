@@ -962,11 +962,8 @@ static time_t compute_time(const char *buf)
 	time(&tv);
 	tm = *localtime(&tv);
 
-	err = sscanf(buf, "%2d-%2d-%4d %2d:%2d:%2d", &tm.tm_mday, &tm.tm_mon,
-			&tm.tm_year, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
-	if (err != 6)
+	if (strptime(buf, "%d-%m-%Y %H:%M:%S", &tm) == NULL)
 		return (time_t)-1;
-	tm.tm_year -= 1900;
 	return mktime(&tm);
 }
 
