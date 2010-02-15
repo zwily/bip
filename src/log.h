@@ -13,7 +13,7 @@
 
 #ifndef LOG_H
 #define LOG_H
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>

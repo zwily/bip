@@ -11,6 +11,8 @@
  * See the file "COPYING" for the exact licensing terms.
  */
 
+#define _XOPEN_SOURCE 500
+
 #include "config.h"
 #include "log.h"
 #include "irc.h"
@@ -954,7 +956,6 @@ char *log_beautify(log_t *logdata, const char *buf, const char *storename,
 static time_t compute_time(const char *buf)
 {
 	struct tm tm;
-	int err;
 	time_t tv;
 
 	/* this is to fill tm_isdst to current tm, expect brokennes when dst
