@@ -63,7 +63,6 @@
 
 struct connecting_data;
 typedef struct connection {
-	int anti_flood;
 	int ssl;
 	unsigned long lasttoken;
 	unsigned token;
