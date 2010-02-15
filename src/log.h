@@ -13,6 +13,7 @@
 
 #ifndef LOG_H
 #define LOG_H
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
