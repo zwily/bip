@@ -1310,9 +1310,9 @@ static list_t *log_backread_hours(log_t *log, const char *storename,
 	list_iterator_t file_it;
 
 	gettimeofday(&tv, NULL);
-	if (tv.tv_sec <= 3600 * 24 * hours)
+	if (tv.tv_sec <= 3600 * hours)
 		return NULL;
-	blstarttime = tv.tv_sec - 3600 * 24 * hours;
+	blstarttime = tv.tv_sec - 3600 * hours;
 
 	store = hash_get(&log->logfgs, storename);
 
