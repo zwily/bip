@@ -32,7 +32,7 @@ int link_add_untrusted(void *ls, X509 *cert);
 static int connection_timedout(connection_t *cn);
 static int socket_set_nonblock(int s);
 static void connection_connected(connection_t *c);
-int cn_want_write(connection_t *cn);
+void cn_use_token(connection_t *);
 
 struct connecting_data
 {
@@ -292,6 +292,8 @@ static int real_write_all(connection_t *cn)
 	if (cn == NULL)
 		fatal("real_write_all: wrong arguments");
 
+	if (cn->token == 0)
+		return 0;
 
 	if (cn->partial) {
 		line = cn->partial;
@@ -301,11 +303,7 @@ static int real_write_all(connection_t *cn)
 	}
 
 	do {
-		if (!cn_want_write(cn))
-			ret = WRITE_KEEP;
-		else
-			ret = write_socket(cn, line);
-
+		ret = write_socket(cn, line);
 		switch (ret) {
 		case WRITE_ERROR:
 			/* we might as well free(line) here */
@@ -317,13 +315,14 @@ static int real_write_all(connection_t *cn)
 			cn->partial = line;
 			return 0;
 		case WRITE_OK:
+			cn_use_token(cn);
 			free(line);
 			break;
 		default:
 			fatal("internal error 6");
 			break;
 		}
-	} while ((line = list_remove_first(cn->outgoing)));
+	} while (cn->token && (line = list_remove_first(cn->outgoing)));
 	return 0;
 }
 
@@ -639,8 +638,11 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 	}
 
 	if (!FD_ISSET(cn->handle, fds)) {
-		if (cn_is_connected(cn))
+		if (cn_is_connected(cn)) {
+			if (!list_is_empty(cn->outgoing))
+				real_write_all(cn);
 			return 0;
+		}
 
 		mylog(LOG_DEBUG, "New socket still not connected (%d)",
 				cn->handle);
@@ -719,7 +721,7 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 /* token generation interval: 1200ms */
 #define TOKEN_INTERVAL 1200
 
-int cn_want_write(connection_t *cn)
+void cn_use_token(connection_t *cn)
 {
 	struct timeval tv;
 	unsigned long now;
@@ -746,17 +748,13 @@ int cn_want_write(connection_t *cn)
 				cn->token = 1;
 			cn->lasttoken = now;
 		}
-	} else
-		/* if gettimeofday() fails, juste ignore
-		 * antiflood */
+	} else {
+		/* if gettimeofday() fails, juste ignore antiflood */
 		cn->token = 1;
-
-	/* use a token if needed and available */
-	if (!list_is_empty(cn->outgoing) && cn->token > 0) {
-		cn->token--;
-		return 1;
 	}
-	return 0;
+
+	if (cn->token > 0)
+		cn->token--;
 }
 
 list_t *wait_event(list_t *cn_list, int *msec, int *nc)
@@ -817,10 +815,13 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 			continue;
 
 		if (!cn_is_connected(cn) || !list_is_empty(cn->outgoing)) {
-			FD_SET(cn->handle, &fds_write);
-			mylog(LOG_DEBUGTOOMUCH, "Test write on fd %d %d:%d",
-					cn->handle, cn->connected,
-					cn_is_connected(cn));
+			if (cn->token) {
+				FD_SET(cn->handle, &fds_write);
+				mylog(LOG_DEBUGTOOMUCH,
+						"Test write on fd %d %d:%d",
+						cn->handle, cn->connected,
+						cn_is_connected(cn));
+			}
 		}
 	}
 
