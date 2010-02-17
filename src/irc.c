@@ -1961,6 +1961,9 @@ static void irc_server_startup(struct link_server *ircs)
 	char *nick;
 	char *username, *realname;
 
+	/* lower the token number as freenode hates fast login */
+        CONN(ircs)->token = 1;
+
 	if (LINK(ircs)->s_password)
 		WRITE_LINE1(CONN(ircs), NULL, "PASS", LINK(ircs)->s_password);
 
