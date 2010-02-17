@@ -1717,9 +1717,10 @@ static int irc_mode(struct link_server *server, struct line *line)
 		case 'e':
 		case 'q':
 		case 'I':
-			if (!irc_line_includes(line, cur_arg + 3))
-				return ERR_PROTOCOL;
-			cur_arg++;
+			/* Sucky way to try to deal with all the different mode
+			 * out there... */
+			if (irc_line_includes(line, cur_arg + 3))
+				cur_arg++;
 			break;
 		default:
 			break;
