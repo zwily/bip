@@ -221,6 +221,8 @@ static void irc_server_connected(struct link_server *server)
 
         log_connected(LINK(server)->log);
 
+	CONN(server)->token = 1;
+
 	if (LINK(server)->cli_nick) {
 		/* we change nick on client */
 		for (i = 0; i < LINK(server)->l_clientc; i++) {
@@ -1960,8 +1962,6 @@ static void irc_server_startup(struct link_server *ircs)
 {
 	char *nick;
 	char *username, *realname;
-
-	CONN(ircs)->token = 1;
 
 	if (LINK(ircs)->s_password)
 		WRITE_LINE1(CONN(ircs), NULL, "PASS", LINK(ircs)->s_password);
