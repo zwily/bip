@@ -55,7 +55,7 @@ AS_IF([test "x$enable_debug" = "xyes"], [
 	CFLAGS="-O2 -g -W -Wall"
 	LDFLAGS="-g"
 ])
-AS_IF([test "x$enable_oidentd" = "xyes"], [
+AS_IF([test "x$enable_debug" = "xyes"], [
 	AC_DEFINE([HAVE_OIDENTD], [], [Have bip edit ~/.oidentd.conf])
 ])
 AM_CONDITIONAL(OIDENTD, test x$enable_identd = xyes)

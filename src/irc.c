@@ -219,9 +219,8 @@ static void irc_server_connected(struct link_server *server)
 	mylog(LOG_INFO, "[%s] Connected for user %s",
 			LINK(server)->name, LINK(server)->user->name);
 
+        irc_server_join(server);
         log_connected(LINK(server)->log);
-
-	CONN(server)->token = 1;
 
 	if (LINK(server)->cli_nick) {
 		/* we change nick on client */
@@ -253,7 +252,6 @@ static void irc_server_connected(struct link_server *server)
 			WRITE_LINE1(CONN(server), NULL, "AWAY",
 					LINK(server)->no_client_away_msg);
 	}
-        irc_server_join(server);
 }
 
 /*
@@ -410,7 +408,7 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 		if (irc_line_elem_equals(line, 0, "376")) /* end of motd */
 			irc_server_connected(server);
 		else if (irc_line_elem_equals(line, 0, "422")) /* no motd */
-			irc_server_connected(server);
+				irc_server_connected(server);
 
 	} else if (LINK(server)->s_state == IRCS_CONNECTING) {
 		ret = OK_FORGET;

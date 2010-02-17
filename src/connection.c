@@ -32,7 +32,6 @@ int link_add_untrusted(void *ls, X509 *cert);
 static int connection_timedout(connection_t *cn);
 static int socket_set_nonblock(int s);
 static void connection_connected(connection_t *c);
-int cn_want_write(connection_t *cn);
 
 struct connecting_data
 {
@@ -292,7 +291,6 @@ static int real_write_all(connection_t *cn)
 	if (cn == NULL)
 		fatal("real_write_all: wrong arguments");
 
-
 	if (cn->partial) {
 		line = cn->partial;
 		cn->partial = NULL;
@@ -301,10 +299,7 @@ static int real_write_all(connection_t *cn)
 	}
 
 	do {
-		if (!cn_want_write(cn))
-			ret = WRITE_KEEP;
-		else
-			ret = write_socket(cn, line);
+		ret = write_socket(cn, line);
 
 		switch (ret) {
 		case WRITE_ERROR:
@@ -323,6 +318,10 @@ static int real_write_all(connection_t *cn)
 			fatal("internal error 6");
 			break;
 		}
+
+		if (cn->anti_flood)
+			/* one line at a time */
+			break;
 	} while ((line = list_remove_first(cn->outgoing)));
 	return 0;
 }
@@ -721,47 +720,49 @@ static int check_event_write(fd_set *fds, connection_t *cn, int *nc)
 
 int cn_want_write(connection_t *cn)
 {
-	struct timeval tv;
-	unsigned long now;
+	if (cn->anti_flood) {
+		struct timeval tv;
+		unsigned long now;
 
-	/* fill the bucket */
-	/* we do not control when we are called */
-	/* now is the number of milliseconds since the Epoch,
-	 * cn->lasttoken is the number of milliseconds when we
-	 * last added a token to the bucket */
-	if (!gettimeofday(&tv, NULL)) {
-		now = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-		/* round now to TOKEN_INTERVAL multiple */
-		now -= now % TOKEN_INTERVAL;
-		if (now < cn->lasttoken) {
-			/* time shift or integer overflow */
-			cn->token = 1;
-			cn->lasttoken = now;
-		} else if (now > cn->lasttoken + TOKEN_INTERVAL) {
-			cn->token += (now - cn->lasttoken) /
-				TOKEN_INTERVAL;
-			if (cn->token > TOKEN_MAX)
-				cn->token = TOKEN_MAX;
-			if (!cn->token)
+		/* fill the bucket */
+		/* we do not control when we are called */
+		/* now is the number of milliseconds since the Epoch,
+		 * cn->lasttoken is the number of milliseconds when we
+		 * last added a token to the bucket */
+		if (!gettimeofday(&tv, NULL)) {
+			now = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+			/* round now to TOKEN_INTERVAL multiple */
+			now -= now % TOKEN_INTERVAL;
+			if (now < cn->lasttoken) {
+				/* time shift or integer overflow */
 				cn->token = 1;
-			cn->lasttoken = now;
-		}
-	} else
-		/* if gettimeofday() fails, juste ignore
-		 * antiflood */
-		cn->token = 1;
+				cn->lasttoken = now;
+			} else if (now > cn->lasttoken + TOKEN_INTERVAL) {
+				cn->token += (now - cn->lasttoken) /
+					TOKEN_INTERVAL;
+				if (cn->token > TOKEN_MAX)
+					cn->token = TOKEN_MAX;
+				if (!cn->token)
+					cn->token = 1;
+				cn->lasttoken = now;
+			}
+		} else
+			/* if gettimeofday() fails, juste ignore
+			 * antiflood */
+			cn->token = 1;
 
-	/* use a token if needed and available */
-	if (!list_is_empty(cn->outgoing) && cn->token > 0) {
-		cn->token--;
-		return 1;
+		/* use a token if needed and available */
+		if (!list_is_empty(cn->outgoing) && cn->token > 0) {
+			cn->token--;
+			return 1;
+		}
+		return 0;
 	}
-	return 0;
+	return !list_is_empty(cn->outgoing);
 }
 
 list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 {
-
 	fd_set fds_read, fds_write, fds_except;
 	int maxfd = -1, err;
 	list_t *cn_newdata;
@@ -816,7 +817,7 @@ list_t *wait_event(list_t *cn_list, int *msec, int *nc)
 		if (cn->listening)
 			continue;
 
-		if (!cn_is_connected(cn) || !list_is_empty(cn->outgoing)) {
+		if (!cn_is_connected(cn) || cn_want_write(cn)) {
 			FD_SET(cn->handle, &fds_write);
 			mylog(LOG_DEBUGTOOMUCH, "Test write on fd %d %d:%d",
 					cn->handle, cn->connected,
@@ -1000,7 +1001,8 @@ static void create_listening_socket(char *hostname, char *port,
 	cn->connected = CONN_ERROR;
 }
 
-static connection_t *connection_init(int ssl, int timeout, int listen)
+static connection_t *connection_init(int anti_flood, int ssl, int timeout,
+		int listen)
 {
 	connection_t *conn;
 	char *incoming;
@@ -1010,6 +1012,7 @@ static connection_t *connection_init(int ssl, int timeout, int listen)
 	incoming = (char *)bip_malloc(CONN_BUFFER_SIZE);
 	outgoing = list_new(NULL);
 
+	conn->anti_flood = anti_flood;
 	conn->ssl = ssl;
 	conn->lasttoken = 0;
 	conn->token = TOKEN_MAX;
@@ -1116,7 +1119,7 @@ connection_t *accept_new(connection_t *cn)
 	}
 	socket_set_nonblock(err);
 
-	conn = connection_init(cn->ssl, cn->timeout, 0);
+	conn = connection_init(cn->anti_flood, cn->ssl, cn->timeout, 0);
 	conn->connect_time = time(NULL);
 	conn->user_data = cn->user_data;
 	conn->handle = err;
@@ -1172,7 +1175,7 @@ connection_t *listen_new(char *hostname, int port, int ssl)
 	 * SSL flag is only here to tell program to convert socket to SSL after
 	 * accept(). Listening socket will NOT be SSL
 	 */
-	conn = connection_init(ssl, 0, 1);
+	conn = connection_init(0, ssl, 0, 1);
 	create_listening_socket(hostname, portbuf, conn);
 
 	return conn;
@@ -1183,7 +1186,7 @@ static connection_t *_connection_new(char *dsthostname, char *dstport,
 {
 	connection_t *conn;
 
-	conn = connection_init(0, timeout, 0);
+	conn = connection_init(1, 0, timeout, 0);
 	create_socket(dsthostname, dstport, srchostname, srcport, conn);
 
 	return conn;
@@ -1408,7 +1411,7 @@ static connection_t *_connection_new_SSL(char *dsthostname, char *dstport,
 {
 	connection_t *conn;
 
-	conn = connection_init(1, timeout, 0);
+	conn = connection_init(1, 1, timeout, 0);
 	if (!(conn->ssl_ctx_h = SSL_init_context())) {
 		mylog(LOG_ERROR, "SSL context initialization failed");
 		return conn;
@@ -1572,7 +1575,7 @@ int main(int argc,char* argv[])
 		fprintf(stderr,"Usage: %s host port\n",argv[0]);
 		exit(1);
 	}
-	conn = connection_init(0, 0, 1);
+	conn = connection_init(0, 0, 0, 1);
 	conn->connect_time = time(NULL);
 	create_listening_socket(argv[1],argv[2],&conn);
 	if (s == -1) {
