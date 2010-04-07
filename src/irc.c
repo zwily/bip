@@ -370,7 +370,7 @@ int irc_dispatch_server(bip_t *bip, struct link_server *server,
 	} else if (irc_line_elem_equals(line, 0, "PONG")) {
 		/* not all server reply with PONG <servername> <our string>
 		 * so we blindly assume the PONG is ours. */
-		if (irc_line_count(line) == 3) {
+		if (irc_line_count(line) == 2 || irc_line_count(line) == 3) {
 			if (server->laginit_ts != -1) {
 				irc_compute_lag(server);
 				irc_lag_init(server);
